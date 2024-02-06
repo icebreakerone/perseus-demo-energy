@@ -1,0 +1,34 @@
+name: Deploy Dev
+
+on:
+  workflow_run:
+    workflows: ["Python tests"]
+    branches: [main]
+    types:
+      - completed
+  workflow_dispatch:
+    branches:
+      - kip/*
+
+env:
+  AWS_REGION: eu-west-2                   # set this to your preferred AWS region, e.g. us-west-1
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    - name: Install Copilot CLI
+      uses: ksivamuthu/aws-copilot-github-action@v0.0.1
+      with:
+        command: install
+    - run: |
+        copilot --version
+        copilot deploy
+    
