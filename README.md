@@ -35,6 +35,18 @@ By default the client will use the local docker environment, testing against the
 AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" pipenv run python -W ignore  client.py
 ```
 
+Example output, showing the initial request_uri created, the consent grant response and finally an authorisation token:
+
+```bash
+$ AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" pipenv run python -W ignore  client.py
+
+Loading .env environment variables...
+Courtesy Notice: Pipenv found itself running within a virtual environment, so it will automatically use that environment, instead of creating its own for any project. You can set PIPENV_IGNORE_VIRTUALENVS=1 to force pipenv to ignore that environment and create its own instead. You can set PIPENV_VERBOSITY=-1 to suppress this warning.
+{'expires_in': 600, 'request_uri': 'urn:ietf:params:oauth:request_uri:UymBrux4ZEMrBRKx9UyKyIm98zpX1cHmAPGAGNofmm4'}
+{'message': 'consent granted', 'user': 'platform_user', 'scope': ['account']}
+DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70
+```
+
 ## FAPI Flow
 
 ![FAPI Flow diagram](docs/fapi-authlete-flow.png)
