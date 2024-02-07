@@ -55,7 +55,18 @@ async def pushed_authorization_request(
         json=payload,
     )
     result = response.json()
-    return json.loads(result["responseContent"])
+    try:
+        data = json.loads(result["responseContent"])
+    except KeyError:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "message": "Unexpected response from FAPI",
+                "response": result,
+                "request": payload,
+            },
+        )
+    return data
 
 
 @app.post("/api/v1/authorize", response_model=models.AuthorizationResponse)
