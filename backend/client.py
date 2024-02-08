@@ -1,6 +1,7 @@
 import os
 
 import requests
+import jwt
 
 from api import conf
 
@@ -18,7 +19,7 @@ def pushed_authorization_request():
         f"{AUTHENTICATION_API}/api/v1/par/",
         json={
             "response_type": "code",
-            "client_id": "3280859750204",
+            "client_id": f"{conf.CLIENT_ID}",
             "redirect_uri": "https://mobile.example.com/cb",
             "code_challenge": "W78hCS0q72DfIHa...kgZkEJuAFaT4",
             "code_challenge_method": "S256",
@@ -36,7 +37,7 @@ def initiate_authorization(request_uri: str):
         f"{AUTHENTICATION_API}/api/v1/authorize/",
         json={
             "request_uri": request_uri,
-            "client_id": 3280859750204,
+            "client_id": f"{conf.CLIENT_ID}",
         },
         verify=False,
     )
@@ -84,7 +85,7 @@ def get_fapi_token(
     response = session.post(
         f"{AUTHENTICATION_API}/api/v1/authorize/token",
         json={
-            "client_id": "3280859750204",
+            "client_id": f"{conf.CLIENT_ID}",
             "parameters": f"grant_type=authorization_code&redirect_uri=https://mobile.example.com/cb&code={auth_code}",
         },
         verify=False,
@@ -102,7 +103,21 @@ if __name__ == "__main__":
     auth_code = authentication_issue_request(token, ticket)["authorizationCode"]
     print(auth_code)
     ## Now we need to exchange the auth code for an access token
-    fapi_token = get_fapi_token(auth_code)["access_token"]
+    result = get_fapi_token(auth_code)
+    print(result)
+    fapi_token = result["access_token"]
+    # print(fapi_token)
+    # Test decoding the token using jwks
+    jwks_url = conf.FAPI_API + "/.well-known/jwks.json"
+    # print(jwks_url)
+    jwks_client = jwt.PyJWKClient(jwks_url)
+    header = jwt.get_unverified_header(fapi_token)
+    print(header)
+
+    key = jwks_client.get_signing_key(header["kid"]).key
+    decoded = jwt.decode(fapi_token, key, [header["alg"]], audience=f"{conf.CLIENT_ID}")
+
+    print(decoded)
     # And finally! When we acces the resource server, it can introspect the FAPI token
     # This request would come from the resource server
     introspect = requests.post(
