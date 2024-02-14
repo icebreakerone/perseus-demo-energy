@@ -16,8 +16,8 @@ CLIENT_PUSHED_AUTHORIZATION_REQUEST: JsonDict = {
 
 PUSHED_AUTHORIZATION_REQUEST: JsonDict = {
     "parameters": f"response_type=code&client_id={conf.CLIENT_ID}&redirect_uri=https%3A%2F%2Fmobile.example.com%2Fcb&code_challenge=W78hCS0q72DfIHa...kgZkEJuAFaT4&code_challenge_method=S256",
-    "clientId": CLIENT_ID,
-    "clientCertificate": CLIENT_CERTIFICATE,
+    "client_id": CLIENT_ID,
+    "client_certificate": CLIENT_CERTIFICATE,
 }
 
 
@@ -38,14 +38,14 @@ AUTHORIZATION_RESPONSE: JsonDict = {
 
 ISSUE_RESPONSE: JsonDict = {
     "type": "authorizationIssueResponse",
-    "resultCode": "A040001",
-    "resultMessage": "[A040001] The authorization request was processed successfully.",
-    "accessTokenDuration": 0,
-    "accessTokenExpiresAt": 0,
+    "result_code": "A040001",
+    "result_message": "[A040001] The authorization request was processed successfully.",
+    "access_token_duration": 0,
+    "access_token_expires_at": 0,
     "action": "LOCATION",
-    "authorizationCode": "DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70",
-    "idToken": "eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJzdWIiOiJ0ZXN0dXNlcjAxIiwiYXVkIjpbIjU5MTIwNTk4NzgxNjQ5MCJdLCJjX2hhc2giOiJqR2kyOElvYm5HcjNNQ3Y0UUVQRTNnIiwiaXNzIjoiaHR0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImV4cCI6MTU3MjQxMjY4MiwiaWF0IjoxNTcyMzI2MjgyLCJub25jZSI6Im4tMFM2X1d6QTJNaiJ9.1PFmc0gAsBWtLBriq3z9a4Tsi_ioEYlOqOYbicGEXWIS1WGX5ffGOyZNSzVBMamZbltZmSys0jlYmmYYLqgGsg",
-    "responseContent": (
+    "authorization_code": "DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70",
+    "id_token": "eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJzdWIiOiJ0ZXN0dXNlcjAxIiwiYXVkIjpbIjU5MTIwNTk4NzgxNjQ5MCJdLCJjX2hhc2giOiJqR2kyOElvYm5HcjNNQ3Y0UUVQRTNnIiwiaXNzIjoiaHR0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImV4cCI6MTU3MjQxMjY4MiwiaWF0IjoxNTcyMzI2MjgyLCJub25jZSI6Im4tMFM2X1d6QTJNaiJ9.1PFmc0gAsBWtLBriq3z9a4Tsi_ioEYlOqOYbicGEXWIS1WGX5ffGOyZNSzVBMamZbltZmSys0jlYmmYYLqgGsg",
+    "response_content": (
         "https://client.example.org/cb/example.com#"
         "code=DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70&"
         "id_token=eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJzdWIiOiJ0ZXN0dXNlcjAxIiwiYXVkIjpbIjU5MTIwN"

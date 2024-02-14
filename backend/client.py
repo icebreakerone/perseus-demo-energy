@@ -100,26 +100,32 @@ if __name__ == "__main__":
     token = get_user_token()["access_token"]
     consent = give_consent(token)
     print(consent)
-    auth_code = authentication_issue_request(token, ticket)["authorizationCode"]
+    auth_code = authentication_issue_request(token, ticket)["authorization_code"]
     print(auth_code)
     ## Now we need to exchange the auth code for an access token
     result = get_fapi_token(auth_code)
-    print(result)
+    # print(result)
     fapi_token = result["access_token"]
-    # print(fapi_token)
+    print(fapi_token)
     # Test decoding the token using jwks
-    jwks_url = conf.FAPI_API + "/.well-known/jwks.json"
-    # print(jwks_url)
-    jwks_client = jwt.PyJWKClient(jwks_url)
-    header = jwt.get_unverified_header(fapi_token)
-    print(header)
+    # jwks_url = conf.FAPI_API + "/.well-known/jwks.json"
+    # # print(jwks_url)
+    # jwks_client = jwt.PyJWKClient(jwks_url)
+    # header = jwt.get_unverified_header(fapi_token)
+    # print(header)
 
-    key = jwks_client.get_signing_key(header["kid"]).key
-    decoded = jwt.decode(fapi_token, key, [header["alg"]], audience=f"{conf.CLIENT_ID}")
+    # key = jwks_client.get_signing_key(header["kid"]).key
+    # decoded = jwt.decode(fapi_token, key, [header["alg"]], audience=f"{conf.CLIENT_ID}")
 
-    print(decoded)
+    # print(decoded)
     # And finally! When we acces the resource server, it can introspect the FAPI token
     # This request would come from the resource server
-    introspect = requests.post(
-        conf.FAPI_API + "/api/v1/introspect", data={"token": fapi_token}
+    session = requests.Session()
+    session.cert = (CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY)
+    session.verify = False
+    introspection_response = session.post(
+        f"{AUTHENTICATION_API}/api/v1/authorize/introspect",
+        json={"token": fapi_token},
+        verify=False,
     )
+    print(introspection_response.json())

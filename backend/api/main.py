@@ -45,8 +45,8 @@ async def pushed_authorization_request(
     """
     payload = {
         "parameters": urllib.parse.urlencode(par.model_dump()),
-        "clientId": par.client_id,
-        "clientCertificate": x_amzn_mtls_clientcert,
+        "client_id": par.client_id,
+        "client_certificate": x_amzn_mtls_clientcert,
     }
     session = requests.Session()
     session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
@@ -56,7 +56,7 @@ async def pushed_authorization_request(
     )
     result = response.json()
     try:
-        data = json.loads(result["responseContent"])
+        data = json.loads(result["response_content"])
     except KeyError:
         raise HTTPException(
             status_code=500,
@@ -78,8 +78,8 @@ async def authorization_code(
     send it back to the client app
     """
     payload = {
-        "requestUri": auth_request.request_uri,
-        "clientId": auth_request.client_id,
+        "request_uri": auth_request.request_uri,
+        "client_id": auth_request.client_id,
     }
     session = requests.Session()
     session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
@@ -136,9 +136,10 @@ async def token(
     """
     payload = {
         "parameters": urllib.parse.urlencode(token_request.model_dump()),
-        "clientId": token_request.client_id,
-        "clientCertificate": x_amzn_mtls_clientcert,
+        "client_id": token_request.client_id,
+        "client_certificate": x_amzn_mtls_clientcert,
     }
+    print("SENDING", payload)
     session = requests.Session()
     session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
     response = session.post(
@@ -146,11 +147,36 @@ async def token(
         json=payload,
     )
     result = response.json()
+    print(result)
     return models.FAPITokenResponse(
-        access_token=result["accessToken"],
-        id_token=result["idToken"],
-        refresh_token=result["refreshToken"],
+        access_token=result["access_token"],
+        id_token=result["id_token"],
+        refresh_token=result["refresh_token"],
     )
+
+
+@app.post("/api/v1/authorize/introspect")
+async def introspect(
+    token: models.IntrospectionRequest,
+    x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
+) -> dict:
+    """
+    Pass the request along to the FAPI api, await the response,
+    send it back to the client app
+    """
+    payload = {
+        "token": token.token,
+        "client_certificate": x_amzn_mtls_clientcert,
+    }
+    session = requests.Session()
+    session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
+    response = session.post(
+        f"{conf.FAPI_API}/auth/introspection/",
+        json=payload,
+    )
+    result = response.json()
+    # The authentication server can use the response to make its own checks,
+    return result
 
 
 """
