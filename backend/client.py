@@ -1,6 +1,11 @@
+"""
+A command line script to demonstrate the FAPI flow
+"""
+
 import os
 
 import requests
+import jwt
 
 from api import conf
 
@@ -10,15 +15,20 @@ CLIENT_CERTIFICATE = f"{ROOT_PATH}/certs/client-cert.pem"
 CLIENT_PRIVATE_KEY = f"{ROOT_PATH}/certs/client-key.pem"
 
 
-def pushed_authorization_request():
+def get_session():
     session = requests.Session()
     session.cert = (CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY)
     session.verify = False
+    return session
+
+
+def pushed_authorization_request():
+    session = get_session()
     response = session.post(
         f"{AUTHENTICATION_API}/api/v1/par/",
         json={
             "response_type": "code",
-            "client_id": "3280859750204",
+            "client_id": f"{conf.CLIENT_ID}",
             "redirect_uri": "https://mobile.example.com/cb",
             "code_challenge": "W78hCS0q72DfIHa...kgZkEJuAFaT4",
             "code_challenge_method": "S256",
@@ -36,7 +46,7 @@ def initiate_authorization(request_uri: str):
         f"{AUTHENTICATION_API}/api/v1/authorize/",
         json={
             "request_uri": request_uri,
-            "client_id": 3280859750204,
+            "client_id": f"{conf.CLIENT_ID}",
         },
         verify=False,
     )
@@ -76,15 +86,11 @@ def give_consent(token: str):
 def get_fapi_token(
     auth_code: str,
 ):
-    session = requests.Session()
-    session.cert = (CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY)
-    session.verify = False
-    """
-    """
+    session = get_session()
     response = session.post(
         f"{AUTHENTICATION_API}/api/v1/authorize/token",
         json={
-            "client_id": "3280859750204",
+            "client_id": f"{conf.CLIENT_ID}",
             "parameters": f"grant_type=authorization_code&redirect_uri=https://mobile.example.com/cb&code={auth_code}",
         },
         verify=False,
@@ -92,19 +98,42 @@ def get_fapi_token(
     return response.json()
 
 
-if __name__ == "__main__":
-    data = pushed_authorization_request()
-    print(data)
-    ticket = initiate_authorization(data["request_uri"])["ticket"]
-    token = get_user_token()["access_token"]
-    consent = give_consent(token)
-    print(consent)
-    auth_code = authentication_issue_request(token, ticket)["authorizationCode"]
-    print(auth_code)
-    ## Now we need to exchange the auth code for an access token
-    fapi_token = get_fapi_token(auth_code)["access_token"]
-    # And finally! When we acces the resource server, it can introspect the FAPI token
-    # This request would come from the resource server
-    introspect = requests.post(
-        conf.FAPI_API + "/api/v1/introspect", data={"token": fapi_token}
+def introspect_token(fapi_token: str):
+    session = get_session()
+    introspection_response = session.post(
+        f"{AUTHENTICATION_API}/api/v1/authorize/introspect",
+        json={"token": fapi_token},
+        verify=False,
     )
+    return introspection_response.json()
+
+
+def client_side_decoding():
+    """
+    Use the jwks to decode the token
+    """
+    jwks_url = conf.FAPI_API + "/.well-known/jwks.json"
+    jwks_client = jwt.PyJWKClient(jwks_url)
+    header = jwt.get_unverified_header(fapi_token)
+    key = jwks_client.get_signing_key(header["kid"]).key
+    decoded = jwt.decode(fapi_token, key, [header["alg"]], audience=f"{conf.CLIENT_ID}")
+    return decoded
+
+
+if __name__ == "__main__":
+    # Initiate flow with PAR
+    data = pushed_authorization_request()
+    # Take note of the ticket
+    ticket = initiate_authorization(data["request_uri"])["ticket"]
+    # authenticate the user
+    token = get_user_token()["access_token"]
+    # Ask for user's consent
+    consent = give_consent(token)
+    # Now we have identified the user, we can use the ticket to request an authorization code
+    auth_code = authentication_issue_request(token, ticket)["authorization_code"]
+    # Now we need to exchange the auth code for an access token
+    result = get_fapi_token(auth_code)
+    fapi_token = result["access_token"]
+    # The token can be used to access protected APIs
+    # The resource server can introspect the token
+    print(introspect_token(fapi_token))

@@ -19,8 +19,8 @@ class ClientPushedAuthorizationRequest(BaseModel):
 
 class PushedAuthorizationRequest(BaseModel):
     parameters: str
-    clientId: int
-    clientCertificate: str
+    client_id: int
+    client_certificate: str
     model_config = {
         "json_schema_extra": {
             "examples": [
@@ -76,14 +76,14 @@ class IssueRequest(BaseModel):
 
 class IssueResponse(BaseModel):
     type: str
-    resultCode: str
-    resultMessage: str
-    accessTokenDuration: int
-    accessTokenExpiresAt: int
+    result_code: str
+    result_message: str
+    access_token_duration: int
+    access_token_expires_at: int
     action: str
-    authorizationCode: str
-    idToken: str
-    responseContent: str
+    authorization_code: str
+    id_token: str
+    response_content: str
     model_config = {
         "json_schema_extra": {
             "examples": [
@@ -104,6 +104,17 @@ class FAPITokenResponse(BaseModel):
     id_token: str
     refresh_token: str
     model_config = {"json_schema_extra": {"examples": [examples.TOKEN_RESPONSE]}}
+
+
+class IntrospectionRequest(BaseModel):
+    token: str
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {"token": "SUtEVc3T"},
+            ]
+        }
+    }
 
 
 # Models for user authentication demo

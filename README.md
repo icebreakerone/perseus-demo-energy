@@ -21,7 +21,14 @@ The docker environment uses nginx to proxy requests to uvicorn, with nginx confi
 
 ## Testing the API with client.py
 
-client.py will execute a series of requests to the API, and print the results, emulating the behaviour of the client API.
+client.py will execute a series of requests to the API demonstrating the steps from initial PAR (pushed authorization request) to introspecting the token presented to the resource API. The steps are
+
+- Create a push authorization request, and store the ticket value
+- Authenticate the user
+- Ask for user's consent
+- With the users identity and the ticket, retrieve the authorization code
+- Exchange the authorization code for an access token
+- Introspect the access token
 
 ```bash
 pipenv run python -W ignore  client.py
@@ -35,16 +42,13 @@ By default the client will use the local docker environment, testing against the
 AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" pipenv run python -W ignore  client.py
 ```
 
-Example output, showing the initial request_uri created, the consent grant response and finally an authorisation token:
+A successful run will complete with outputting the token introspection response:
 
 ```bash
 $ AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" pipenv run python -W ignore  client.py
-
 Loading .env environment variables...
 Courtesy Notice: Pipenv found itself running within a virtual environment, so it will automatically use that environment, instead of creating its own for any project. You can set PIPENV_IGNORE_VIRTUALENVS=1 to force pipenv to ignore that environment and create its own instead. You can set PIPENV_VERBOSITY=-1 to suppress this warning.
-{'expires_in': 600, 'request_uri': 'urn:ietf:params:oauth:request_uri:UymBrux4ZEMrBRKx9UyKyIm98zpX1cHmAPGAGNofmm4'}
-{'message': 'consent granted', 'user': 'platform_user', 'scope': ['account']}
-DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70
+{'active': True, 'sub': 'platform.user@perseus.ib1.org', 'organisation_id': 'perseus-demo-accounting', 'amr': ['kba', 'email_verification', 'phone_verification'], 'auth_time': 1702375791, 'organisation_name': 'Perseus Demo Accounting', 'organisation_number': '01234567', 'software_name': 'Perseus Demo Accounting Client', 'client_id': 21653835348762, 'exp': 1702379404, 'iat': 1702375804, 'iss': 'https://perseus-demo-fapi.ib1.org', 'scope': ['openid', 'profile'], 'cnf': {'x5t#S256': '97P4nb8Ey8z6miUXCkMjLNhewEgWyKW4LpEosCnr9yg'}, 'token_type': 'Bearer'}
 ```
 
 ## FAPI Flow
