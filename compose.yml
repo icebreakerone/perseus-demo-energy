@@ -19,6 +19,7 @@ services:
     stop_signal: SIGINT
     environment:
       - FAPI_API=http://host.docker.internal:8020
+      # - FAPI_API=https://perseus-demo-fapi.ib1.org
     command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
     volumes:
       - ./backend/api:/code/api

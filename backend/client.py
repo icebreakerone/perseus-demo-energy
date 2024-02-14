@@ -3,7 +3,7 @@ A command line script to demonstrate the FAPI flow
 """
 
 import os
-
+import time
 import requests
 import jwt
 
@@ -95,11 +95,14 @@ def get_fapi_token(
         },
         verify=False,
     )
+    if not response.status_code == 200:
+        raise Exception(response.text)
     return response.json()
 
 
 def introspect_token(fapi_token: str):
     session = get_session()
+    # session = requests.Session()
     introspection_response = session.post(
         f"{AUTHENTICATION_API}/api/v1/authorize/introspect",
         json={"token": fapi_token},

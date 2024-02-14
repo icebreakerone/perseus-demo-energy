@@ -139,15 +139,16 @@ async def token(
         "client_id": token_request.client_id,
         "client_certificate": x_amzn_mtls_clientcert,
     }
-    print("SENDING", payload)
     session = requests.Session()
     session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
     response = session.post(
         f"{conf.FAPI_API}/auth/token/",
         json=payload,
     )
+    if response.status_code != 200:
+        print(response.text)
+        raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
-    print(result)
     return models.FAPITokenResponse(
         access_token=result["access_token"],
         id_token=result["id_token"],
