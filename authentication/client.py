@@ -9,7 +9,8 @@ import jwt
 
 from api import conf
 
-AUTHENTICATION_API = os.environ.get("AUTHENTICATION_API", "https://0.0.0.0:443")
+AUTHENTICATION_API = os.environ.get("AUTHENTICATION_API", "https://0.0.0.0:8000")
+RESOURCE_API = os.environ.get("RESOURCE_API", "https://0.0.0.0:8010")
 ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLIENT_CERTIFICATE = f"{ROOT_PATH}/certs/client-cert.pem"
 CLIENT_PRIVATE_KEY = f"{ROOT_PATH}/certs/client-key.pem"
@@ -23,9 +24,9 @@ def get_session():
 
 
 def pushed_authorization_request():
-    session = get_session()
-    response = session.post(
-        f"{AUTHENTICATION_API}/api/v1/par/",
+
+    response = requests.post(
+        f"{AUTHENTICATION_API}/api/v1/par",
         json={
             "response_type": "code",
             "client_id": f"{conf.CLIENT_ID}",
@@ -34,7 +35,9 @@ def pushed_authorization_request():
             "code_challenge_method": "S256",
         },
         verify=False,
+        cert=(CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY),
     )
+    print(response.status_code, response.text)
     return response.json()
 
 
@@ -43,7 +46,7 @@ def initiate_authorization(request_uri: str):
     /as/authorise?request_uri=urn:ietf:params:oauth:request_uri:UymBrux4ZEMrBRKx9UyKyIm98zpX1cHmAPGAGNofmm4
     """
     response = requests.post(
-        f"{AUTHENTICATION_API}/api/v1/authorize/",
+        f"{AUTHENTICATION_API}/api/v1/authorize",
         json={
             "request_uri": request_uri,
             "client_id": f"{conf.CLIENT_ID}",
@@ -128,15 +131,25 @@ if __name__ == "__main__":
     data = pushed_authorization_request()
     # Take note of the ticket
     ticket = initiate_authorization(data["request_uri"])["ticket"]
-    # authenticate the user
+    # # authenticate the user
     token = get_user_token()["access_token"]
-    # Ask for user's consent
+    # # Ask for user's consent
     consent = give_consent(token)
-    # Now we have identified the user, we can use the ticket to request an authorization code
+    # # Now we have identified the user, we can use the ticket to request an authorization code
     auth_code = authentication_issue_request(token, ticket)["authorization_code"]
-    # Now we need to exchange the auth code for an access token
+    # # Now we need to exchange the auth code for an access token
     result = get_fapi_token(auth_code)
     fapi_token = result["access_token"]
-    # The token can be used to access protected APIs
-    # The resource server can introspect the token
+    # # The token can be used to access protected APIs
+    # # The resource server can introspect the token
     print(introspect_token(fapi_token))
+    # We should now be able to use the token to retrieve data from the resource server
+    result = requests.get(
+        f"{RESOURCE_API}/api/v1/consumption",
+        verify=False,
+        headers={"Authorization": f"Bearer {fapi_token}"},
+        cert=(CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY),
+    )
+    print(result.status_code)
+    print(result.text)
+    print(result.json())

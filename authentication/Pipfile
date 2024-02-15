@@ -19,6 +19,7 @@ ruff = "*"
 types-python-jose = "*"
 types-passlib = "*"
 types-requests = "*"
+httpx = "*"
 
 [requires]
 python_version = "3.12"

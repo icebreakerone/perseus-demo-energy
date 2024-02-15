@@ -1,7 +1,7 @@
 server {
   listen 80;
   location / {
-    proxy_pass http://backend:8080;
+    proxy_pass http://${UPSTREAM}:8080;
   }
 }
 
@@ -25,6 +25,6 @@ server {
         # # if the client certificate verified 
         # # will have the value of 'SUCCESS' and 'NONE' otherwise
         proxy_set_header VERIFIED $ssl_client_verify;
-        proxy_pass http://backend:8080;
+        proxy_pass http://${UPSTREAM}:8080;
     }
 }

@@ -43,6 +43,7 @@ async def pushed_authorization_request(
     Pass the request along to the FAPI api, await the response,
     send it back to the client app
     """
+    print(x_amzn_mtls_clientcert)
     payload = {
         "parameters": urllib.parse.urlencode(par.model_dump()),
         "client_id": par.client_id,
