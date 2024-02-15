@@ -3,7 +3,6 @@ A command line script to demonstrate the FAPI flow
 """
 
 import os
-import time
 import requests
 import jwt
 
