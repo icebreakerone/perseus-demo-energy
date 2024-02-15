@@ -1,9 +1,5 @@
 import logging
-import time
-import os
-import tempfile
 import urllib.parse
-import email.utils
 import uuid
 from typing import Optional, Tuple
 import requests
