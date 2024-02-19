@@ -20,6 +20,9 @@ types-python-jose = "*"
 types-passlib = "*"
 types-requests = "*"
 httpx = "*"
+pytest = "*"
+responses = "*"
+pytest-mock = "*"
 
 [requires]
 python_version = "3.12"
