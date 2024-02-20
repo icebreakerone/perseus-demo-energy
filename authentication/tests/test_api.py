@@ -91,40 +91,22 @@ def test_token():
         },
         headers={"x-amzn-mtls-clientcert": "client-certificate"},
     )
-    print(response.text)
     assert response.status_code == 200
     assert "access_token" in response.json()
     assert "id_token" in response.json()
     assert "refresh_token" in response.json()
 
 
-# def test_introspect():
-#     response = client.post(
-#         "/api/v1/authorize/introspect",
-#         json={"token": "test-token"},
-#         headers={"x_amzn_mtls_clientcert": "client-certificate"},
-#     )
-#     assert response.status_code == 200
-#     assert "result" in response.json()
+def test_introspect():
+    # todo
+    pass
 
 
-# def test_login_for_access_token():
-#     response = client.post(
-#         "/api/v1/authenticate/token",
-#         data={"username": "test-user", "password": "test-password"},
-#     )
-#     assert response.status_code == 200
-#     assert "access_token" in response.json()
-#     assert "token_type" in response.json()
+def test_login_for_access_token():
+    # todo
+    pass
 
 
-# def test_user_consent():
-#     response = client.post(
-#         "/api/v1/authenticate/consent",
-#         json={"scopes": ["scope1", "scope2"]},
-#         headers={"Authorization": "Bearer access-token"},
-#     )
-#     assert response.status_code == 200
-#     assert "message" in response.json()
-#     assert "user" in response.json()
-#     assert "scope" in response.json()
+def test_user_consent():
+    # todo
+    pass
