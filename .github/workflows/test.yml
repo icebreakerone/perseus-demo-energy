@@ -11,6 +11,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
+      - name: pwd
+        run: pwd
+      - name: ls
+        run: ls
+      - name: auth
+        run: ls authentication
+      - name: .github
+        run: ls .github
       - name: Run tests
         uses: ./.github/templates/test/
         with:
