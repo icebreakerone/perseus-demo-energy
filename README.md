@@ -44,7 +44,7 @@ client.py will execute a series of requests to the API demonstrating the steps f
 - Introspect the access token
 
 ```bash
-pipenv run python -W ignore  client.py
+python -W ignore  client.py
 ```
 
 The `-W ignore` switch suppresses multiple warnings about the self-signed certificates.
@@ -52,7 +52,7 @@ The `-W ignore` switch suppresses multiple warnings about the self-signed certif
 By default the client will use the local docker environment, testing against the live API can be achieved by setting the `AUTHENTICATION_API` and `RESOURCE_API` environment variables.
 
 ```bash
-AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" pipenv run python -W ignore  client.py
+AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" RESOURCE_API=https://perseus-demo-energy.ib1.org python -W ignore  client.py
 ```
 
 A successful run will complete with outputting the token introspection response:
