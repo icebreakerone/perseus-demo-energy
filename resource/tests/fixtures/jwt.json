@@ -1,0 +1,31 @@
+{
+    "active": true,
+    "sub": "test@icebreakerone.org",
+    "organisation_id": "perseusdemoenergy",
+    "acr": "urn:mace:incommon:iap:silver",
+    "amr": [
+        "kba",
+        "email_verification",
+        "phone_verification",
+        "two_factor"
+    ],
+    "auth_time": 1701358177,
+    "organisation_name": "Perseus Demo Energy",
+    "organisation_number": "01234567",
+    "software_name": "Perseus Demo Accounting Client",
+    "software_roles": [
+        "Test Role 1"
+    ],
+    "additional_software_metadata": {
+        "metadata": {}
+    },
+    "client_id": "fa877db2-345a-43d0-bb4d-7ad0138003c9",
+    "exp": 1701361795,
+    "iat": 1701358195,
+    "iss": "https://auth.directory.sandbox.trust.icebreakerone.org",
+    "scope": "directory:software",
+    "cnf": {
+        "x5t#S256": "XCK75zLZH5zm2_bnNfBNxW7UGcvXshgASoJ01T6uVO8"
+    },
+    "token_type": "Bearer"
+}

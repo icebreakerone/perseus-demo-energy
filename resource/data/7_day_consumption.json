@@ -1,0 +1,3026 @@
+[
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T09:00:00+00:00",
+    "to": "2023-10-25T09:30:00+00:00",
+    "consumption": {
+      "value": 194.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T09:30:00+00:00",
+    "to": "2023-10-25T10:00:00+00:00",
+    "consumption": {
+      "value": 119.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T10:00:00+00:00",
+    "to": "2023-10-25T10:30:00+00:00",
+    "consumption": {
+      "value": 229.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T10:30:00+00:00",
+    "to": "2023-10-25T11:00:00+00:00",
+    "consumption": {
+      "value": 198.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T11:00:00+00:00",
+    "to": "2023-10-25T11:30:00+00:00",
+    "consumption": {
+      "value": 130.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T11:30:00+00:00",
+    "to": "2023-10-25T12:00:00+00:00",
+    "consumption": {
+      "value": 258.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T12:00:00+00:00",
+    "to": "2023-10-25T12:30:00+00:00",
+    "consumption": {
+      "value": 101.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T12:30:00+00:00",
+    "to": "2023-10-25T13:00:00+00:00",
+    "consumption": {
+      "value": 200.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T13:00:00+00:00",
+    "to": "2023-10-25T13:30:00+00:00",
+    "consumption": {
+      "value": 141.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T13:30:00+00:00",
+    "to": "2023-10-25T14:00:00+00:00",
+    "consumption": {
+      "value": 97.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T14:00:00+00:00",
+    "to": "2023-10-25T14:30:00+00:00",
+    "consumption": {
+      "value": 175.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T14:30:00+00:00",
+    "to": "2023-10-25T15:00:00+00:00",
+    "consumption": {
+      "value": 203.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T15:00:00+00:00",
+    "to": "2023-10-25T15:30:00+00:00",
+    "consumption": {
+      "value": 284.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T15:30:00+00:00",
+    "to": "2023-10-25T16:00:00+00:00",
+    "consumption": {
+      "value": 219.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T16:00:00+00:00",
+    "to": "2023-10-25T16:30:00+00:00",
+    "consumption": {
+      "value": 218.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T16:30:00+00:00",
+    "to": "2023-10-25T17:00:00+00:00",
+    "consumption": {
+      "value": 220.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T17:00:00+00:00",
+    "to": "2023-10-25T17:30:00+00:00",
+    "consumption": {
+      "value": 215.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T17:30:00+00:00",
+    "to": "2023-10-25T18:00:00+00:00",
+    "consumption": {
+      "value": 117.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T18:00:00+00:00",
+    "to": "2023-10-25T18:30:00+00:00",
+    "consumption": {
+      "value": 281.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T18:30:00+00:00",
+    "to": "2023-10-25T19:00:00+00:00",
+    "consumption": {
+      "value": 90.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T19:00:00+00:00",
+    "to": "2023-10-25T19:30:00+00:00",
+    "consumption": {
+      "value": 149.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T19:30:00+00:00",
+    "to": "2023-10-25T20:00:00+00:00",
+    "consumption": {
+      "value": 122.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T20:00:00+00:00",
+    "to": "2023-10-25T20:30:00+00:00",
+    "consumption": {
+      "value": 291.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T20:30:00+00:00",
+    "to": "2023-10-25T21:00:00+00:00",
+    "consumption": {
+      "value": 171.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T21:00:00+00:00",
+    "to": "2023-10-25T21:30:00+00:00",
+    "consumption": {
+      "value": 117.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T21:30:00+00:00",
+    "to": "2023-10-25T22:00:00+00:00",
+    "consumption": {
+      "value": 284.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T22:00:00+00:00",
+    "to": "2023-10-25T22:30:00+00:00",
+    "consumption": {
+      "value": 78.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T22:30:00+00:00",
+    "to": "2023-10-25T23:00:00+00:00",
+    "consumption": {
+      "value": 299.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T23:00:00+00:00",
+    "to": "2023-10-25T23:30:00+00:00",
+    "consumption": {
+      "value": 105.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-25T23:30:00+00:00",
+    "to": "2023-10-26T00:00:00+00:00",
+    "consumption": {
+      "value": 55.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T00:00:00+00:00",
+    "to": "2023-10-26T00:30:00+00:00",
+    "consumption": {
+      "value": 170.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T00:30:00+00:00",
+    "to": "2023-10-26T01:00:00+00:00",
+    "consumption": {
+      "value": 156.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T01:00:00+00:00",
+    "to": "2023-10-26T01:30:00+00:00",
+    "consumption": {
+      "value": 183.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T01:30:00+00:00",
+    "to": "2023-10-26T02:00:00+00:00",
+    "consumption": {
+      "value": 123.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T02:00:00+00:00",
+    "to": "2023-10-26T02:30:00+00:00",
+    "consumption": {
+      "value": 53.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T02:30:00+00:00",
+    "to": "2023-10-26T03:00:00+00:00",
+    "consumption": {
+      "value": 111.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T03:00:00+00:00",
+    "to": "2023-10-26T03:30:00+00:00",
+    "consumption": {
+      "value": 298.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T03:30:00+00:00",
+    "to": "2023-10-26T04:00:00+00:00",
+    "consumption": {
+      "value": 200.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T04:00:00+00:00",
+    "to": "2023-10-26T04:30:00+00:00",
+    "consumption": {
+      "value": 146.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T04:30:00+00:00",
+    "to": "2023-10-26T05:00:00+00:00",
+    "consumption": {
+      "value": 98.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T05:00:00+00:00",
+    "to": "2023-10-26T05:30:00+00:00",
+    "consumption": {
+      "value": 216.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T05:30:00+00:00",
+    "to": "2023-10-26T06:00:00+00:00",
+    "consumption": {
+      "value": 50.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T06:00:00+00:00",
+    "to": "2023-10-26T06:30:00+00:00",
+    "consumption": {
+      "value": 230.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T06:30:00+00:00",
+    "to": "2023-10-26T07:00:00+00:00",
+    "consumption": {
+      "value": 235.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T07:00:00+00:00",
+    "to": "2023-10-26T07:30:00+00:00",
+    "consumption": {
+      "value": 73.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T07:30:00+00:00",
+    "to": "2023-10-26T08:00:00+00:00",
+    "consumption": {
+      "value": 65.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T08:00:00+00:00",
+    "to": "2023-10-26T08:30:00+00:00",
+    "consumption": {
+      "value": 271.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T08:30:00+00:00",
+    "to": "2023-10-26T09:00:00+00:00",
+    "consumption": {
+      "value": 142.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T09:00:00+00:00",
+    "to": "2023-10-26T09:30:00+00:00",
+    "consumption": {
+      "value": 88.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T09:30:00+00:00",
+    "to": "2023-10-26T10:00:00+00:00",
+    "consumption": {
+      "value": 286.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T10:00:00+00:00",
+    "to": "2023-10-26T10:30:00+00:00",
+    "consumption": {
+      "value": 264.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T10:30:00+00:00",
+    "to": "2023-10-26T11:00:00+00:00",
+    "consumption": {
+      "value": 244.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T11:00:00+00:00",
+    "to": "2023-10-26T11:30:00+00:00",
+    "consumption": {
+      "value": 61.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T11:30:00+00:00",
+    "to": "2023-10-26T12:00:00+00:00",
+    "consumption": {
+      "value": 170.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T12:00:00+00:00",
+    "to": "2023-10-26T12:30:00+00:00",
+    "consumption": {
+      "value": 116.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T12:30:00+00:00",
+    "to": "2023-10-26T13:00:00+00:00",
+    "consumption": {
+      "value": 231.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T13:00:00+00:00",
+    "to": "2023-10-26T13:30:00+00:00",
+    "consumption": {
+      "value": 182.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T13:30:00+00:00",
+    "to": "2023-10-26T14:00:00+00:00",
+    "consumption": {
+      "value": 57.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T14:00:00+00:00",
+    "to": "2023-10-26T14:30:00+00:00",
+    "consumption": {
+      "value": 160.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T14:30:00+00:00",
+    "to": "2023-10-26T15:00:00+00:00",
+    "consumption": {
+      "value": 147.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T15:00:00+00:00",
+    "to": "2023-10-26T15:30:00+00:00",
+    "consumption": {
+      "value": 227.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T15:30:00+00:00",
+    "to": "2023-10-26T16:00:00+00:00",
+    "consumption": {
+      "value": 72.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T16:00:00+00:00",
+    "to": "2023-10-26T16:30:00+00:00",
+    "consumption": {
+      "value": 74.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T16:30:00+00:00",
+    "to": "2023-10-26T17:00:00+00:00",
+    "consumption": {
+      "value": 107.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T17:00:00+00:00",
+    "to": "2023-10-26T17:30:00+00:00",
+    "consumption": {
+      "value": 230.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T17:30:00+00:00",
+    "to": "2023-10-26T18:00:00+00:00",
+    "consumption": {
+      "value": 129.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T18:00:00+00:00",
+    "to": "2023-10-26T18:30:00+00:00",
+    "consumption": {
+      "value": 98.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T18:30:00+00:00",
+    "to": "2023-10-26T19:00:00+00:00",
+    "consumption": {
+      "value": 109.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T19:00:00+00:00",
+    "to": "2023-10-26T19:30:00+00:00",
+    "consumption": {
+      "value": 112.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T19:30:00+00:00",
+    "to": "2023-10-26T20:00:00+00:00",
+    "consumption": {
+      "value": 110.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T20:00:00+00:00",
+    "to": "2023-10-26T20:30:00+00:00",
+    "consumption": {
+      "value": 291.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T20:30:00+00:00",
+    "to": "2023-10-26T21:00:00+00:00",
+    "consumption": {
+      "value": 256.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T21:00:00+00:00",
+    "to": "2023-10-26T21:30:00+00:00",
+    "consumption": {
+      "value": 105.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T21:30:00+00:00",
+    "to": "2023-10-26T22:00:00+00:00",
+    "consumption": {
+      "value": 261.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T22:00:00+00:00",
+    "to": "2023-10-26T22:30:00+00:00",
+    "consumption": {
+      "value": 170.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T22:30:00+00:00",
+    "to": "2023-10-26T23:00:00+00:00",
+    "consumption": {
+      "value": 295.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T23:00:00+00:00",
+    "to": "2023-10-26T23:30:00+00:00",
+    "consumption": {
+      "value": 213.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-26T23:30:00+00:00",
+    "to": "2023-10-27T00:00:00+00:00",
+    "consumption": {
+      "value": 108.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T00:00:00+00:00",
+    "to": "2023-10-27T00:30:00+00:00",
+    "consumption": {
+      "value": 124.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T00:30:00+00:00",
+    "to": "2023-10-27T01:00:00+00:00",
+    "consumption": {
+      "value": 251.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T01:00:00+00:00",
+    "to": "2023-10-27T01:30:00+00:00",
+    "consumption": {
+      "value": 142.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T01:30:00+00:00",
+    "to": "2023-10-27T02:00:00+00:00",
+    "consumption": {
+      "value": 72.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T02:00:00+00:00",
+    "to": "2023-10-27T02:30:00+00:00",
+    "consumption": {
+      "value": 183.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T02:30:00+00:00",
+    "to": "2023-10-27T03:00:00+00:00",
+    "consumption": {
+      "value": 280.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T03:00:00+00:00",
+    "to": "2023-10-27T03:30:00+00:00",
+    "consumption": {
+      "value": 91.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T03:30:00+00:00",
+    "to": "2023-10-27T04:00:00+00:00",
+    "consumption": {
+      "value": 270.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T04:00:00+00:00",
+    "to": "2023-10-27T04:30:00+00:00",
+    "consumption": {
+      "value": 251.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T04:30:00+00:00",
+    "to": "2023-10-27T05:00:00+00:00",
+    "consumption": {
+      "value": 157.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T05:00:00+00:00",
+    "to": "2023-10-27T05:30:00+00:00",
+    "consumption": {
+      "value": 273.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T05:30:00+00:00",
+    "to": "2023-10-27T06:00:00+00:00",
+    "consumption": {
+      "value": 166.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T06:00:00+00:00",
+    "to": "2023-10-27T06:30:00+00:00",
+    "consumption": {
+      "value": 178.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T06:30:00+00:00",
+    "to": "2023-10-27T07:00:00+00:00",
+    "consumption": {
+      "value": 104.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T07:00:00+00:00",
+    "to": "2023-10-27T07:30:00+00:00",
+    "consumption": {
+      "value": 96.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T07:30:00+00:00",
+    "to": "2023-10-27T08:00:00+00:00",
+    "consumption": {
+      "value": 106.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T08:00:00+00:00",
+    "to": "2023-10-27T08:30:00+00:00",
+    "consumption": {
+      "value": 238.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T08:30:00+00:00",
+    "to": "2023-10-27T09:00:00+00:00",
+    "consumption": {
+      "value": 188.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T09:00:00+00:00",
+    "to": "2023-10-27T09:30:00+00:00",
+    "consumption": {
+      "value": 286.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T09:30:00+00:00",
+    "to": "2023-10-27T10:00:00+00:00",
+    "consumption": {
+      "value": 68.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T10:00:00+00:00",
+    "to": "2023-10-27T10:30:00+00:00",
+    "consumption": {
+      "value": 50.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T10:30:00+00:00",
+    "to": "2023-10-27T11:00:00+00:00",
+    "consumption": {
+      "value": 276.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T11:00:00+00:00",
+    "to": "2023-10-27T11:30:00+00:00",
+    "consumption": {
+      "value": 142.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T11:30:00+00:00",
+    "to": "2023-10-27T12:00:00+00:00",
+    "consumption": {
+      "value": 263.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T12:00:00+00:00",
+    "to": "2023-10-27T12:30:00+00:00",
+    "consumption": {
+      "value": 105.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T12:30:00+00:00",
+    "to": "2023-10-27T13:00:00+00:00",
+    "consumption": {
+      "value": 150.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T13:00:00+00:00",
+    "to": "2023-10-27T13:30:00+00:00",
+    "consumption": {
+      "value": 101.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T13:30:00+00:00",
+    "to": "2023-10-27T14:00:00+00:00",
+    "consumption": {
+      "value": 109.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T14:00:00+00:00",
+    "to": "2023-10-27T14:30:00+00:00",
+    "consumption": {
+      "value": 198.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T14:30:00+00:00",
+    "to": "2023-10-27T15:00:00+00:00",
+    "consumption": {
+      "value": 169.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T15:00:00+00:00",
+    "to": "2023-10-27T15:30:00+00:00",
+    "consumption": {
+      "value": 226.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T15:30:00+00:00",
+    "to": "2023-10-27T16:00:00+00:00",
+    "consumption": {
+      "value": 265.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T16:00:00+00:00",
+    "to": "2023-10-27T16:30:00+00:00",
+    "consumption": {
+      "value": 188.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T16:30:00+00:00",
+    "to": "2023-10-27T17:00:00+00:00",
+    "consumption": {
+      "value": 148.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T17:00:00+00:00",
+    "to": "2023-10-27T17:30:00+00:00",
+    "consumption": {
+      "value": 257.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T17:30:00+00:00",
+    "to": "2023-10-27T18:00:00+00:00",
+    "consumption": {
+      "value": 222.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T18:00:00+00:00",
+    "to": "2023-10-27T18:30:00+00:00",
+    "consumption": {
+      "value": 129.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T18:30:00+00:00",
+    "to": "2023-10-27T19:00:00+00:00",
+    "consumption": {
+      "value": 66.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T19:00:00+00:00",
+    "to": "2023-10-27T19:30:00+00:00",
+    "consumption": {
+      "value": 199.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T19:30:00+00:00",
+    "to": "2023-10-27T20:00:00+00:00",
+    "consumption": {
+      "value": 60.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T20:00:00+00:00",
+    "to": "2023-10-27T20:30:00+00:00",
+    "consumption": {
+      "value": 117.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T20:30:00+00:00",
+    "to": "2023-10-27T21:00:00+00:00",
+    "consumption": {
+      "value": 247.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T21:00:00+00:00",
+    "to": "2023-10-27T21:30:00+00:00",
+    "consumption": {
+      "value": 216.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T21:30:00+00:00",
+    "to": "2023-10-27T22:00:00+00:00",
+    "consumption": {
+      "value": 242.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T22:00:00+00:00",
+    "to": "2023-10-27T22:30:00+00:00",
+    "consumption": {
+      "value": 155.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T22:30:00+00:00",
+    "to": "2023-10-27T23:00:00+00:00",
+    "consumption": {
+      "value": 291.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T23:00:00+00:00",
+    "to": "2023-10-27T23:30:00+00:00",
+    "consumption": {
+      "value": 176.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-27T23:30:00+00:00",
+    "to": "2023-10-28T00:00:00+00:00",
+    "consumption": {
+      "value": 54.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T00:00:00+00:00",
+    "to": "2023-10-28T00:30:00+00:00",
+    "consumption": {
+      "value": 66.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T00:30:00+00:00",
+    "to": "2023-10-28T01:00:00+00:00",
+    "consumption": {
+      "value": 273.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T01:00:00+00:00",
+    "to": "2023-10-28T01:30:00+00:00",
+    "consumption": {
+      "value": 210.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T01:30:00+00:00",
+    "to": "2023-10-28T02:00:00+00:00",
+    "consumption": {
+      "value": 79.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T02:00:00+00:00",
+    "to": "2023-10-28T02:30:00+00:00",
+    "consumption": {
+      "value": 168.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T02:30:00+00:00",
+    "to": "2023-10-28T03:00:00+00:00",
+    "consumption": {
+      "value": 83.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T03:00:00+00:00",
+    "to": "2023-10-28T03:30:00+00:00",
+    "consumption": {
+      "value": 92.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T03:30:00+00:00",
+    "to": "2023-10-28T04:00:00+00:00",
+    "consumption": {
+      "value": 165.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T04:00:00+00:00",
+    "to": "2023-10-28T04:30:00+00:00",
+    "consumption": {
+      "value": 168.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T04:30:00+00:00",
+    "to": "2023-10-28T05:00:00+00:00",
+    "consumption": {
+      "value": 220.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T05:00:00+00:00",
+    "to": "2023-10-28T05:30:00+00:00",
+    "consumption": {
+      "value": 235.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T05:30:00+00:00",
+    "to": "2023-10-28T06:00:00+00:00",
+    "consumption": {
+      "value": 199.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T06:00:00+00:00",
+    "to": "2023-10-28T06:30:00+00:00",
+    "consumption": {
+      "value": 251.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T06:30:00+00:00",
+    "to": "2023-10-28T07:00:00+00:00",
+    "consumption": {
+      "value": 76.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T07:00:00+00:00",
+    "to": "2023-10-28T07:30:00+00:00",
+    "consumption": {
+      "value": 179.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T07:30:00+00:00",
+    "to": "2023-10-28T08:00:00+00:00",
+    "consumption": {
+      "value": 104.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T08:00:00+00:00",
+    "to": "2023-10-28T08:30:00+00:00",
+    "consumption": {
+      "value": 246.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T08:30:00+00:00",
+    "to": "2023-10-28T09:00:00+00:00",
+    "consumption": {
+      "value": 91.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T09:00:00+00:00",
+    "to": "2023-10-28T09:30:00+00:00",
+    "consumption": {
+      "value": 171.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T09:30:00+00:00",
+    "to": "2023-10-28T10:00:00+00:00",
+    "consumption": {
+      "value": 152.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T10:00:00+00:00",
+    "to": "2023-10-28T10:30:00+00:00",
+    "consumption": {
+      "value": 208.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T10:30:00+00:00",
+    "to": "2023-10-28T11:00:00+00:00",
+    "consumption": {
+      "value": 56.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T11:00:00+00:00",
+    "to": "2023-10-28T11:30:00+00:00",
+    "consumption": {
+      "value": 135.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T11:30:00+00:00",
+    "to": "2023-10-28T12:00:00+00:00",
+    "consumption": {
+      "value": 227.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T12:00:00+00:00",
+    "to": "2023-10-28T12:30:00+00:00",
+    "consumption": {
+      "value": 203.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T12:30:00+00:00",
+    "to": "2023-10-28T13:00:00+00:00",
+    "consumption": {
+      "value": 128.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T13:00:00+00:00",
+    "to": "2023-10-28T13:30:00+00:00",
+    "consumption": {
+      "value": 202.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T13:30:00+00:00",
+    "to": "2023-10-28T14:00:00+00:00",
+    "consumption": {
+      "value": 239.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T14:00:00+00:00",
+    "to": "2023-10-28T14:30:00+00:00",
+    "consumption": {
+      "value": 272.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T14:30:00+00:00",
+    "to": "2023-10-28T15:00:00+00:00",
+    "consumption": {
+      "value": 224.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T15:00:00+00:00",
+    "to": "2023-10-28T15:30:00+00:00",
+    "consumption": {
+      "value": 173.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T15:30:00+00:00",
+    "to": "2023-10-28T16:00:00+00:00",
+    "consumption": {
+      "value": 88.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T16:00:00+00:00",
+    "to": "2023-10-28T16:30:00+00:00",
+    "consumption": {
+      "value": 154.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T16:30:00+00:00",
+    "to": "2023-10-28T17:00:00+00:00",
+    "consumption": {
+      "value": 114.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T17:00:00+00:00",
+    "to": "2023-10-28T17:30:00+00:00",
+    "consumption": {
+      "value": 52.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T17:30:00+00:00",
+    "to": "2023-10-28T18:00:00+00:00",
+    "consumption": {
+      "value": 156.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T18:00:00+00:00",
+    "to": "2023-10-28T18:30:00+00:00",
+    "consumption": {
+      "value": 86.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T18:30:00+00:00",
+    "to": "2023-10-28T19:00:00+00:00",
+    "consumption": {
+      "value": 250.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T19:00:00+00:00",
+    "to": "2023-10-28T19:30:00+00:00",
+    "consumption": {
+      "value": 75.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T19:30:00+00:00",
+    "to": "2023-10-28T20:00:00+00:00",
+    "consumption": {
+      "value": 232.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T20:00:00+00:00",
+    "to": "2023-10-28T20:30:00+00:00",
+    "consumption": {
+      "value": 245.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T20:30:00+00:00",
+    "to": "2023-10-28T21:00:00+00:00",
+    "consumption": {
+      "value": 173.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T21:00:00+00:00",
+    "to": "2023-10-28T21:30:00+00:00",
+    "consumption": {
+      "value": 233.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T21:30:00+00:00",
+    "to": "2023-10-28T22:00:00+00:00",
+    "consumption": {
+      "value": 157.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T22:00:00+00:00",
+    "to": "2023-10-28T22:30:00+00:00",
+    "consumption": {
+      "value": 50.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T22:30:00+00:00",
+    "to": "2023-10-28T23:00:00+00:00",
+    "consumption": {
+      "value": 257.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T23:00:00+00:00",
+    "to": "2023-10-28T23:30:00+00:00",
+    "consumption": {
+      "value": 52.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-28T23:30:00+00:00",
+    "to": "2023-10-29T00:00:00+00:00",
+    "consumption": {
+      "value": 181.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T00:00:00+00:00",
+    "to": "2023-10-29T00:30:00+00:00",
+    "consumption": {
+      "value": 105.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T00:30:00+00:00",
+    "to": "2023-10-29T01:00:00+00:00",
+    "consumption": {
+      "value": 186.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T01:00:00+00:00",
+    "to": "2023-10-29T01:30:00+00:00",
+    "consumption": {
+      "value": 153.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T01:30:00+00:00",
+    "to": "2023-10-29T02:00:00+00:00",
+    "consumption": {
+      "value": 151.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T02:00:00+00:00",
+    "to": "2023-10-29T02:30:00+00:00",
+    "consumption": {
+      "value": 100.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T02:30:00+00:00",
+    "to": "2023-10-29T03:00:00+00:00",
+    "consumption": {
+      "value": 81.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T03:00:00+00:00",
+    "to": "2023-10-29T03:30:00+00:00",
+    "consumption": {
+      "value": 274.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T03:30:00+00:00",
+    "to": "2023-10-29T04:00:00+00:00",
+    "consumption": {
+      "value": 81.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T04:00:00+00:00",
+    "to": "2023-10-29T04:30:00+00:00",
+    "consumption": {
+      "value": 285.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T04:30:00+00:00",
+    "to": "2023-10-29T05:00:00+00:00",
+    "consumption": {
+      "value": 205.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T05:00:00+00:00",
+    "to": "2023-10-29T05:30:00+00:00",
+    "consumption": {
+      "value": 154.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T05:30:00+00:00",
+    "to": "2023-10-29T06:00:00+00:00",
+    "consumption": {
+      "value": 295.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T06:00:00+00:00",
+    "to": "2023-10-29T06:30:00+00:00",
+    "consumption": {
+      "value": 233.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T06:30:00+00:00",
+    "to": "2023-10-29T07:00:00+00:00",
+    "consumption": {
+      "value": 244.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T07:00:00+00:00",
+    "to": "2023-10-29T07:30:00+00:00",
+    "consumption": {
+      "value": 63.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T07:30:00+00:00",
+    "to": "2023-10-29T08:00:00+00:00",
+    "consumption": {
+      "value": 269.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T08:00:00+00:00",
+    "to": "2023-10-29T08:30:00+00:00",
+    "consumption": {
+      "value": 58.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T08:30:00+00:00",
+    "to": "2023-10-29T09:00:00+00:00",
+    "consumption": {
+      "value": 182.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T09:00:00+00:00",
+    "to": "2023-10-29T09:30:00+00:00",
+    "consumption": {
+      "value": 118.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T09:30:00+00:00",
+    "to": "2023-10-29T10:00:00+00:00",
+    "consumption": {
+      "value": 276.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T10:00:00+00:00",
+    "to": "2023-10-29T10:30:00+00:00",
+    "consumption": {
+      "value": 57.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T10:30:00+00:00",
+    "to": "2023-10-29T11:00:00+00:00",
+    "consumption": {
+      "value": 287.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T11:00:00+00:00",
+    "to": "2023-10-29T11:30:00+00:00",
+    "consumption": {
+      "value": 55.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T11:30:00+00:00",
+    "to": "2023-10-29T12:00:00+00:00",
+    "consumption": {
+      "value": 223.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T12:00:00+00:00",
+    "to": "2023-10-29T12:30:00+00:00",
+    "consumption": {
+      "value": 155.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T12:30:00+00:00",
+    "to": "2023-10-29T13:00:00+00:00",
+    "consumption": {
+      "value": 206.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T13:00:00+00:00",
+    "to": "2023-10-29T13:30:00+00:00",
+    "consumption": {
+      "value": 274.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T13:30:00+00:00",
+    "to": "2023-10-29T14:00:00+00:00",
+    "consumption": {
+      "value": 221.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T14:00:00+00:00",
+    "to": "2023-10-29T14:30:00+00:00",
+    "consumption": {
+      "value": 53.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T14:30:00+00:00",
+    "to": "2023-10-29T15:00:00+00:00",
+    "consumption": {
+      "value": 281.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T15:00:00+00:00",
+    "to": "2023-10-29T15:30:00+00:00",
+    "consumption": {
+      "value": 247.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T15:30:00+00:00",
+    "to": "2023-10-29T16:00:00+00:00",
+    "consumption": {
+      "value": 237.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T16:00:00+00:00",
+    "to": "2023-10-29T16:30:00+00:00",
+    "consumption": {
+      "value": 111.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T16:30:00+00:00",
+    "to": "2023-10-29T17:00:00+00:00",
+    "consumption": {
+      "value": 205.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T17:00:00+00:00",
+    "to": "2023-10-29T17:30:00+00:00",
+    "consumption": {
+      "value": 62.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T17:30:00+00:00",
+    "to": "2023-10-29T18:00:00+00:00",
+    "consumption": {
+      "value": 79.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T18:00:00+00:00",
+    "to": "2023-10-29T18:30:00+00:00",
+    "consumption": {
+      "value": 100.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T18:30:00+00:00",
+    "to": "2023-10-29T19:00:00+00:00",
+    "consumption": {
+      "value": 99.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T19:00:00+00:00",
+    "to": "2023-10-29T19:30:00+00:00",
+    "consumption": {
+      "value": 67.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T19:30:00+00:00",
+    "to": "2023-10-29T20:00:00+00:00",
+    "consumption": {
+      "value": 83.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T20:00:00+00:00",
+    "to": "2023-10-29T20:30:00+00:00",
+    "consumption": {
+      "value": 249.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T20:30:00+00:00",
+    "to": "2023-10-29T21:00:00+00:00",
+    "consumption": {
+      "value": 198.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T21:00:00+00:00",
+    "to": "2023-10-29T21:30:00+00:00",
+    "consumption": {
+      "value": 206.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T21:30:00+00:00",
+    "to": "2023-10-29T22:00:00+00:00",
+    "consumption": {
+      "value": 184.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T22:00:00+00:00",
+    "to": "2023-10-29T22:30:00+00:00",
+    "consumption": {
+      "value": 62.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T22:30:00+00:00",
+    "to": "2023-10-29T23:00:00+00:00",
+    "consumption": {
+      "value": 88.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T23:00:00+00:00",
+    "to": "2023-10-29T23:30:00+00:00",
+    "consumption": {
+      "value": 293.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-29T23:30:00+00:00",
+    "to": "2023-10-30T00:00:00+00:00",
+    "consumption": {
+      "value": 148.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T00:00:00+00:00",
+    "to": "2023-10-30T00:30:00+00:00",
+    "consumption": {
+      "value": 68.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T00:30:00+00:00",
+    "to": "2023-10-30T01:00:00+00:00",
+    "consumption": {
+      "value": 280.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T01:00:00+00:00",
+    "to": "2023-10-30T01:30:00+00:00",
+    "consumption": {
+      "value": 50.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T01:30:00+00:00",
+    "to": "2023-10-30T02:00:00+00:00",
+    "consumption": {
+      "value": 182.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T02:00:00+00:00",
+    "to": "2023-10-30T02:30:00+00:00",
+    "consumption": {
+      "value": 117.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T02:30:00+00:00",
+    "to": "2023-10-30T03:00:00+00:00",
+    "consumption": {
+      "value": 222.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T03:00:00+00:00",
+    "to": "2023-10-30T03:30:00+00:00",
+    "consumption": {
+      "value": 94.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T03:30:00+00:00",
+    "to": "2023-10-30T04:00:00+00:00",
+    "consumption": {
+      "value": 187.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T04:00:00+00:00",
+    "to": "2023-10-30T04:30:00+00:00",
+    "consumption": {
+      "value": 258.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T04:30:00+00:00",
+    "to": "2023-10-30T05:00:00+00:00",
+    "consumption": {
+      "value": 249.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T05:00:00+00:00",
+    "to": "2023-10-30T05:30:00+00:00",
+    "consumption": {
+      "value": 251.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T05:30:00+00:00",
+    "to": "2023-10-30T06:00:00+00:00",
+    "consumption": {
+      "value": 201.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T06:00:00+00:00",
+    "to": "2023-10-30T06:30:00+00:00",
+    "consumption": {
+      "value": 262.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T06:30:00+00:00",
+    "to": "2023-10-30T07:00:00+00:00",
+    "consumption": {
+      "value": 127.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T07:00:00+00:00",
+    "to": "2023-10-30T07:30:00+00:00",
+    "consumption": {
+      "value": 210.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T07:30:00+00:00",
+    "to": "2023-10-30T08:00:00+00:00",
+    "consumption": {
+      "value": 95.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T08:00:00+00:00",
+    "to": "2023-10-30T08:30:00+00:00",
+    "consumption": {
+      "value": 50.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T08:30:00+00:00",
+    "to": "2023-10-30T09:00:00+00:00",
+    "consumption": {
+      "value": 138.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T09:00:00+00:00",
+    "to": "2023-10-30T09:30:00+00:00",
+    "consumption": {
+      "value": 86.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T09:30:00+00:00",
+    "to": "2023-10-30T10:00:00+00:00",
+    "consumption": {
+      "value": 145.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T10:00:00+00:00",
+    "to": "2023-10-30T10:30:00+00:00",
+    "consumption": {
+      "value": 191.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T10:30:00+00:00",
+    "to": "2023-10-30T11:00:00+00:00",
+    "consumption": {
+      "value": 61.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T11:00:00+00:00",
+    "to": "2023-10-30T11:30:00+00:00",
+    "consumption": {
+      "value": 241.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T11:30:00+00:00",
+    "to": "2023-10-30T12:00:00+00:00",
+    "consumption": {
+      "value": 102.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T12:00:00+00:00",
+    "to": "2023-10-30T12:30:00+00:00",
+    "consumption": {
+      "value": 163.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T12:30:00+00:00",
+    "to": "2023-10-30T13:00:00+00:00",
+    "consumption": {
+      "value": 197.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T13:00:00+00:00",
+    "to": "2023-10-30T13:30:00+00:00",
+    "consumption": {
+      "value": 144.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T13:30:00+00:00",
+    "to": "2023-10-30T14:00:00+00:00",
+    "consumption": {
+      "value": 260.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T14:00:00+00:00",
+    "to": "2023-10-30T14:30:00+00:00",
+    "consumption": {
+      "value": 203.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T14:30:00+00:00",
+    "to": "2023-10-30T15:00:00+00:00",
+    "consumption": {
+      "value": 128.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T15:00:00+00:00",
+    "to": "2023-10-30T15:30:00+00:00",
+    "consumption": {
+      "value": 195.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T15:30:00+00:00",
+    "to": "2023-10-30T16:00:00+00:00",
+    "consumption": {
+      "value": 160.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T16:00:00+00:00",
+    "to": "2023-10-30T16:30:00+00:00",
+    "consumption": {
+      "value": 206.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T16:30:00+00:00",
+    "to": "2023-10-30T17:00:00+00:00",
+    "consumption": {
+      "value": 210.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T17:00:00+00:00",
+    "to": "2023-10-30T17:30:00+00:00",
+    "consumption": {
+      "value": 58.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T17:30:00+00:00",
+    "to": "2023-10-30T18:00:00+00:00",
+    "consumption": {
+      "value": 211.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T18:00:00+00:00",
+    "to": "2023-10-30T18:30:00+00:00",
+    "consumption": {
+      "value": 74.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T18:30:00+00:00",
+    "to": "2023-10-30T19:00:00+00:00",
+    "consumption": {
+      "value": 81.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T19:00:00+00:00",
+    "to": "2023-10-30T19:30:00+00:00",
+    "consumption": {
+      "value": 110.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T19:30:00+00:00",
+    "to": "2023-10-30T20:00:00+00:00",
+    "consumption": {
+      "value": 110.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T20:00:00+00:00",
+    "to": "2023-10-30T20:30:00+00:00",
+    "consumption": {
+      "value": 145.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T20:30:00+00:00",
+    "to": "2023-10-30T21:00:00+00:00",
+    "consumption": {
+      "value": 126.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T21:00:00+00:00",
+    "to": "2023-10-30T21:30:00+00:00",
+    "consumption": {
+      "value": 82.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T21:30:00+00:00",
+    "to": "2023-10-30T22:00:00+00:00",
+    "consumption": {
+      "value": 54.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T22:00:00+00:00",
+    "to": "2023-10-30T22:30:00+00:00",
+    "consumption": {
+      "value": 251.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T22:30:00+00:00",
+    "to": "2023-10-30T23:00:00+00:00",
+    "consumption": {
+      "value": 229.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T23:00:00+00:00",
+    "to": "2023-10-30T23:30:00+00:00",
+    "consumption": {
+      "value": 164.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-30T23:30:00+00:00",
+    "to": "2023-10-31T00:00:00+00:00",
+    "consumption": {
+      "value": 280.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T00:00:00+00:00",
+    "to": "2023-10-31T00:30:00+00:00",
+    "consumption": {
+      "value": 97.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T00:30:00+00:00",
+    "to": "2023-10-31T01:00:00+00:00",
+    "consumption": {
+      "value": 110.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T01:00:00+00:00",
+    "to": "2023-10-31T01:30:00+00:00",
+    "consumption": {
+      "value": 286.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T01:30:00+00:00",
+    "to": "2023-10-31T02:00:00+00:00",
+    "consumption": {
+      "value": 129.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T02:00:00+00:00",
+    "to": "2023-10-31T02:30:00+00:00",
+    "consumption": {
+      "value": 243.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T02:30:00+00:00",
+    "to": "2023-10-31T03:00:00+00:00",
+    "consumption": {
+      "value": 204.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T03:00:00+00:00",
+    "to": "2023-10-31T03:30:00+00:00",
+    "consumption": {
+      "value": 136.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T03:30:00+00:00",
+    "to": "2023-10-31T04:00:00+00:00",
+    "consumption": {
+      "value": 204.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T04:00:00+00:00",
+    "to": "2023-10-31T04:30:00+00:00",
+    "consumption": {
+      "value": 67.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T04:30:00+00:00",
+    "to": "2023-10-31T05:00:00+00:00",
+    "consumption": {
+      "value": 207.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T05:00:00+00:00",
+    "to": "2023-10-31T05:30:00+00:00",
+    "consumption": {
+      "value": 186.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T05:30:00+00:00",
+    "to": "2023-10-31T06:00:00+00:00",
+    "consumption": {
+      "value": 157.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T06:00:00+00:00",
+    "to": "2023-10-31T06:30:00+00:00",
+    "consumption": {
+      "value": 95.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T06:30:00+00:00",
+    "to": "2023-10-31T07:00:00+00:00",
+    "consumption": {
+      "value": 81.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T07:00:00+00:00",
+    "to": "2023-10-31T07:30:00+00:00",
+    "consumption": {
+      "value": 241.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T07:30:00+00:00",
+    "to": "2023-10-31T08:00:00+00:00",
+    "consumption": {
+      "value": 235.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T08:00:00+00:00",
+    "to": "2023-10-31T08:30:00+00:00",
+    "consumption": {
+      "value": 150.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T08:30:00+00:00",
+    "to": "2023-10-31T09:00:00+00:00",
+    "consumption": {
+      "value": 253.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T09:00:00+00:00",
+    "to": "2023-10-31T09:30:00+00:00",
+    "consumption": {
+      "value": 225.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T09:30:00+00:00",
+    "to": "2023-10-31T10:00:00+00:00",
+    "consumption": {
+      "value": 224.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T10:00:00+00:00",
+    "to": "2023-10-31T10:30:00+00:00",
+    "consumption": {
+      "value": 224.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T10:30:00+00:00",
+    "to": "2023-10-31T11:00:00+00:00",
+    "consumption": {
+      "value": 208.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T11:00:00+00:00",
+    "to": "2023-10-31T11:30:00+00:00",
+    "consumption": {
+      "value": 268.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T11:30:00+00:00",
+    "to": "2023-10-31T12:00:00+00:00",
+    "consumption": {
+      "value": 282.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T12:00:00+00:00",
+    "to": "2023-10-31T12:30:00+00:00",
+    "consumption": {
+      "value": 86.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T12:30:00+00:00",
+    "to": "2023-10-31T13:00:00+00:00",
+    "consumption": {
+      "value": 142.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T13:00:00+00:00",
+    "to": "2023-10-31T13:30:00+00:00",
+    "consumption": {
+      "value": 88.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T13:30:00+00:00",
+    "to": "2023-10-31T14:00:00+00:00",
+    "consumption": {
+      "value": 185.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T14:00:00+00:00",
+    "to": "2023-10-31T14:30:00+00:00",
+    "consumption": {
+      "value": 210.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T14:30:00+00:00",
+    "to": "2023-10-31T15:00:00+00:00",
+    "consumption": {
+      "value": 205.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T15:00:00+00:00",
+    "to": "2023-10-31T15:30:00+00:00",
+    "consumption": {
+      "value": 130.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T15:30:00+00:00",
+    "to": "2023-10-31T16:00:00+00:00",
+    "consumption": {
+      "value": 71.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T16:00:00+00:00",
+    "to": "2023-10-31T16:30:00+00:00",
+    "consumption": {
+      "value": 66.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T16:30:00+00:00",
+    "to": "2023-10-31T17:00:00+00:00",
+    "consumption": {
+      "value": 157.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T17:00:00+00:00",
+    "to": "2023-10-31T17:30:00+00:00",
+    "consumption": {
+      "value": 212.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T17:30:00+00:00",
+    "to": "2023-10-31T18:00:00+00:00",
+    "consumption": {
+      "value": 152.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T18:00:00+00:00",
+    "to": "2023-10-31T18:30:00+00:00",
+    "consumption": {
+      "value": 130.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T18:30:00+00:00",
+    "to": "2023-10-31T19:00:00+00:00",
+    "consumption": {
+      "value": 93.7,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T19:00:00+00:00",
+    "to": "2023-10-31T19:30:00+00:00",
+    "consumption": {
+      "value": 162.6,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T19:30:00+00:00",
+    "to": "2023-10-31T20:00:00+00:00",
+    "consumption": {
+      "value": 261.8,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T20:00:00+00:00",
+    "to": "2023-10-31T20:30:00+00:00",
+    "consumption": {
+      "value": 190.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T20:30:00+00:00",
+    "to": "2023-10-31T21:00:00+00:00",
+    "consumption": {
+      "value": 261.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T21:00:00+00:00",
+    "to": "2023-10-31T21:30:00+00:00",
+    "consumption": {
+      "value": 206.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T21:30:00+00:00",
+    "to": "2023-10-31T22:00:00+00:00",
+    "consumption": {
+      "value": 123.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T22:00:00+00:00",
+    "to": "2023-10-31T22:30:00+00:00",
+    "consumption": {
+      "value": 221.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T22:30:00+00:00",
+    "to": "2023-10-31T23:00:00+00:00",
+    "consumption": {
+      "value": 174.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T23:00:00+00:00",
+    "to": "2023-10-31T23:30:00+00:00",
+    "consumption": {
+      "value": 80.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-10-31T23:30:00+00:00",
+    "to": "2023-11-01T00:00:00+00:00",
+    "consumption": {
+      "value": 66.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T00:00:00+00:00",
+    "to": "2023-11-01T00:30:00+00:00",
+    "consumption": {
+      "value": 136.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T00:30:00+00:00",
+    "to": "2023-11-01T01:00:00+00:00",
+    "consumption": {
+      "value": 67.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T01:00:00+00:00",
+    "to": "2023-11-01T01:30:00+00:00",
+    "consumption": {
+      "value": 273.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T01:30:00+00:00",
+    "to": "2023-11-01T02:00:00+00:00",
+    "consumption": {
+      "value": 184.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T02:00:00+00:00",
+    "to": "2023-11-01T02:30:00+00:00",
+    "consumption": {
+      "value": 97.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T02:30:00+00:00",
+    "to": "2023-11-01T03:00:00+00:00",
+    "consumption": {
+      "value": 56.3,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T03:00:00+00:00",
+    "to": "2023-11-01T03:30:00+00:00",
+    "consumption": {
+      "value": 207.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T03:30:00+00:00",
+    "to": "2023-11-01T04:00:00+00:00",
+    "consumption": {
+      "value": 177.0,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T04:00:00+00:00",
+    "to": "2023-11-01T04:30:00+00:00",
+    "consumption": {
+      "value": 74.2,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T04:30:00+00:00",
+    "to": "2023-11-01T05:00:00+00:00",
+    "consumption": {
+      "value": 191.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T05:00:00+00:00",
+    "to": "2023-11-01T05:30:00+00:00",
+    "consumption": {
+      "value": 216.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T05:30:00+00:00",
+    "to": "2023-11-01T06:00:00+00:00",
+    "consumption": {
+      "value": 192.4,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T06:00:00+00:00",
+    "to": "2023-11-01T06:30:00+00:00",
+    "consumption": {
+      "value": 100.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T06:30:00+00:00",
+    "to": "2023-11-01T07:00:00+00:00",
+    "consumption": {
+      "value": 257.9,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T07:00:00+00:00",
+    "to": "2023-11-01T07:30:00+00:00",
+    "consumption": {
+      "value": 237.1,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T07:30:00+00:00",
+    "to": "2023-11-01T08:00:00+00:00",
+    "consumption": {
+      "value": 118.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T08:00:00+00:00",
+    "to": "2023-11-01T08:30:00+00:00",
+    "consumption": {
+      "value": 140.5,
+      "unitCode": "WHR"
+    }
+  },
+  {
+    "type": "Electricity",
+    "from": "2023-11-01T08:30:00+00:00",
+    "to": "2023-11-01T09:00:00+00:00",
+    "consumption": {
+      "value": 196.3,
+      "unitCode": "WHR"
+    }
+  }
+]

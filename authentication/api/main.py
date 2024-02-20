@@ -34,6 +34,9 @@ async def test(request: Request) -> dict:
     return dict(request.headers.mutablecopy())
 
 
+# TODO: mock responses from FAPI api using the responses library
+
+
 @app.post("/api/v1/par", response_model=models.PushedAuthorizationResponse)
 async def pushed_authorization_request(
     par: models.ClientPushedAuthorizationRequest,
@@ -43,6 +46,7 @@ async def pushed_authorization_request(
     Pass the request along to the FAPI api, await the response,
     send it back to the client app
     """
+
     payload = {
         "parameters": urllib.parse.urlencode(par.model_dump()),
         "client_id": par.client_id,
@@ -124,9 +128,9 @@ async def issue(
     return result
 
 
-# TODO is it authenticate and authorize or authentication and authorzation?
 @app.post("/api/v1/authorize/token", response_model=models.FAPITokenResponse)
 async def token(
+    request: Request,
     token_request: models.FAPITokenRequest,
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
 ) -> models.FAPITokenResponse:
@@ -139,6 +143,7 @@ async def token(
         "client_id": token_request.client_id,
         "client_certificate": x_amzn_mtls_clientcert,
     }
+    print(payload)
     session = requests.Session()
     session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
     response = session.post(
@@ -146,7 +151,6 @@ async def token(
         json=payload,
     )
     if response.status_code != 200:
-        print(response.text)
         raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
     return models.FAPITokenResponse(

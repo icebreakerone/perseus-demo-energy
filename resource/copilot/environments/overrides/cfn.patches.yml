@@ -1,0 +1,6 @@
+
+# Add passthrough MutualAuthentication to the HTTPSListener
+- op: add
+  path: /Resources/HTTPSListener/Properties/MutualAuthentication
+  value: 
+    Mode: passthrough
