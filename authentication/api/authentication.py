@@ -44,7 +44,6 @@ def verify_password(plain_password, hashed_password):
 
 
 def get_user(db, username: str):
-    print("GET USER", username)
     if username in db:
         user_dict = db[username]
         return models.UserInDB(**user_dict)

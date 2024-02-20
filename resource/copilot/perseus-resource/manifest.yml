@@ -38,13 +38,8 @@ network:
 # Optional fields for more advanced use-cases.
 #
 variables:                    # Pass environment variables as key value pairs.
- LOG_LEVEL: info
-
-secrets:
-    PERSEUS_DEMO_ENERGY_PEM: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/softwarestatement.pem
-    PERSEUS_DEMO_ENERGY_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/softwarestatement.key
-    DIRECTORY_CLIENT_ID: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/client_id
-    ISSUER_URL: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/issuer_url
+  LOG_LEVEL: info
+  ISSUER_URL: "https://perseus-demo-fapi.ib1.org"
 # You can override any of the values defined above by environment.
 #environments:
 #  test:

@@ -121,6 +121,7 @@ def client_side_decoding(token: str):
     jwks_url = conf.FAPI_API + "/.well-known/jwks.json"
     jwks_client = jwt.PyJWKClient(jwks_url)
     header = jwt.get_unverified_header(token)
+    print(header)
     key = jwks_client.get_signing_key(header["kid"]).key
     decoded = jwt.decode(token, key, [header["alg"]], audience=f"{conf.CLIENT_ID}")
     # Example of tests to apply
@@ -143,12 +144,16 @@ if __name__ == "__main__":
     data = pushed_authorization_request()
     # Take note of the ticket
     ticket = initiate_authorization(data["request_uri"])["ticket"]
+    print("Received ticket number: ", ticket)
     # # authenticate the user
     token = get_user_token()["access_token"]
+    print("User authenticated, token received: ", token)
     # # Ask for user's consent
     consent = give_consent(token)
+    print("Consent given: ", consent)
     # # Now we have identified the user, we can use the ticket to request an authorization code
     issue_response = authentication_issue_request(token, ticket)
+    print("Issue request: ", issue_response["authorization_code"])
     # Client side - check the id_token values
     print(client_side_decoding(issue_response["id_token"]))
     # # Now we need to exchange the auth code for an access token

@@ -49,7 +49,7 @@ pipenv run python -W ignore  client.py
 
 The `-W ignore` switch suppresses multiple warnings about the self-signed certificates.
 
-By default the client will use the local docker environment, testing against the live API can be achieved by setting the `AUTHENTICATION_API` environment variable.
+By default the client will use the local docker environment, testing against the live API can be achieved by setting the `AUTHENTICATION_API` and `RESOURCE_API` environment variables.
 
 ```bash
 AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" pipenv run python -W ignore  client.py
