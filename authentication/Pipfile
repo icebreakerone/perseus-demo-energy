@@ -9,17 +9,16 @@ pyjwt = "*"
 uvicorn = "*"
 requests = "*"
 python-jose = {extras = ["cryptography"] }
-passlib = {extras = ["bcrypt"] }
 python-multipart = "*"
+httpx = "*"
+bcrypt = "*"
 
 [dev-packages]
 black = "*"
 mypy = "*"
 ruff = "*"
 types-python-jose = "*"
-types-passlib = "*"
 types-requests = "*"
-httpx = "*"
 pytest = "*"
 responses = "*"
 pytest-mock = "*"
