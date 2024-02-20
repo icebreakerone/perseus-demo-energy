@@ -1,8 +1,8 @@
-name: Deploy Dev
+name: Deploy Resource
 
 on:
   workflow_run:
-    workflows: ["Python tests"]
+    workflows: ["Python tests resource"]
     branches: [main]
     types:
       - completed
@@ -24,11 +24,8 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
-    - name: Install Copilot CLI
-      uses: ksivamuthu/aws-copilot-github-action@v0.0.1
+    - name: Deploy authentication
+      uses: ./.github/templates/deploy/
       with:
-        command: install
-    - run: |
-        copilot --version
-        copilot deploy
-    
+        folder: resource
+  

@@ -1,0 +1,20 @@
+name: deploy
+description: Deploy Copilot service
+inputs:
+  folder: 
+    description: 'The folder to run deploy from'
+    required: true
+
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Copilot CLI
+      uses: ksivamuthu/aws-copilot-github-action@v0.0.1
+      with:
+        command: install
+    - run: |
+        cd ${{ inputs.folder }}
+        copilot --version
+        copilot deploy
+      shell: bash
