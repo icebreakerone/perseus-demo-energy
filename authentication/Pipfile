@@ -12,6 +12,7 @@ python-jose = {extras = ["cryptography"] }
 python-multipart = "*"
 httpx = "*"
 bcrypt = "*"
+cryptography = "*"
 
 [dev-packages]
 black = "*"
