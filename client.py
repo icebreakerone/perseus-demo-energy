@@ -119,6 +119,7 @@ def client_side_decoding(token: str):
     Use the jwks to decode the token
     """
     jwks_url = conf.FAPI_API + "/.well-known/jwks.json"
+    print(jwks_url)
     jwks_client = jwt.PyJWKClient(jwks_url)
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
