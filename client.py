@@ -121,12 +121,9 @@ def client_side_decoding(token: str):
     jwks_url = conf.FAPI_API + "/.well-known/jwks.json"
     jwks_client = jwt.PyJWKClient(jwks_url)
     header = jwt.get_unverified_header(token)
-    print(header)
     key = jwks_client.get_signing_key(header["kid"]).key
     decoded = jwt.decode(token, key, [header["alg"]], audience=f"{conf.CLIENT_ID}")
     # Example of tests to apply
-    print(decoded)
-    print(conf.FAPI_API)
     if decoded["aud"] != conf.CLIENT_ID:
         raise ValueError("Invalid audience")
     if decoded["iss"] != conf.FAPI_API:
