@@ -53,6 +53,7 @@ client.py will execute a series of requests to the API demonstrating the steps f
 - With the users identity and the ticket, retrieve the authorization code
 - Exchange the authorization code for an access token
 - Introspect the access token
+- Use the access token to access the resource API
 
 ```bash
 python -W ignore  client.py
@@ -60,20 +61,13 @@ python -W ignore  client.py
 
 The `-W ignore` switch suppresses multiple warnings about the self-signed certificates.
 
-By default the client will use the local docker environment, testing against the live API can be achieved by setting the `AUTHENTICATION_API` and `RESOURCE_API` environment variables.
+By default the client will use the local docker environment and expects a local instance of the FAPI api to be running on localhost:8020. Testing against the deployed API can be achieved by setting the `AUTHENTICATION_API` and `RESOURCE_API` environment variables, and optionally the FAPI_API environment variable.
 
 ```bash
-AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" RESOURCE_API=https://perseus-demo-energy.ib1.org python -W ignore  client.py
+FAPI_API=https://perseus-demo-fapi.ib1.org AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" RESOURCE_API=https://perseus-demo-energy.ib1.org python -W ignore  client.py
 ```
 
-A successful run will complete with outputting the token introspection response:
-
-```bash
-$ AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" pipenv run python -W ignore  client.py
-Loading .env environment variables...
-Courtesy Notice: Pipenv found itself running within a virtual environment, so it will automatically use that environment, instead of creating its own for any project. You can set PIPENV_IGNORE_VIRTUALENVS=1 to force pipenv to ignore that environment and create its own instead. You can set PIPENV_VERBOSITY=-1 to suppress this warning.
-{'active': True, 'sub': 'platform.user@perseus.ib1.org', 'organisation_id': 'perseus-demo-accounting', 'amr': ['kba', 'email_verification', 'phone_verification'], 'auth_time': 1702375791, 'organisation_name': 'Perseus Demo Accounting', 'organisation_number': '01234567', 'software_name': 'Perseus Demo Accounting Client', 'client_id': 21653835348762, 'exp': 1702379404, 'iat': 1702375804, 'iss': 'https://perseus-demo-fapi.ib1.org', 'scope': ['openid', 'profile'], 'cnf': {'x5t#S256': '97P4nb8Ey8z6miUXCkMjLNhewEgWyKW4LpEosCnr9yg'}, 'token_type': 'Bearer'}
-```
+A successful run will complete with outputting data from the resource API.
 
 ## FAPI Flow
 
