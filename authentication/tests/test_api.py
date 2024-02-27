@@ -30,7 +30,7 @@ def test_pushed_authorization_request():
     )
     response = client.post(
         "/api/v1/par",
-        json={
+        data={
             "client_id": 123456,
             "redirect_uri": "https://mobile.example.com/cb",
             "code_challenge": "W78hCS0q72DfIHa...kgZkEJuAFaT4",
