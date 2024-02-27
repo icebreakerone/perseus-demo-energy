@@ -11,6 +11,7 @@ from authentication.api import conf
 
 AUTHENTICATION_API = os.environ.get("AUTHENTICATION_API", "https://0.0.0.0:8000")
 RESOURCE_API = os.environ.get("RESOURCE_API", "https://0.0.0.0:8010")
+
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 CLIENT_CERTIFICATE = f"{ROOT_PATH}/certs/client-cert.pem"
 CLIENT_PRIVATE_KEY = f"{ROOT_PATH}/certs/client-key.pem"
@@ -27,7 +28,7 @@ def pushed_authorization_request():
 
     response = requests.post(
         f"{AUTHENTICATION_API}/api/v1/par",
-        json={
+        data={
             "response_type": "code",
             "client_id": f"{conf.CLIENT_ID}",
             "redirect_uri": "https://mobile.example.com/cb",

@@ -5,7 +5,7 @@ import urllib.parse
 import requests
 
 
-from fastapi import FastAPI, Request, Header, HTTPException, Depends, status
+from fastapi import FastAPI, Request, Header, HTTPException, Depends, status, Form
 from fastapi.security import HTTPBasic, OAuth2PasswordRequestForm
 
 import datetime
@@ -35,21 +35,39 @@ async def test(request: Request) -> dict:
 
 
 # TODO: mock responses from FAPI api using the responses library
+# response_type: str
+# client_id: int
+# redirect_uri: str
+# code_challenge: str
+# code_challenge_method: str
 
 
 @app.post("/api/v1/par", response_model=models.PushedAuthorizationResponse)
 async def pushed_authorization_request(
-    par: models.ClientPushedAuthorizationRequest,
+    response_type: Annotated[str, Form()],
+    client_id: Annotated[str, Form()],
+    redirect_uri: Annotated[str, Form()],
+    code_challenge: Annotated[str, Form()],
+    code_challenge_method: Annotated[str, Form()],
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
 ) -> dict:
     """
     Pass the request along to the FAPI api, await the response,
     send it back to the client app
     """
-
+    # Get all arguments and convert to a urlencoded string
+    encoded_parameters = urllib.parse.urlencode(
+        {
+            "response_type": response_type,
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "code_challenge": code_challenge,
+            "code_challenge_method": code_challenge_method,
+        }
+    )
     payload = {
-        "parameters": urllib.parse.urlencode(par.model_dump()),
-        "client_id": par.client_id,
+        "parameters": encoded_parameters,
+        "client_id": client_id,
         "client_certificate": x_amzn_mtls_clientcert,
     }
     session = requests.Session()
