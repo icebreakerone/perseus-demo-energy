@@ -8,15 +8,8 @@ type: Load Balanced Web Service
 
 # Distribute traffic to your service.
 http:
-  # Requests to this path will be forwarded to your service.
-  # To match all requests you can use the "/" path.
   path: '/'
-  alias: perseus-demo-energy.ib1.org
-  hosted_zone: Z06253313MKVN98JLAQRK
-  # You can specify a custom health check path. The default is "/".
-  # healthcheck: '/'
-# in copilot/{service name}/manifest.yml
-  
+
 # Configuration for your containers and service.
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#image-build
@@ -41,8 +34,8 @@ variables:                    # Pass environment variables as key value pairs.
   LOG_LEVEL: info
   ISSUER_URL: "https://perseus-demo-fapi.ib1.org"
 # You can override any of the values defined above by environment.
-#environments:
-#  test:
-#    count: 2               # Number of tasks to run for the "test" environment.
-#    deployment:            # The deployment strategy for the "test" environment.
-#       rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.
+environments:
+ prod:
+  http:
+    alias: perseus-demo-energy.ib1.org
+    hosted_zone: Z06253313MKVN98JLAQRK
