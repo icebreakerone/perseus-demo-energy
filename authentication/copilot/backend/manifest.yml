@@ -11,8 +11,6 @@ http:
   # Requests to this path will be forwarded to your service.
   # To match all requests you can use the "/" path.
   path: '/'
-  alias: perseus-demo-authentication.ib1.org
-  hosted_zone: Z080590727V6ALTWMJ7N5
   # You can specify a custom health check path. The default is "/".
   # healthcheck: '/'
 # in copilot/{service name}/manifest.yml
@@ -42,12 +40,10 @@ variables:                    # Pass environment variables as key value pairs.
   CLIENT_ID: 21653835348762
   CLIENT_SECRET: "uE4NgqeIpuSV_XejQ7Ds3jsgA1yXhjR1MXJ1LbPuyls"
 
-#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
-
-# You can override any of the values defined above by environment.
-#environments:
-#  test:
-#    count: 2               # Number of tasks to run for the "test" environment.
-#    deployment:            # The deployment strategy for the "test" environment.
-#       rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.
+environments:
+    prod:
+      http:
+        # Requests to this path will be forwarded to your service.
+        # To match all requests you can use the "/" path.
+        alias: perseus-demo-authentication.ib1.org
+        hosted_zone: Z080590727V6ALTWMJ7N5
