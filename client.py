@@ -139,34 +139,45 @@ def client_side_decoding(token: str):
 
 if __name__ == "__main__":
     # Initiate flow with PAR
-    data = pushed_authorization_request()
-    # Take note of the ticket
-    ticket = initiate_authorization(data["request_uri"])["ticket"]
-    print("Received ticket number: ", ticket)
-    # # authenticate the user
-    token = get_user_token()["access_token"]
-    print("User authenticated, token received: ", token)
-    # # Ask for user's consent
-    consent = give_consent(token)
-    print("Consent given: ", consent)
-    # # Now we have identified the user, we can use the ticket to request an authorization code
-    issue_response = authentication_issue_request(token, ticket)
-    print("Issue request: ", issue_response["authorization_code"])
-    # Client side - check the id_token values
-    print(client_side_decoding(issue_response["id_token"]))
-    # # Now we need to exchange the auth code for an access token
-    result = get_fapi_token(issue_response["authorization_code"])
-    fapi_token = result["access_token"]
-    # # The token can be used to access protected APIs
-    # # The resource server can introspect the token
-    print(introspect_token(fapi_token))
-    # We should now be able to use the token to retrieve data from the resource server
-    result = requests.get(
-        f"{RESOURCE_API}/api/v1/consumption",
+    par_response = pushed_authorization_request()
+    print(par_response)
+    response = requests.post(
+        f"{AUTHENTICATION_API}/api/v1/authorize/test",
+        json={
+            "client_id": f"{conf.CLIENT_ID}",
+            "request_uri": par_response["request_uri"],
+        },
         verify=False,
-        headers={"Authorization": f"Bearer {fapi_token}"},
         cert=(CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY),
     )
-    print(result.status_code)
-    print(result.text)
-    print(result.json())
+    print(response.status_code, response.text)
+    # Take note of the ticket
+    # ticket = initiate_authorization(data["request_uri"])["ticket"]
+    # print("Received ticket number: ", ticket)
+    # # # authenticate the user
+    # token = get_user_token()["access_token"]
+    # print("User authenticated, token received: ", token)
+    # # # Ask for user's consent
+    # consent = give_consent(token)
+    # print("Consent given: ", consent)
+    # # # Now we have identified the user, we can use the ticket to request an authorization code
+    # issue_response = authentication_issue_request(token, ticket)
+    # print("Issue request: ", issue_response["authorization_code"])
+    # # Client side - check the id_token values
+    # print(client_side_decoding(issue_response["id_token"]))
+    # # # Now we need to exchange the auth code for an access token
+    # result = get_fapi_token(issue_response["authorization_code"])
+    # fapi_token = result["access_token"]
+    # # # The token can be used to access protected APIs
+    # # # The resource server can introspect the token
+    # print(introspect_token(fapi_token))
+    # # We should now be able to use the token to retrieve data from the resource server
+    # result = requests.get(
+    #     f"{RESOURCE_API}/api/v1/consumption",
+    #     verify=False,
+    #     headers={"Authorization": f"Bearer {fapi_token}"},
+    #     cert=(CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY),
+    # )
+    # print(result.status_code)
+    # print(result.text)
+    # print(result.json())

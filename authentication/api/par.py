@@ -3,9 +3,11 @@ import redis
 import json
 import base64
 
+from . import conf
+
 
 def redis_connection() -> redis.Redis:
-    return redis.Redis(host="redis", port=6379, db=0, decode_responses=True)
+    return redis.Redis(host=conf.REDIS_HOST, port=6379, db=0, decode_responses=True)
 
 
 def get_token(byte_length: int = 20) -> str:  # 160 bits / 8 bits per byte = 20 bytes
