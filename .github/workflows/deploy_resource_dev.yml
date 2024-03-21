@@ -3,7 +3,7 @@ name: Deploy Resource Dev
 on:
   workflow_run:
     workflows: ["Python tests resource"]
-    branches: [main]
+    branches: [preprod]
     types:
       - completed
   workflow_dispatch:

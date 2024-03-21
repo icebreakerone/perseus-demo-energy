@@ -3,7 +3,7 @@ name: Deploy Authentication Dev
 on:
   workflow_run:
     workflows: ["Python tests authentication"]
-    branches: [main]
+    branches: [preprod]
     types:
       - completed
   workflow_dispatch:

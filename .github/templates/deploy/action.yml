@@ -4,6 +4,9 @@ inputs:
   folder: 
     description: 'The folder to run deploy from'
     required: true
+  env: 
+    description: 'The environment to deploy to'
+    required: true
 
 
 runs:
@@ -16,5 +19,5 @@ runs:
     - run: |
         cd ${{ inputs.folder }}
         copilot --version
-        copilot deploy
+        copilot deploy  --env ${{ inputs.folder }}
       shell: bash
