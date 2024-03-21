@@ -1,11 +1,16 @@
-# The manifest for the "dev" environment.
+# The manifest for the "prod" environment.
 # Read the full specification for the "Environment" type at:
 #  https://aws.github.io/copilot-cli/docs/manifest/environment/
 
 # Your environment name will be used in naming your resources like VPC, cluster, etc.
-name: dev
+name: prod
 type: Environment
+
+http:
+  public:
+    certificates:
+      - arn:aws:acm:eu-west-2:232615051732:certificate/d4547c2b-3c08-4f5d-b709-663e27ea0ebf
 
 # Configure observability for your environment resources.
 observability:
-  container_insights: true
+  container_insights: false
