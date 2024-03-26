@@ -142,7 +142,7 @@ if __name__ == "__main__":
     par_response = pushed_authorization_request()
     print(par_response)
     response = requests.post(
-        f"{AUTHENTICATION_API}/api/v1/authorize/test",
+        f"{AUTHENTICATION_API}/api/v1/par/test",
         json={
             "client_id": f"{conf.CLIENT_ID}",
             "request_uri": par_response["request_uri"],

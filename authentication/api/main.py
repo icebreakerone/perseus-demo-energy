@@ -13,6 +13,8 @@ import datetime
 from . import models
 from . import conf
 from . import authentication
+from . import par
+
 
 app = FastAPI(
     docs_url="/api-docs",
@@ -52,43 +54,42 @@ async def pushed_authorization_request(
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
 ) -> dict:
     """
-    Pass the request along to the FAPI api, await the response,
-    send it back to the client app
+    Store the request in redis, return a request_uri to the client
+
+    TODO: check if client certificate is required
     """
-    # Get all arguments and convert to a urlencoded string
-    encoded_parameters = urllib.parse.urlencode(
-        {
-            "response_type": response_type,
-            "client_id": client_id,
-            "redirect_uri": redirect_uri,
-            "code_challenge": code_challenge,
-            "code_challenge_method": code_challenge_method,
-        }
-    )
-    payload = {
-        "parameters": encoded_parameters,
+    # Get args as dict
+    parameters = {
+        "response_type": response_type,
         "client_id": client_id,
-        "client_certificate": x_amzn_mtls_clientcert,
+        "redirect_uri": redirect_uri,
+        "code_challenge": code_challenge,
+        "code_challenge_method": code_challenge_method,
     }
-    session = requests.Session()
-    session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
-    response = session.post(
-        f"{conf.FAPI_API}/auth/par/",
-        json=payload,
-    )
-    result = response.json()
-    try:
-        data = json.loads(result["response_content"])
-    except KeyError:
+    token = par.get_token()
+    par.store_request(token, parameters)
+    return {
+        "request_uri": f"urn:ietf:params:oauth:request_uri:{token}",
+        "expires_in": 600,
+    }
+
+
+# Test endpoint that just returns the stored request from par endpoint
+@app.post("/api/v1/par/test")
+async def pushed_authorization_request_test(
+    auth_request: models.AuthorizationRequest,
+) -> dict:
+    """
+    Get the stored request from redis
+    """
+    token = auth_request.request_uri.split(":")[-1]
+    request = par.get_request(token)
+    if request["client_id"] != auth_request.client_id:
         raise HTTPException(
-            status_code=500,
-            detail={
-                "message": "Unexpected response from FAPI",
-                "response": result,
-                "request": payload,
-            },
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Client ID does not match",
         )
-    return data
+    return request
 
 
 @app.post("/api/v1/authorize", response_model=models.AuthorizationResponse)

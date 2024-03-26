@@ -13,6 +13,7 @@ python-multipart = "*"
 httpx = "*"
 bcrypt = "*"
 cryptography = "*"
+redis = "*"
 
 [dev-packages]
 black = "*"
