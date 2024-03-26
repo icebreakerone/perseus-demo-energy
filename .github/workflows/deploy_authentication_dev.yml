@@ -29,3 +29,10 @@ jobs:
         with:
           folder: authentication
           env: dev
+          service_name: authentication
+      - name: Deploy Redis
+        uses: ./.github/templates/deploy/
+        with:
+          folder: authentication
+          env: dev
+          service_name: redis

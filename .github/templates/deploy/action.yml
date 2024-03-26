@@ -19,5 +19,5 @@ runs:
     - run: |
         cd ${{ inputs.folder }}
         copilot --version
-        copilot deploy  --env ${{ inputs.env }}
+        copilot deploy  --env ${{ inputs.env }} --name ${{ inputs.service_name }}
       shell: bash
