@@ -1,5 +1,4 @@
 from typing import Annotated
-import json
 
 import urllib.parse
 import requests
