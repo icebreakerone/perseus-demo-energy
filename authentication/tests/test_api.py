@@ -51,9 +51,10 @@ def test_authorization_code():
     )
     response = client.post(
         "/api/v1/authorize",
-        json={"request_uri": "test-uri", "client_id": 123456},
+        json={"request_uri": "test-uri", "client_id": "123456"},
         headers={"x-amzn-mtls-clientcert": "client-certificate"},
     )
+    print(response.status_code, response.text)
     assert response.status_code == 200
     assert "ticket" in response.json()
 
