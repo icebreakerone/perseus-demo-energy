@@ -43,6 +43,12 @@ docker-compose up
 
 The environment variables in the docker compose file point to the FAPI api running on localhost port 8020 (http://host.docker.internal:8020). As the FAPI api is not running in the docker environment, you may need to change these environment variables to match your local environment. It will also work with the live FAPI api by changing these values to "https://perseus-demo-fapi.ib1.org".
 
+## Pushed Authorization Request (PAR)
+
+As PAR is not available on the Ory Hydra service that this demo is based on, a PAR endpoint has been implemented in this example service. It is expected that production ipmlementations may use the PAR endpoint of their Fapi provider.
+
+In this simple implementation, the request is stored in a redis instance, using a token that matches Fapi requirements as the key.
+
 ## Testing the API with client.py
 
 client.py will execute a series of requests to the API demonstrating the steps from initial PAR (pushed authorization request) to introspecting the token presented to the resource API. The steps are

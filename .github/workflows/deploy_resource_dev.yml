@@ -1,9 +1,9 @@
-name: Deploy Resource Prod
+name: Deploy Resource Dev
 
 on:
   workflow_run:
     workflows: ["Python tests resource"]
-    branches: [main]
+    branches: [preprod]
     types:
       - completed
   workflow_dispatch:
@@ -14,7 +14,7 @@ env:
   AWS_REGION: eu-west-2 # set this to your preferred AWS region, e.g. us-west-1
 
 jobs:
-  deploy-prod:
+  deploy-dev:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -28,5 +28,5 @@ jobs:
         uses: ./.github/templates/deploy/
         with:
           folder: resource
-          env: prod
+          env: dev
           service_name: perseus-resource

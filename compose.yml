@@ -9,6 +9,7 @@ services:
     ports:
       - 8000:443
       # - 443:443
+    command: [nginx-debug, "-g", "daemon off;"]
     depends_on:
       - authentication_backend
 
@@ -19,7 +20,16 @@ services:
     environment:
       - FAPI_API=http://host.docker.internal:8020
       # - FAPI_API=https://perseus-demo-fapi.ib1.org
-    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "api.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8080",
+        "--reload",
+      ]
     volumes:
       - ./authentication/api:/code/api
 
@@ -42,6 +52,26 @@ services:
     environment:
       - ISSUER_URL=http://host.docker.internal:8020
       # - FAPI_API=https://perseus-demo-fapi.ib1.org
-    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
+    command:
+      [
+        "uvicorn",
+        "api.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8080",
+        "--reload",
+      ]
     volumes:
       - ./resource/api:/code/api
+
+  redis:
+    image: "redis:alpine"
+    command: redis-server
+    ports:
+      - "6379:6379"
+    volumes:
+      - $PWD/redis-data:/var/lib/redis
+      - $PWD/redis.conf:/usr/local/etc/redis/redis.conf
+    environment:
+      - REDIS_REPLICATION_MODE=master

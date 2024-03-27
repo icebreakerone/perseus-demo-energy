@@ -46,7 +46,7 @@ class PushedAuthorizationResponse(BaseModel):
 
 class AuthorizationRequest(BaseModel):
     request_uri: str
-    client_id: int
+    client_id: str
     model_config = {
         "json_schema_extra": {
             "examples": [

@@ -1,9 +1,9 @@
-name: Deploy Resource Prod
+name: Deploy Authentication Dev
 
 on:
   workflow_run:
-    workflows: ["Python tests resource"]
-    branches: [main]
+    workflows: ["Python tests authentication"]
+    branches: [preprod]
     types:
       - completed
   workflow_dispatch:
@@ -14,7 +14,7 @@ env:
   AWS_REGION: eu-west-2 # set this to your preferred AWS region, e.g. us-west-1
 
 jobs:
-  deploy-prod:
+  deploy-dev:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -27,6 +27,12 @@ jobs:
       - name: Deploy authentication
         uses: ./.github/templates/deploy/
         with:
-          folder: resource
-          env: prod
-          service_name: perseus-resource
+          folder: authentication
+          env: dev
+          service_name: backend
+      - name: Deploy Redis
+        uses: ./.github/templates/deploy/
+        with:
+          folder: authentication
+          env: dev
+          service_name: redis
