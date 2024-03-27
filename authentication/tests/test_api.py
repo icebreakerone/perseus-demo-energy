@@ -1,4 +1,5 @@
 import datetime
+from unittest.mock import patch, MagicMock
 
 import responses
 import pytest
@@ -20,8 +21,13 @@ def mock_token(mocker):
     return access_token
 
 
+# Mock the redis server, as pushed_authorization_request() uses it
 @responses.activate
-def test_pushed_authorization_request():
+@patch("api.par.redis_connection")
+def test_pushed_authorization_request(mock_redis_connection):
+    mock_redis = MagicMock()
+    mock_redis.set.return_value = True
+    mock_redis_connection.return_value = mock_redis
     responses.post(
         f"{conf.FAPI_API}/auth/par/",
         json={
