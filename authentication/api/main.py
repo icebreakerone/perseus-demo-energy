@@ -55,8 +55,16 @@ async def pushed_authorization_request(
     """
     Store the request in redis, return a request_uri to the client
 
-    TODO: check if client certificate is required
+    https://www.rfc-editor.org/rfc/rfc9126.html#section-2 - Pushed Authorization Request Endpoint
+    https://www.rfc-editor.org/rfc/rfc6749.html#section-3.2.1 - Client authentication methods
     """
+    # Client authentication by mtls
+    # In production the Perseus directory will be able to check certificates
+    if not x_amzn_mtls_clientcert:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Client certificate required",
+        )
     # Get args as dict
     parameters = {
         "response_type": response_type,
