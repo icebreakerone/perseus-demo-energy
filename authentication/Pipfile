@@ -14,6 +14,8 @@ httpx = "*"
 bcrypt = "*"
 cryptography = "*"
 redis = "*"
+pkce = "*"
+boto3 = "*"
 
 [dev-packages]
 black = "*"

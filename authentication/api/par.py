@@ -16,6 +16,7 @@ def get_token(byte_length: int = 20) -> str:  # 160 bits / 8 bits per byte = 20 
 
 
 def store_request(token: str, request: dict):
+    # todo - add pydantic validation
     connection = redis_connection()
     connection.set(token, json.dumps(request))
     connection.expire(token, 60)  # 1 minute

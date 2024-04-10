@@ -1,11 +1,14 @@
 from typing import Annotated
+import json
 
+import pkce
 import urllib.parse
 import requests
-
+import jwt
 
 from fastapi import FastAPI, Request, Header, HTTPException, Depends, status, Form
 from fastapi.security import HTTPBasic, OAuth2PasswordRequestForm
+from fastapi.responses import RedirectResponse
 
 import datetime
 
@@ -13,7 +16,7 @@ from . import models
 from . import conf
 from . import authentication
 from . import par
-
+from . import auth
 
 app = FastAPI(
     docs_url="/api-docs",
@@ -48,8 +51,9 @@ async def pushed_authorization_request(
     response_type: Annotated[str, Form()],
     client_id: Annotated[str, Form()],
     redirect_uri: Annotated[str, Form()],
+    state: Annotated[str, Form()],
     code_challenge: Annotated[str, Form()],
-    code_challenge_method: Annotated[str, Form()],
+    scope: Annotated[str, Form()],
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
 ) -> dict:
     """
@@ -65,14 +69,18 @@ async def pushed_authorization_request(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Client certificate required",
         )
+
     # Get args as dict
     parameters = {
         "response_type": response_type,
         "client_id": client_id,
-        "redirect_uri": redirect_uri,
         "code_challenge": code_challenge,
-        "code_challenge_method": code_challenge_method,
+        "code_challenge_method": "S256",  # "plain" or "S256
+        "redirect_uri": redirect_uri,
+        "state": state,
+        "scope": scope,
     }
+    print(parameters)
     token = par.get_token()
     par.store_request(token, parameters)
     return {
@@ -81,107 +89,88 @@ async def pushed_authorization_request(
     }
 
 
-# Test endpoint that just returns the stored request from par endpoint
-@app.post("/api/v1/par/test")
-async def pushed_authorization_request_test(
-    auth_request: models.AuthorizationRequest,
-) -> dict:
-    """
-    Get the stored request from redis
-    """
-    token = auth_request.request_uri.split(":")[-1]
-    request = par.get_request(token)
-    if request["client_id"] != auth_request.client_id:
+@app.get("/api/v1/authorize")
+async def authorize(
+    request_uri: str,
+    client_id: str,
+    x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
+):
+    if not request_uri:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Request URI required",
+        )
+    # Retrieve PAR data from Redis
+    token = request_uri.split(":")[-1]
+    par_request = par.get_request(token)
+    if not par_request:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Request URI does not exist or has expired",
+        )
+    if par_request["client_id"] != client_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Client ID does not match",
         )
-    return request
 
-
-@app.post("/api/v1/authorize", response_model=models.AuthorizationResponse)
-async def authorization_code(
-    auth_request: models.AuthorizationRequest,
-) -> dict:
-    """
-    Pass the request along to the FAPI api, await the response,
-    send it back to the client app
-    """
-    payload = {
-        "request_uri": auth_request.request_uri,
-        "client_id": auth_request.client_id,
-    }
-    session = requests.Session()
-    session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
-    response = session.post(
-        f"{conf.FAPI_API}/auth/authorization",
-        json=payload,
+    # Construct authorization URL with request object and PKCE parameters
+    authorization_url = (
+        f"{conf.AUTHORIZATION_ENDPOINT}?"
+        f"client_id={conf.CLIENT_ID}&"
+        f"response_type=code&"
+        f"redirect_uri={conf.REDIRECT_URI}&"
+        f"scope={par_request['scope']}&"
+        f"state={par_request['state']}&"
+        f"code_challenge={par_request['code_challenge']}&"
+        f"code_challenge_method=S256&"
+        f"request={json.dumps(par_request)}"
     )
 
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    result = response.json()
-    return {
-        "message": "Authorisation code request issued",
-        "ticket": result["ticket"],
-    }
-
-
-@app.post("/api/v1/authorize/issue", response_model=models.IssueResponse)
-async def issue(
-    current_user: Annotated[
-        models.User, Depends(authentication.get_current_active_user)
-    ],
-    issue_request: models.IssueRequest,
-) -> dict:
-    """
-    Send subject and ticket to the FAPI api, await the response
-    """
-
-    payload = {
-        "subject": current_user.username,
-        "ticket": issue_request.ticket,
-    }
-    session = requests.Session()
-    session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
-    response = session.post(
-        f"{conf.FAPI_API}/auth/authorization/issue",
-        json=payload,
-    )
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    result = response.json()
-    return result
+    # Redirect the user to the authorization URL
+    return RedirectResponse(authorization_url, status_code=302)
 
 
 @app.post("/api/v1/authorize/token", response_model=models.FAPITokenResponse)
 async def token(
-    request: Request,
-    token_request: models.FAPITokenRequest,
+    grant_type: Annotated[str, Form()],
+    client_id: Annotated[str, Form()],
+    redirect_uri: Annotated[str, Form()],
+    code_verifier: Annotated[str, Form()],
+    code: Annotated[str, Form()],
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
 ) -> models.FAPITokenResponse:
-    """
-    Pass the request along to the FAPI api, await the response, tidy it up and
-    send it back to the client app
-    """
+    # TODO we need to add callbacks to add the client certificate thumbprint into the token
+    # https://www.ory.sh/docs/oauth2-oidc/authorization-code-flow
     payload = {
-        "parameters": urllib.parse.urlencode(token_request.model_dump()),
-        "client_id": token_request.client_id,
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": redirect_uri,
+        "client_id": client_id,
+        "code_verifier": code_verifier,
         "client_certificate": x_amzn_mtls_clientcert,
     }
-    print(payload)
     session = requests.Session()
     session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
-    response = session.post(
-        f"{conf.FAPI_API}/auth/token/",
-        json=payload,
+    # print(payload, conf.TOKEN_ENDPOINT)
+    response = requests.post(
+        f"{conf.TOKEN_ENDPOINT}",
+        data=payload,
     )
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
+    # We need to step in here to add an id_token as Ory Hydra is unable to provide this with a no-password Oauth2 client
+    # so first of all we'll decode the token we receive so we can use elements of it to create our id_token
+    # *important* this is due to limitations of the Ory Hydra platform, many other platforms will return an id_token as
+    # part of their response
+    decoded_token = jwt.decode(
+        result["access_token"], options={"verify_signature": False}
+    )
+    id_token = auth.create_id_token(decoded_token["sub"])
     return models.FAPITokenResponse(
         access_token=result["access_token"],
-        id_token=result["id_token"],
+        id_token=id_token,
         refresh_token=result["refresh_token"],
     )
 
@@ -250,3 +239,28 @@ async def user_consent(
         "user": current_user.username,
         "scope": consent.scopes,
     }
+
+
+@app.get("/.well-known/openid-configuration")
+async def get_openid_configuration():
+
+    return {
+        "issuer": f"{conf.ISSUER_URL}",
+        "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/auth/par/",
+        "authorization_endpoint": f"{conf.ISSUER_URL}/auth/authorization/",
+        "token_endpoint": f"{conf.ISSUER_URL}/auth/token/",
+        "jwks_uri": f"{conf.ISSUER_URL}/.well-known/jwks.json",
+        "introspection_endpoint": f"{conf.ISSUER_URL}/auth/introspection/",
+        "response_types_supported": ["code", "id_token", "token"],
+        "subject_types_supported": ["public"],
+        "id_token_signing_alg_values_supported": ["ES256"],
+        "token_endpoint_auth_methods_supported": ["private_key_jwt"],
+        "token_endpoint_auth_signing_alg_values_supported": ["ES256"],
+    }
+
+
+@app.get("/.well-known/jwks.json")
+async def get_jwks():
+    jwks = auth.create_jwks(auth.get_key("cert"))
+    # Return JWKS as JSON response
+    return jwks

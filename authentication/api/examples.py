@@ -61,6 +61,9 @@ TOKEN_REQUEST: JsonDict = {
     "client_id": f"{CLIENT_ID}",
     "parameters": "grant_type=authorization_code&redirect_uri=https://client.example.org/cb/example.com&code=DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70",
     "client_certificate": CLIENT_CERTIFICATE,
+    "redirect_uri": "https://client.example.org/cb/",
+    "code_verifier": "random_string",
+    "code": "DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70",
 }
 
 TOKEN_RESPONSE: JsonDict = {

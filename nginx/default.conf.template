@@ -15,7 +15,7 @@ server {
     # CA certificate
     ssl_client_certificate /etc/nginx/certs/ca-cert.pem;
     # need to validate client certificate(if this flag optional_no_ca it won't validate client certificates)
-    ssl_verify_client optional;
+    ssl_verify_client optional_no_ca;
     location / {
         # remote ip and forwarding ip
         proxy_set_header X-Real-IP $remote_addr;

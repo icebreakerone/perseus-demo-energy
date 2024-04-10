@@ -93,9 +93,12 @@ class IssueResponse(BaseModel):
     }
 
 
-class FAPITokenRequest(BaseModel):
-    client_id: int
-    parameters: str
+class TokenRequest(BaseModel):
+    grant_type: str
+    client_id: str
+    redirect_uri: str
+    code_verifier: str
+    code: str
     model_config = {"json_schema_extra": {"examples": [examples.TOKEN_REQUEST]}}
 
 
