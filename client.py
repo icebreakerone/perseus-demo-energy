@@ -59,7 +59,6 @@ def pushed_authorization_request():
         verify=False,
         cert=(CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY),
     )
-    print(response.status_code, response.text)
     return code_verifier, response.json()
 
 
@@ -75,7 +74,6 @@ def initiate_authorization(request_uri: str):
         },
         verify=False,
     )
-    # print()
     return response.json()
 
 
@@ -166,7 +164,8 @@ if __name__ == "__main__":
     code_verifier, par_response = pushed_authorization_request()
     print("Code verifier:", code_verifier)
     # print(par_response)
-    response = requests.get(
+    session = get_session()
+    response = session.get(
         f"{AUTHENTICATION_API}/api/v1/authorize",
         params={
             "client_id": f"{conf.CLIENT_ID}",
@@ -180,37 +179,8 @@ if __name__ == "__main__":
         print(response.headers["location"])
     else:
         print(response.status_code, response.text)
-    # token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjVlNzk3M2JlLWQ5NTQtNGMzOC04MDNlLWMyOWZiOGEwMTY2MyIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJjbGllbnRfaWQiOiJmNjc5MTZjZS1kZTMzLTRlMmYtYThlMy1jYmQ1ZjY0NTljMzAiLCJleHAiOjE3MTI3NTE0MTYsImV4dCI6e30sImlhdCI6MTcxMjc0NzgxNiwiaXNzIjoiaHR0cHM6Ly92aWdvcm91cy1oZXlyb3Zza3ktMXRydnYwaWt4OS5wcm9qZWN0cy5vcnlhcGlzLmNvbSIsImp0aSI6ImY2NDdjOWFmLWU0OGUtNDE3My1iYjQxLTM5NWQ4MWU1M2ZmNyIsIm5iZiI6MTcxMjc0NzgxNiwic2NwIjpbInByb2ZpbGUiXSwic3ViIjoiZDZmZDZlMWMtYTEwZS00MGQ4LWFhMmItOTYwNmYzZDM0ZDNjIn0.SE19y_kn6inHZNjk3afo5Vy2QlR_TNJjI3PoNnHe62Rcqt5S9oPaqZyt-FJ6rbQmTGv9T-TXDDHO9lyUTyebdKMTWAp8XiUSmTr-hifFbKApsCnHorJIgeP1UIpx_7F7ewkcbJQiewDxAzrjAZRkC-oqQO4Pypll7viBeqBcQ9ah1kl3gjeB3mK1vU55LvouJtIsXFL_29pBud3Dce78dXpUWzbVY7mdru1fEw34VwMr14IZvOLx1Qt1IYpDAqQs2mwWzkQGp_ihU_AmBlmPEN4IMRYYr69cTwastZD4NOBCpSDwMrJZb3LQCZjuer4bYX1r5JXqoqZf3TCPiYtcHqtOm7hOtr9ve1VMbeNwbMKUMOjT2HtjMkXMlFlqnNxlJbX_5Td5AXO0VNKsziokqiuTYSIrUNHyZ1I8KakssHGmu9aru2bHpvc4DptV6DOtiZTh00mQjIUu77nfnvnwZ1oX0IJhG2cCaFM4E-52gu6WkMvPPEJ5pMCmIB3tyWy2yNlJBsXpY-FObOSXNHmrEaVEyU46GCdEZvYAUrmW7y2sy5iyHwUZ2TS7N9xFEAx_d3MueIQb9a6_HzPpwlqJrXDgNHEU1mCn0m9UpWYhAz9w9Y0Koee2hfJA26_b5L64Ywf5EQf1BqmbuuUFMRKZYWJ5gSFKESZdHbFxQ4tdoHs"
-    # token_parts = token.split(".")
-    # header = jwt.decode(token_parts[0], options={"verify_signature": False})
-    # print(response.status_code, response.headers["location"])
-    # Take note of the ticket
-    # ticket = initiate_authorization(data["request_uri"])["ticket"]
-    # print("Received ticket number: ", ticket)
-    # # # authenticate the user
-    # token = get_user_token()["access_token"]
-    # print("User authenticated, token received: ", token)
-    # # # Ask for user's consent
-    # consent = give_consent(token)
-    # print("Consent given: ", consent)
-    # # # Now we have identified the user, we can use the ticket to request an authorization code
-    # issue_response = authentication_issue_request(token, ticket)
-    # print("Issue request: ", issue_response["authorization_code"])
-    # # Client side - check the id_token values
-    # print(client_side_decoding(issue_response["id_token"]))
-    # # # Now we need to exchange the auth code for an access token
-    # result = get_fapi_token(issue_response["authorization_code"])
-    # fapi_token = result["access_token"]
-    # # # The token can be used to access protected APIs
-    # # # The resource server can introspect the token
-    # print(introspect_token(fapi_token))
-    # # We should now be able to use the token to retrieve data from the resource server
-    # result = requests.get(
-    #     f"{RESOURCE_API}/api/v1/consumption",
-    #     verify=False,
-    #     headers={"Authorization": f"Bearer {fapi_token}"},
-    #     cert=(CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY),
-    # )
-    # print(result.status_code)
-    # print(result.text)
-    # print(result.json())
+    print(
+        introspect_token(
+            "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJjbGllbnRfaWQiOiJmNjc5MTZjZS1kZTMzLTRlMmYtYThlMy1jYmQ1ZjY0NTljMzAiLCJleHAiOjE3MTI4NDY2NTYsImV4dCI6e30sImlhdCI6MTcxMjg0MzA1NSwiaXNzIjoiaHR0cHM6Ly92aWdvcm91cy1oZXlyb3Zza3ktMXRydnYwaWt4OS5wcm9qZWN0cy5vcnlhcGlzLmNvbSIsImp0aSI6IjkxYWMwZjRkLWJlZGEtNDE0Yy1hYjMxLTIzNDA1NmQ4YmRlNyIsIm5iZiI6MTcxMjg0MzA1NSwic2NwIjpbInByb2ZpbGUiLCJlbWFpbCIsIm9mZmxpbmVfYWNjZXNzIl0sInN1YiI6ImQ2ZmQ2ZTFjLWExMGUtNDBkOC1hYTJiLTk2MDZmM2QzNGQzYyIsImNuZiI6eyJ4NXQjUzI1NiI6Ims2Sm9jX1RiUkltX3ZJUXlyV2NNVElWel9RWm1SMEpSZUdBU1dSY0xkblEifX0.hOFJCiR0QVIIOJrfSU6cUevCy953Qg2vsRBwBKBvYbLiCCGkelIIFwObAUtdREaZktVoVAMFKC2X7yrER-PXSA"
+        )
+    )

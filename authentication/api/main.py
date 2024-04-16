@@ -14,7 +14,6 @@ import datetime
 
 from . import models
 from . import conf
-from . import authentication
 from . import par
 from . import auth
 
@@ -36,14 +35,6 @@ async def docs() -> dict:
 @app.get("/info")
 async def test(request: Request) -> dict:
     return dict(request.headers.mutablecopy())
-
-
-# TODO: mock responses from FAPI api using the responses library
-# response_type: str
-# client_id: int
-# redirect_uri: str
-# code_challenge: str
-# code_challenge_method: str
 
 
 @app.post("/api/v1/par", response_model=models.PushedAuthorizationResponse)
@@ -138,21 +129,25 @@ async def token(
     redirect_uri: Annotated[str, Form()],
     code_verifier: Annotated[str, Form()],
     code: Annotated[str, Form()],
-    x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
+    x_amzn_mtls_clientcert: Annotated[str, Header()],
 ) -> models.FAPITokenResponse:
-    # TODO we need to add callbacks to add the client certificate thumbprint into the token
-    # https://www.ory.sh/docs/oauth2-oidc/authorization-code-flow
+    """
+    Token issuing endpoint
+
+    We use the Ory Hydra endpoint to issue the token and validate authorisation code flow
+    but due to missing features in Ory Hydra authorisation code flow we need to generate
+    our own id_token, and add client certificate details to the token
+    """
     payload = {
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": redirect_uri,
         "client_id": client_id,
         "code_verifier": code_verifier,
-        "client_certificate": x_amzn_mtls_clientcert,
     }
+    print("Token request:", x_amzn_mtls_clientcert)
     session = requests.Session()
     session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
-    # print(payload, conf.TOKEN_ENDPOINT)
     response = requests.post(
         f"{conf.TOKEN_ENDPOINT}",
         data=payload,
@@ -160,16 +155,18 @@ async def token(
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
-    # We need to step in here to add an id_token as Ory Hydra is unable to provide this with a no-password Oauth2 client
-    # so first of all we'll decode the token we receive so we can use elements of it to create our id_token
-    # *important* this is due to limitations of the Ory Hydra platform, many other platforms will return an id_token as
-    # part of their response
+    # Decode the Ory Hydra issued token
     decoded_token = jwt.decode(
         result["access_token"], options={"verify_signature": False}
     )
+    # Add in our required client certificate thumbprint
+    enhanced_token = auth.create_enhanced_access_token(
+        decoded_token, x_amzn_mtls_clientcert
+    )
+    # Create our id_token
     id_token = auth.create_id_token(decoded_token["sub"])
     return models.FAPITokenResponse(
-        access_token=result["access_token"],
+        access_token=enhanced_token,
         id_token=id_token,
         refresh_token=result["refresh_token"],
     )
@@ -178,67 +175,18 @@ async def token(
 @app.post("/api/v1/authorize/introspect")
 async def introspect(
     token: models.IntrospectionRequest,
-    x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
+    x_amzn_mtls_clientcert: Annotated[str, Header()],
 ) -> dict:
     """
-    Pass the request along to the FAPI api, await the response,
-    send it back to the client app
+    We have our token as a jwt, so we can do the introspection here
     """
-    payload = {
-        "token": token.token,
-        "client_certificate": x_amzn_mtls_clientcert,
-    }
-    session = requests.Session()
-    session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
-    response = session.post(
-        f"{conf.FAPI_API}/auth/introspection/",
-        json=payload,
-    )
-    result = response.json()
+    print("Introspection: ", x_amzn_mtls_clientcert)
+    try:
+        introspection_response = auth.introspect(x_amzn_mtls_clientcert, token.token)
+    except auth.AccessTokenValidatorError as e:
+        raise HTTPException(status_code=401, detail=str(e))
     # The authentication server can use the response to make its own checks,
-    return result
-
-
-"""
-'Fake' user authentication
-"""
-
-
-@app.post("/api/v1/authenticate/token")
-async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
-) -> models.UserToken:
-    user = authentication.authenticate_user(form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = datetime.timedelta(
-        minutes=authentication.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-    access_token = authentication.create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return models.UserToken(access_token=access_token, token_type="bearer")
-
-
-@app.post("/api/v1/authenticate/consent")
-async def user_consent(
-    current_user: Annotated[
-        models.User, Depends(authentication.get_current_active_user)
-    ],
-    consent: models.Consent,
-):
-    """
-    Consent will be stored by the platform
-    """
-    return {
-        "message": "consent granted",
-        "user": current_user.username,
-        "scope": consent.scopes,
-    }
+    return introspection_response
 
 
 @app.get("/.well-known/openid-configuration")
