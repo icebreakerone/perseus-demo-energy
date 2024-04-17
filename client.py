@@ -106,23 +106,6 @@ def give_consent(token: str):
     return response.json()
 
 
-def get_fapi_token(
-    auth_code: str,
-):
-    session = get_session()
-    response = session.post(
-        f"{AUTHENTICATION_API}/api/v1/authorize/token",
-        json={
-            "client_id": f"{conf.CLIENT_ID}",
-            "parameters": f"grant_type=authorization_code&redirect_uri=https://mobile.example.com/cb&code={auth_code}",
-        },
-        verify=False,
-    )
-    if not response.status_code == 200:
-        raise Exception(response.text)
-    return response.json()
-
-
 def introspect_token(fapi_token: str):
     session = get_session()
     # session = requests.Session()
@@ -167,7 +150,7 @@ if __name__ == "__main__":
     # Generate PKCE code verifier and challenge
 
     code_verifier, par_response = pushed_authorization_request()
-    print("Code verifier:", code_verifier)
+    print("Code verifier: ", code_verifier)
     session = get_session()
     response = session.get(
         f"{AUTHENTICATION_API}/api/v1/authorize",
