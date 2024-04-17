@@ -150,7 +150,6 @@ if __name__ == "__main__":
     # Generate PKCE code verifier and challenge
 
     code_verifier, par_response = pushed_authorization_request()
-    print("Code verifier:", code_verifier)
     session = get_session()
     response = session.get(
         f"{AUTHENTICATION_API}/api/v1/authorize",

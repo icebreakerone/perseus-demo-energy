@@ -145,6 +145,8 @@ async def token(
     but due to missing features in Ory Hydra authorisation code flow we need to generate
     our own id_token, and add client certificate details to the token
     """
+    if x_amzn_mtls_clientcert is None:
+        raise HTTPException(status_code=401, detail="No client certificate provided")
     payload = {
         "grant_type": grant_type,
         "code": code,
@@ -186,6 +188,8 @@ async def introspect(
     """
     We have our token as a jwt, so we can do the introspection here
     """
+    if x_amzn_mtls_clientcert is None:
+        raise HTTPException(status_code=401, detail="No client certificate provided")
     try:
         introspection_response = auth.introspect(x_amzn_mtls_clientcert, token.token)
     except auth.AccessTokenValidatorError as e:
