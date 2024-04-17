@@ -55,10 +55,22 @@ In this simple implementation, the request is stored in a redis instance, using 
 
 ## Testing the API with client.py
 
-Running client.py will perform the initial steps in the authorisation code flow, outputting a URL that will open the UI to log in and confirm consent. The PKCE code verifier will also be in the output, which will be needed after the redirect
+client.py can be used to test authorisation code flow, introspection, id_token decoding and retrieving data from the resource URL.
+
+Four commands are available, and are run using:
 
 ```bash
-python -W ignore  client.py
+python -W ignore  client.py [auth|introspect|id-token|resource]
+```
+
+nb. The optional `-W ignore` switch suppresses multiple warnings about the self-signed certificates.
+
+### Auth
+
+Running `client.py auth` will perform the initial steps in the authorisation code flow, outputting a URL that will open the UI to log in and confirm consent. The PKCE code verifier will also be in the output, which will be needed after the redirect
+
+```bash
+python -W ignore  client.py auth
 ```
 
 Example output:
@@ -67,8 +79,6 @@ Example output:
 Code verifier: c6P-FfD0ayLslzCUESCsay8QHEg71O0SnKLeHPkOSyOZ6KubKPRaclM4u5veKcqI7MNqZX_xAUt4CUwIwm4JD99EacbtjAABbyY1i972umU9Ong9HFjtJq84y5mljGFy
 https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com/oauth2/auth?client_id=f67916ce-de33-4e2f-a8e3-cbd5f6459c30&response_type=code&redirect_uri=http://127.0.0.1:3000/callback&scope=profile+offline_access&state=9mpb2gDwhp2fLTa_MwJGM21R7FjOQCJq&code_challenge=cksXMlSWrcflDTJoyrpiWX0u2VRV6C--pzetmBIo6LQ&code_challenge_method=S256
 ```
-
-nb. The `-W ignore` switch suppresses multiple warnings about the self-signed certificates.
 
 By default the client will use the local docker environment and expects a local instance of the FAPI api to be running on localhost:8020. Testing against the deployed API can be achieved by setting the `AUTHENTICATION_API` and `RESOURCE_API` environment variables, and optionally the FAPI_API environment variable.
 
@@ -83,6 +93,26 @@ Opening the redirect url will present you with the default Ory Hydra log in/ sig
 Granting consent will redirect to our demo client application, with the authorisation code appended to the url. The authorisation code can be exchanged for an access token by adding the code_verifier value to the form and submitting:
 
 ![Redirect](docs/exchange.png)
+
+### Introspection
+
+To show the response of the introspection endpoint, run:
+
+```bash
+python -W ignore  client.py introspect --token <token>
+```
+
+with token being the `token` value obtained from authorisation code flow
+
+### Client side id_token decoding
+
+To show the response of client side id_token decoding, run:
+
+```bash
+python -W ignore  client.py id-token --token <token>
+```
+
+with token being the `id_token` value obtained from authorisation code flow
 
 ## Ory Hydra
 

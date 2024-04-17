@@ -14,7 +14,7 @@ CERTS = {
 }
 
 
-FAPI_API = os.environ.get("FAPI_API", "https://perseus-demo-fapi.ib1.org")
+ISSUER_URL = os.environ.get("ISSUER_URL", "https://perseus-demo-energy.ib1.org")
 CLIENT_ID = os.environ.get("CLIENT_ID", "21653835348762")
 CLIENT_SECRET = os.environ.get(
     "CLIENT_SECRET", "uE4NgqeIpuSV_XejQ7Ds3jsgA1yXhjR1MXJ1LbPuyls"
@@ -32,6 +32,6 @@ INTROSPECTION_ENDPOINT = os.environ.get(
     "https://musing-kirch-t48np94ikp.projects.oryapis.com/admin/oauth2/introspect",
 )
 REDIRECT_URI = os.environ.get(
-    "REDIRECT_URI", "https://perseus-demo-authentication.ib1.org/callback"
+    "REDIRECT_URI", "https://perseus-demo-accounting.ib1.org/callback"
 )
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")

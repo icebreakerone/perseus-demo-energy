@@ -8,6 +8,9 @@ import jwt
 import pkce
 import time
 import secrets
+
+import click
+
 from authentication.api import conf
 import ssl
 
@@ -124,17 +127,17 @@ def client_side_decoding(token: str):
     # Workaround for self-signed certificates, insecure
     ssl._create_default_https_context = ssl._create_unverified_context
 
-    jwks_url = conf.FAPI_API + "/.well-known/jwks.json"
+    jwks_url = conf.ISSUER_URL + "/.well-known/jwks.json"
     print(jwks_url)
     jwks_client = jwt.PyJWKClient(jwks_url)
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
     decoded = jwt.decode(token, key, [header["alg"]], audience=f"{conf.CLIENT_ID}")
-    print(decoded, conf.FAPI_API)
+    print(decoded, conf.ISSUER_URL)
     # Example of tests to apply
     if decoded["aud"] != conf.CLIENT_ID:
         raise ValueError("Invalid audience")
-    if decoded["iss"] != conf.FAPI_API:
+    if decoded["iss"] != conf.ISSUER_URL:
         raise ValueError("Invalid issuer")
     if decoded["exp"] < int(time.time()):
         raise ValueError("Token expired")
@@ -144,11 +147,25 @@ def client_side_decoding(token: str):
     return decoded
 
 
-if __name__ == "__main__":
-    # Initiate flow with PAR
+@click.group()
+def cli():
+    pass
 
-    # Generate PKCE code verifier and challenge
 
+@click.option("--token", help="introspect token returned from authorisation flow")
+@cli.command()
+def introspect(token):
+    print(introspect_token(token))
+
+
+@click.option("--token", help="Decode ID token returned from authorisation flow")
+@cli.command()
+def id_token(token):
+    print(client_side_decoding(token))
+
+
+@cli.command()
+def auth():
     code_verifier, par_response = pushed_authorization_request()
     print("Code verifier: ", code_verifier)
     session = get_session()
@@ -165,13 +182,21 @@ if __name__ == "__main__":
     if response.status_code == 302:
         print(response.headers["location"])
     else:
-        print(response.status_code, response.text)
+        print("Error:", response.status_code, response.text)
+
+
+if __name__ == "__main__":
+    cli()
+    # Initiate flow with PAR
+
+    # Generate PKCE code verifier and challenge
+
     # The following two tests will use the values returned after login and consent has been given
-    print(
-        introspect_token(
-            "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJjbGllbnRfaWQiOiJmNjc5MTZjZS1kZTMzLTRlMmYtYThlMy1jYmQ1ZjY0NTljMzAiLCJleHAiOjE3MTMyODU5MjUsImV4dCI6e30sImlhdCI6MTcxMzI4MjMyNSwiaXNzIjoiaHR0cHM6Ly92aWdvcm91cy1oZXlyb3Zza3ktMXRydnYwaWt4OS5wcm9qZWN0cy5vcnlhcGlzLmNvbSIsImp0aSI6ImNjYTQ5N2Y1LWYzYjAtNGM4MS1iODczLTdmOTdhNzRjZmNkYSIsIm5iZiI6MTcxMzI4MjMyNSwic2NwIjpbInByb2ZpbGUiLCJvZmZsaW5lX2FjY2VzcyJdLCJzdWIiOiJkNmZkNmUxYy1hMTBlLTQwZDgtYWEyYi05NjA2ZjNkMzRkM2MiLCJjbmYiOnsieDV0I1MyNTYiOiJrNkpvY19UYlJJbV92SVF5cldjTVRJVnpfUVptUjBKUmVHQVNXUmNMZG5RIn19.SxM9YvqE-vvXwemHNbLHNey7xbyLGsGu4T6bSmmhXNP2-nk8GMcmoHCLXhgYhQFJ3HcuLx7P9kQCqEUrY68xGQ"
-        )
-    )
+    # print(
+    #     introspect_token(
+    #         "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJjbGllbnRfaWQiOiJmNjc5MTZjZS1kZTMzLTRlMmYtYThlMy1jYmQ1ZjY0NTljMzAiLCJleHAiOjE3MTMyODU5MjUsImV4dCI6e30sImlhdCI6MTcxMzI4MjMyNSwiaXNzIjoiaHR0cHM6Ly92aWdvcm91cy1oZXlyb3Zza3ktMXRydnYwaWt4OS5wcm9qZWN0cy5vcnlhcGlzLmNvbSIsImp0aSI6ImNjYTQ5N2Y1LWYzYjAtNGM4MS1iODczLTdmOTdhNzRjZmNkYSIsIm5iZiI6MTcxMzI4MjMyNSwic2NwIjpbInByb2ZpbGUiLCJvZmZsaW5lX2FjY2VzcyJdLCJzdWIiOiJkNmZkNmUxYy1hMTBlLTQwZDgtYWEyYi05NjA2ZjNkMzRkM2MiLCJjbmYiOnsieDV0I1MyNTYiOiJrNkpvY19UYlJJbV92SVF5cldjTVRJVnpfUVptUjBKUmVHQVNXUmNMZG5RIn19.SxM9YvqE-vvXwemHNbLHNey7xbyLGsGu4T6bSmmhXNP2-nk8GMcmoHCLXhgYhQFJ3HcuLx7P9kQCqEUrY68xGQ"
+    #     )
+    # )
     # print(
     #     client_side_decoding(
     #         "eyJhbGciOiJFUzI1NiIsImtpZCI6IjEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3BlcnNldXMtZGVtby1lbmVyZ3kuaWIxLm9yZyIsInN1YiI6ImQ2ZmQ2ZTFjLWExMGUtNDBkOC1hYTJiLTk2MDZmM2QzNGQzYyIsImF1ZCI6ImY2NzkxNmNlLWRlMzMtNGUyZi1hOGUzLWNiZDVmNjQ1OWMzMCIsImV4cCI6MTcxMzI3OTgxMiwiaWF0IjoxNzEzMjc2MjEyLCJraWQiOjF9.SHpel4gQyrIS6RNM4VTZgsepgR-g-g5zQWeLwBVUzapeusDU2tsfT4yCczN6XMNYq9xCuL2WmIVEWKJBonp2Gw"
