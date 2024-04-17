@@ -36,9 +36,11 @@ network:
 # Optional fields for more advanced use-cases.
 #
 variables:                    # Pass environment variables as key value pairs.
-  FAPI_API: "https://perseus-demo-fapi.ib1.org"
-  CLIENT_ID: 21653835348762
-  CLIENT_SECRET: "uE4NgqeIpuSV_XejQ7Ds3jsgA1yXhjR1MXJ1LbPuyls"
+  CLIENT_ID: f67916ce-de33-4e2f-a8e3-cbd5f6459c30
+  REDIS_HOST: redis.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local
+  OAUTH_URL: https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com
+
+
 
 environments:
     prod:
@@ -47,3 +49,12 @@ environments:
         # To match all requests you can use the "/" path.
         alias: perseus-demo-authentication.ib1.org
         hosted_zone: Z080590727V6ALTWMJ7N5
+      secrets: 
+        SERVER_KEY: /copilot/perseus-demo-fapi/prod/secrets/server_key
+        SERVER_CERT: /copilot/perseus-demo-fapi/prod/secrets/server_cert
+        CLIENT_SECRET: /copilot/perseus-demo-authentication/prod/secrets/client_secret
+    dev:
+      secrets: 
+        SERVER_KEY: /copilot/perseus-demo-fapi/dev/secrets/server_key
+        SERVER_CERT: /copilot/perseus-demo-fapi/dev/secrets/server_cert
+        CLIENT_SECRET: /copilot/perseus-demo-authentication/dev/secrets/client_secret
