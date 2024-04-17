@@ -19,17 +19,16 @@ CLIENT_ID = os.environ.get("CLIENT_ID", "21653835348762")
 CLIENT_SECRET = os.environ.get(
     "CLIENT_SECRET", "uE4NgqeIpuSV_XejQ7Ds3jsgA1yXhjR1MXJ1LbPuyls"
 )
+OAUTH_URL = os.environ.get(
+    "OAUTH_URL", "https://musing-kirch-t48np94ikp.projects.oryapis.com"
+)
 AUTHORIZATION_ENDPOINT = os.environ.get(
     "AUTHORIZATION_ENDPOINT",
-    "https://musing-kirch-t48np94ikp.projects.oryapis.com/oauth2/auth",
+    f"{OAUTH_URL}/oauth2/auth",
 )
 TOKEN_ENDPOINT = os.environ.get(
     "TOKEN_ENDPOINT",
-    "https://musing-kirch-t48np94ikp.projects.oryapis.com/oauth2/token",
-)
-INTROSPECTION_ENDPOINT = os.environ.get(
-    "INTROSPECTION_ENDPOINT",
-    "https://musing-kirch-t48np94ikp.projects.oryapis.com/admin/oauth2/introspect",
+    f"{OAUTH_URL}/oauth2/token",
 )
 REDIRECT_URI = os.environ.get(
     "REDIRECT_URI", "https://perseus-demo-accounting.ib1.org/callback"
