@@ -164,6 +164,18 @@ def id_token(token):
     print(client_side_decoding(token))
 
 
+@click.option("--token", help="Authorisation token")
+@cli.command()
+def resource(token):
+    result = requests.get(
+        f"{RESOURCE_API}/api/v1/consumption",
+        verify=False,
+        headers={"Authorization": f"Bearer {token}"},
+        cert=(CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY),
+    )
+    return result.json()
+
+
 @cli.command()
 def auth():
     code_verifier, par_response = pushed_authorization_request()
@@ -187,18 +199,3 @@ def auth():
 
 if __name__ == "__main__":
     cli()
-    # Initiate flow with PAR
-
-    # Generate PKCE code verifier and challenge
-
-    # The following two tests will use the values returned after login and consent has been given
-    # print(
-    #     introspect_token(
-    #         "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJjbGllbnRfaWQiOiJmNjc5MTZjZS1kZTMzLTRlMmYtYThlMy1jYmQ1ZjY0NTljMzAiLCJleHAiOjE3MTMyODU5MjUsImV4dCI6e30sImlhdCI6MTcxMzI4MjMyNSwiaXNzIjoiaHR0cHM6Ly92aWdvcm91cy1oZXlyb3Zza3ktMXRydnYwaWt4OS5wcm9qZWN0cy5vcnlhcGlzLmNvbSIsImp0aSI6ImNjYTQ5N2Y1LWYzYjAtNGM4MS1iODczLTdmOTdhNzRjZmNkYSIsIm5iZiI6MTcxMzI4MjMyNSwic2NwIjpbInByb2ZpbGUiLCJvZmZsaW5lX2FjY2VzcyJdLCJzdWIiOiJkNmZkNmUxYy1hMTBlLTQwZDgtYWEyYi05NjA2ZjNkMzRkM2MiLCJjbmYiOnsieDV0I1MyNTYiOiJrNkpvY19UYlJJbV92SVF5cldjTVRJVnpfUVptUjBKUmVHQVNXUmNMZG5RIn19.SxM9YvqE-vvXwemHNbLHNey7xbyLGsGu4T6bSmmhXNP2-nk8GMcmoHCLXhgYhQFJ3HcuLx7P9kQCqEUrY68xGQ"
-    #     )
-    # )
-    # print(
-    #     client_side_decoding(
-    #         "eyJhbGciOiJFUzI1NiIsImtpZCI6IjEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3BlcnNldXMtZGVtby1lbmVyZ3kuaWIxLm9yZyIsInN1YiI6ImQ2ZmQ2ZTFjLWExMGUtNDBkOC1hYTJiLTk2MDZmM2QzNGQzYyIsImF1ZCI6ImY2NzkxNmNlLWRlMzMtNGUyZi1hOGUzLWNiZDVmNjQ1OWMzMCIsImV4cCI6MTcxMzI3OTgxMiwiaWF0IjoxNzEzMjc2MjEyLCJraWQiOjF9.SHpel4gQyrIS6RNM4VTZgsepgR-g-g5zQWeLwBVUzapeusDU2tsfT4yCczN6XMNYq9xCuL2WmIVEWKJBonp2Gw"
-    #     )
-    # )

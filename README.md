@@ -114,6 +114,12 @@ python -W ignore  client.py id-token --token <token>
 
 with token being the `id_token` value obtained from authorisation code flow
 
+### Retrieve data from protected endpoint
+
+```bash
+python -W ignore  client.py resource --token <token>
+```
+
 ## Ory Hydra
 
 Please contact IB1 for the Client ID and secret if you would like to test against our demo Ory account. Alternatively you can set up a free developer account and create an Oauth2 client with your own details. The client should have:
