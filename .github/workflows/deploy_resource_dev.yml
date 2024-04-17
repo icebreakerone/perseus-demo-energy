@@ -29,3 +29,4 @@ jobs:
         with:
           folder: resource
           env: dev
+          service_name: perseus-resource

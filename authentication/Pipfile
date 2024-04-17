@@ -13,6 +13,10 @@ python-multipart = "*"
 httpx = "*"
 bcrypt = "*"
 cryptography = "*"
+redis = "*"
+pkce = "*"
+boto3 = "*"
+pytest-coverage = "*"
 
 [dev-packages]
 black = "*"
@@ -23,6 +27,7 @@ types-requests = "*"
 pytest = "*"
 responses = "*"
 pytest-mock = "*"
+click = "*"
 
 [requires]
 python_version = "3.12"

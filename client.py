@@ -5,9 +5,15 @@ A command line script to demonstrate the FAPI flow
 import os
 import requests
 import jwt
+import pkce
 import time
+import secrets
+
+import click
 
 from authentication.api import conf
+import ssl
+
 
 AUTHENTICATION_API = os.environ.get("AUTHENTICATION_API", "https://0.0.0.0:8000")
 RESOURCE_API = os.environ.get("RESOURCE_API", "https://0.0.0.0:8010")
@@ -17,6 +23,22 @@ CLIENT_CERTIFICATE = f"{ROOT_PATH}/certs/client-cert.pem"
 CLIENT_PRIVATE_KEY = f"{ROOT_PATH}/certs/client-key.pem"
 
 
+def generate_state(length=32):
+    """
+    Generate a cryptographically random state parameter for OAuth 2.0.
+
+    Parameters:
+        length (int): Length of the state parameter (default is 32 bytes).
+
+    Returns:
+        str: The generated state parameter.
+    """
+    # Generate a random string using a secure random source
+    state = secrets.token_urlsafe(length)
+    # Return the first 'length' characters of the generated string
+    return state[:length]
+
+
 def get_session():
     session = requests.Session()
     session.cert = (CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY)
@@ -24,22 +46,23 @@ def get_session():
     return session
 
 
-def pushed_authorization_request():
-
+def pushed_authorization_request() -> tuple[str, dict]:
+    code_verifier, code_challenge = pkce.generate_pkce_pair()
     response = requests.post(
         f"{AUTHENTICATION_API}/api/v1/par",
         data={
             "response_type": "code",
             "client_id": f"{conf.CLIENT_ID}",
-            "redirect_uri": "https://mobile.example.com/cb",
-            "code_challenge": "W78hCS0q72DfIHa...kgZkEJuAFaT4",
+            "redirect_uri": f"{conf.REDIRECT_URI}",
+            "state": generate_state(),
+            "code_challenge": code_challenge,
             "code_challenge_method": "S256",
+            "scope": "profile+offline_access",
         },
         verify=False,
         cert=(CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY),
     )
-    print(response.status_code, response.text)
-    return response.json()
+    return code_verifier, response.json()
 
 
 def initiate_authorization(request_uri: str):
@@ -54,7 +77,6 @@ def initiate_authorization(request_uri: str):
         },
         verify=False,
     )
-    # print()
     return response.json()
 
 
@@ -87,23 +109,6 @@ def give_consent(token: str):
     return response.json()
 
 
-def get_fapi_token(
-    auth_code: str,
-):
-    session = get_session()
-    response = session.post(
-        f"{AUTHENTICATION_API}/api/v1/authorize/token",
-        json={
-            "client_id": f"{conf.CLIENT_ID}",
-            "parameters": f"grant_type=authorization_code&redirect_uri=https://mobile.example.com/cb&code={auth_code}",
-        },
-        verify=False,
-    )
-    if not response.status_code == 200:
-        raise Exception(response.text)
-    return response.json()
-
-
 def introspect_token(fapi_token: str):
     session = get_session()
     # session = requests.Session()
@@ -119,15 +124,20 @@ def client_side_decoding(token: str):
     """
     Use the jwks to decode the token
     """
-    jwks_url = conf.FAPI_API + "/.well-known/jwks.json"
+    # Workaround for self-signed certificates, insecure
+    ssl._create_default_https_context = ssl._create_unverified_context
+
+    jwks_url = conf.ISSUER_URL + "/.well-known/jwks.json"
+    print(jwks_url)
     jwks_client = jwt.PyJWKClient(jwks_url)
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
     decoded = jwt.decode(token, key, [header["alg"]], audience=f"{conf.CLIENT_ID}")
+    print(decoded, conf.ISSUER_URL)
     # Example of tests to apply
     if decoded["aud"] != conf.CLIENT_ID:
         raise ValueError("Invalid audience")
-    if decoded["iss"] != conf.FAPI_API:
+    if decoded["iss"] != conf.ISSUER_URL:
         raise ValueError("Invalid issuer")
     if decoded["exp"] < int(time.time()):
         raise ValueError("Token expired")
@@ -137,36 +147,58 @@ def client_side_decoding(token: str):
     return decoded
 
 
-if __name__ == "__main__":
-    # Initiate flow with PAR
-    data = pushed_authorization_request()
-    # Take note of the ticket
-    ticket = initiate_authorization(data["request_uri"])["ticket"]
-    print("Received ticket number: ", ticket)
-    # # authenticate the user
-    token = get_user_token()["access_token"]
-    print("User authenticated, token received: ", token)
-    # # Ask for user's consent
-    consent = give_consent(token)
-    print("Consent given: ", consent)
-    # # Now we have identified the user, we can use the ticket to request an authorization code
-    issue_response = authentication_issue_request(token, ticket)
-    print("Issue request: ", issue_response["authorization_code"])
-    # Client side - check the id_token values
-    print(client_side_decoding(issue_response["id_token"]))
-    # # Now we need to exchange the auth code for an access token
-    result = get_fapi_token(issue_response["authorization_code"])
-    fapi_token = result["access_token"]
-    # # The token can be used to access protected APIs
-    # # The resource server can introspect the token
-    print(introspect_token(fapi_token))
-    # We should now be able to use the token to retrieve data from the resource server
-    result = requests.get(
-        f"{RESOURCE_API}/api/v1/consumption",
+@click.group()
+def cli():
+    pass
+
+
+@click.option("--token", help="introspect token returned from authorisation flow")
+@cli.command()
+def introspect(token):
+    print(introspect_token(token))
+
+
+@click.option("--token", help="Decode ID token returned from authorisation flow")
+@cli.command()
+def id_token(token):
+    print(client_side_decoding(token))
+
+
+@cli.command()
+def auth():
+    code_verifier, par_response = pushed_authorization_request()
+    print("Code verifier: ", code_verifier)
+    session = get_session()
+    response = session.get(
+        f"{AUTHENTICATION_API}/api/v1/authorize",
+        params={
+            "client_id": f"{conf.CLIENT_ID}",
+            "request_uri": par_response["request_uri"],
+        },
         verify=False,
-        headers={"Authorization": f"Bearer {fapi_token}"},
+        allow_redirects=False,
         cert=(CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY),
     )
-    print(result.status_code)
-    print(result.text)
-    print(result.json())
+    if response.status_code == 302:
+        print(response.headers["location"])
+    else:
+        print("Error:", response.status_code, response.text)
+
+
+if __name__ == "__main__":
+    cli()
+    # Initiate flow with PAR
+
+    # Generate PKCE code verifier and challenge
+
+    # The following two tests will use the values returned after login and consent has been given
+    # print(
+    #     introspect_token(
+    #         "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJjbGllbnRfaWQiOiJmNjc5MTZjZS1kZTMzLTRlMmYtYThlMy1jYmQ1ZjY0NTljMzAiLCJleHAiOjE3MTMyODU5MjUsImV4dCI6e30sImlhdCI6MTcxMzI4MjMyNSwiaXNzIjoiaHR0cHM6Ly92aWdvcm91cy1oZXlyb3Zza3ktMXRydnYwaWt4OS5wcm9qZWN0cy5vcnlhcGlzLmNvbSIsImp0aSI6ImNjYTQ5N2Y1LWYzYjAtNGM4MS1iODczLTdmOTdhNzRjZmNkYSIsIm5iZiI6MTcxMzI4MjMyNSwic2NwIjpbInByb2ZpbGUiLCJvZmZsaW5lX2FjY2VzcyJdLCJzdWIiOiJkNmZkNmUxYy1hMTBlLTQwZDgtYWEyYi05NjA2ZjNkMzRkM2MiLCJjbmYiOnsieDV0I1MyNTYiOiJrNkpvY19UYlJJbV92SVF5cldjTVRJVnpfUVptUjBKUmVHQVNXUmNMZG5RIn19.SxM9YvqE-vvXwemHNbLHNey7xbyLGsGu4T6bSmmhXNP2-nk8GMcmoHCLXhgYhQFJ3HcuLx7P9kQCqEUrY68xGQ"
+    #     )
+    # )
+    # print(
+    #     client_side_decoding(
+    #         "eyJhbGciOiJFUzI1NiIsImtpZCI6IjEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3BlcnNldXMtZGVtby1lbmVyZ3kuaWIxLm9yZyIsInN1YiI6ImQ2ZmQ2ZTFjLWExMGUtNDBkOC1hYTJiLTk2MDZmM2QzNGQzYyIsImF1ZCI6ImY2NzkxNmNlLWRlMzMtNGUyZi1hOGUzLWNiZDVmNjQ1OWMzMCIsImV4cCI6MTcxMzI3OTgxMiwiaWF0IjoxNzEzMjc2MjEyLCJraWQiOjF9.SHpel4gQyrIS6RNM4VTZgsepgR-g-g5zQWeLwBVUzapeusDU2tsfT4yCczN6XMNYq9xCuL2WmIVEWKJBonp2Gw"
+    #     )
+    # )
