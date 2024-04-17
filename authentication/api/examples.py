@@ -36,31 +36,14 @@ AUTHORIZATION_RESPONSE: JsonDict = {
     "ticket": "b0JGD-ZkT8ElBGw2ck-T-t87Z033jXvhqC2omPT1bQ4",
 }
 
-ISSUE_RESPONSE: JsonDict = {
-    "type": "authorizationIssueResponse",
-    "result_code": "A040001",
-    "result_message": "[A040001] The authorization request was processed successfully.",
-    "access_token_duration": 0,
-    "access_token_expires_at": 0,
-    "action": "LOCATION",
-    "authorization_code": "DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70",
-    "id_token": "eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJzdWIiOiJ0ZXN0dXNlcjAxIiwiYXVkIjpbIjU5MTIwNTk4NzgxNjQ5MCJdLCJjX2hhc2giOiJqR2kyOElvYm5HcjNNQ3Y0UUVQRTNnIiwiaXNzIjoiaHR0cHM6Ly9hcy5leGFtcGxlLmNvbSIsImV4cCI6MTU3MjQxMjY4MiwiaWF0IjoxNTcyMzI2MjgyLCJub25jZSI6Im4tMFM2X1d6QTJNaiJ9.1PFmc0gAsBWtLBriq3z9a4Tsi_ioEYlOqOYbicGEXWIS1WGX5ffGOyZNSzVBMamZbltZmSys0jlYmmYYLqgGsg",
-    "response_content": (
-        "https://client.example.org/cb/example.com#"
-        "code=DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70&"
-        "id_token=eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJzdWIiOiJ0ZXN0dXNlcjAxIiwiYXVkIjpbIjU5MTIwN"
-        "Tk4NzgxNjQ5MCJdLCJjX2hhc2giOiJqR2kyOElvYm5HcjNNQ3Y0UUVQRTNnIiwiaXNzIjoiaHR0cHM6L"
-        "y9hcy5leGFtcGxlLmNvbSIsImV4cCI6MTU3MjQxMjY4MiwiaWF0IjoxNTcyMzI2MjgyLCJub25jZSI6I"
-        "m4tMFM2X1d6QTJNaiJ9.1PFmc0gAsBWtLBriq3z9a4Tsi_ioEYlOqOYbicGEXWIS1WGX5ffGOyZNSzVB"
-        "MamZbltZmSys0jlYmmYYLqgGsg"
-    ),
-}
-
 
 TOKEN_REQUEST: JsonDict = {
     "client_id": f"{CLIENT_ID}",
     "parameters": "grant_type=authorization_code&redirect_uri=https://client.example.org/cb/example.com&code=DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70",
     "client_certificate": CLIENT_CERTIFICATE,
+    "redirect_uri": "https://client.example.org/cb/",
+    "code_verifier": "random_string",
+    "code": "DxiKC0cOc_46nzVjgr41RWBQtMDrAvc0BUbMJ_v7I70",
 }
 
 TOKEN_RESPONSE: JsonDict = {
@@ -72,4 +55,19 @@ TOKEN_RESPONSE: JsonDict = {
         "o5lPKehvIHyViZgRg4CY_ZGmnyFooG4FCwlZxu-QOTtaDCffCsuCdz4GqknTA"
     ),
     "refresh_token": "tXZjYfoK35I-djg9V3n6s58zsrVqRIzTNMXKIS_wkj8",
+}
+
+INTROSPECTION_RESPONSE = {
+    "aud": [],
+    "client_id": "f67916ce-de33-4e2f-a8e3-cbd5f6459c30",
+    "exp": 1713285925,
+    "ext": {},
+    "iat": 1713282325,
+    "iss": "https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com",
+    "jti": "cca497f5-f3b0-4c81-b873-7f97a74cfcda",
+    "nbf": 1713282325,
+    "scp": ["profile", "offline_access"],
+    "sub": "d6fd6e1c-a10e-40d8-aa2b-9606f3d34d3c",
+    "cnf": {"x5t#S256": "k6Joc_TbRIm_vIQyrWcMTIVz_QZmR0JReGASWRcLdnQ"},
+    "active": True,
 }

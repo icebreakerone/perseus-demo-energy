@@ -5,7 +5,7 @@ openssl genpkey -algorithm RSA -out ca-key.pem
 openssl req -new -x509 -key ca-key.pem -out ca-cert.pem -subj "/C=GB/ST=London/O=Perseus CA/CN=perseus-demo-fapi.ib1.org"
 
 # Generate server private key
-openssl genpkey -algorithm RSA -out server-key.pemee
+openssl genpkey -algorithm RSA -out server-key.pem
 
 # Generate server CSR
 openssl req -new -key server-key.pem -out server-csr.pem -subj "/C=GB/ST=London/O=Perseus Demo Authentication/CN=perseus-demo-authentication.ib1.org"

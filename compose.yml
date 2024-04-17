@@ -17,9 +17,11 @@ services:
     build:
       context: authentication
     stop_signal: SIGINT
+    env_file:
+      - authentication/.env
     environment:
-      - FAPI_API=http://host.docker.internal:8020
-      # - FAPI_API=https://perseus-demo-fapi.ib1.org
+      - REDIS_HOST=redis
+      - CALLBACK_URL=http://host.docker.internal:3000/callback
     command:
       [
         "uvicorn",
