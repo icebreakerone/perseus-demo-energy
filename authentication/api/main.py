@@ -4,7 +4,7 @@ import json
 import requests
 import jwt
 
-from fastapi import FastAPI, Header, HTTPException, status, Form
+from fastapi import FastAPI, Header, HTTPException, status, Form, Request
 from fastapi.security import HTTPBasic
 from fastapi.responses import Response
 
@@ -31,13 +31,14 @@ async def docs() -> dict:
 
 @app.post("/api/v1/par", response_model=models.PushedAuthorizationResponse)
 async def pushed_authorization_request(
+    request: Request,
     response_type: Annotated[str, Form()],
     client_id: Annotated[str, Form()],
     redirect_uri: Annotated[str, Form()],
     state: Annotated[str, Form()],
     code_challenge: Annotated[str, Form()],
     scope: Annotated[str, Form()],
-    x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
+    x_amzn_mtls_clientcert: Annotated[str, Header()],
 ) -> dict:
     """
     Store the request in redis, return a request_uri to the client
@@ -65,15 +66,8 @@ async def pushed_authorization_request(
         "state": state,
         "scope": scope,
     }
-    print(parameters)
     token = par.get_token()
     par.store_request(token, parameters)
-    print(
-        {
-            "request_uri": f"urn:ietf:params:oauth:request_uri:{token}",
-            "expires_in": 600,
-        }
-    )
     return {
         "request_uri": f"urn:ietf:params:oauth:request_uri:{token}",
         "expires_in": 600,
@@ -152,13 +146,12 @@ async def token(
     our own id_token, and add client certificate details to the token
     """
     payload = {
-        "grant_type": "authorization_code",
+        "grant_type": grant_type,
         "code": code,
         "redirect_uri": redirect_uri,
         "client_id": client_id,
         "code_verifier": code_verifier,
     }
-    print("Token request:", x_amzn_mtls_clientcert)
     session = requests.Session()
     session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
     response = requests.post(

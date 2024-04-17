@@ -50,6 +50,7 @@ def parse_cert(client_certificate: str) -> x509.Certificate:
 
 
 def _check_certificate(cert, introspection_response):
+
     if "cnf" in introspection_response:
         # thumbprint from introspection response
         try:
@@ -192,7 +193,6 @@ def get_key(type: str = "key") -> str:
     or the tmp path to the matching certificate stored as an env var
     """
     if conf.CERTS[type] and os.path.exists(conf.CERTS[type]):
-        print("Returning conf.CERTS[type]")
         return conf.CERTS[type]
     secret = os.environ.get(f"SERVER_{type.upper()}")
     fp = tempfile.NamedTemporaryFile(delete=False)
