@@ -84,6 +84,23 @@ Granting consent will redirect to our demo client application, with the authoris
 
 ![Redirect](docs/exchange.png)
 
+## Ory Hydra
+
+Please contact IB1 for the Client ID and secret if you would like to test against our demo Ory account. Alternatively you can set up a free developer account and create an Oauth2 client with your own details. The client should have:
+
+- Authentication method set to None
+- Grant types Authorisation Code and Refresh Token
+- Response types Code and ID Token
+- Access Token Type jwt
+- Scopes profile and offline_access
+- Redirect urls to match your production and/or development and local redirect URLs
+
+![Authentication Method None](docs/authentication-method-none.png)
+
+![Grant Types and Response Types](docs/supported-flows.png)
+
+![Scopes and redirecs](docs/scope-redirects.png)
+
 ## FAPI Flow
 
 ![FAPI Flow diagram](docs/fapi-authlete-flow.png)
