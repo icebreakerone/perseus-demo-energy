@@ -1,6 +1,6 @@
 # Perseus demo energy provider
 
-Emulates authentication and resource api endpoints for the Perseus demo.
+Emulates authentication and resource api endpoints for the Perseus demo. Authentication is built on top of [Ory Hydra](https://www.ory.sh).
 
 ## Authentication API
 
@@ -65,7 +65,7 @@ Example output:
 
 ```bash
 Code verifier: c6P-FfD0ayLslzCUESCsay8QHEg71O0SnKLeHPkOSyOZ6KubKPRaclM4u5veKcqI7MNqZX_xAUt4CUwIwm4JD99EacbtjAABbyY1i972umU9Ong9HFjtJq84y5mljGFy
-https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com/oauth2/auth?client_id=f67916ce-de33-4e2f-a8e3-cbd5f6459c30&response_type=code&redirect_uri=http://127.0.0.1:3000/callback&scope=profile+offline_access&state=9mpb2gDwhp2fLTa_MwJGM21R7FjOQCJq&code_challenge=cksXMlSWrcflDTJoyrpiWX0u2VRV6C--pzetmBIo6LQ&code_challenge_method=S256&request={"response_type": "code", "client_id": "f67916ce-de33-4e2f-a8e3-cbd5f6459c30", "code_challenge": "cksXMlSWrcflDTJoyrpiWX0u2VRV6C--pzetmBIo6LQ", "code_challenge_method": "S256", "redirect_uri": "http://127.0.0.1:3000/callback", "state": "9mpb2gDwhp2fLTa_MwJGM21R7FjOQCJq", "scope": "profile+offline_access"}
+https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com/oauth2/auth?client_id=f67916ce-de33-4e2f-a8e3-cbd5f6459c30&response_type=code&redirect_uri=http://127.0.0.1:3000/callback&scope=profile+offline_access&state=9mpb2gDwhp2fLTa_MwJGM21R7FjOQCJq&code_challenge=cksXMlSWrcflDTJoyrpiWX0u2VRV6C--pzetmBIo6LQ&code_challenge_method=S256
 ```
 
 nb. The `-W ignore` switch suppresses multiple warnings about the self-signed certificates.
@@ -75,6 +75,14 @@ By default the client will use the local docker environment and expects a local 
 ```bash
 FAPI_API=https://perseus-demo-fapi.ib1.org AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" RESOURCE_API=https://perseus-demo-energy.ib1.org python -W ignore  client.py
 ```
+
+Opening the redirect url will present you with the default Ory Hydra log in/ sign up screen, followed by a consent screen:
+
+![Consent screen](docs/consent.png)
+
+Granting consent will redirect to our demo client application, with the authorisation code appended to the url. The authorisation code can be exchanged for an access token by adding the code_verifier value to the form and submitting:
+
+![Redirect](docs/exchange.png)
 
 ## FAPI Flow
 
