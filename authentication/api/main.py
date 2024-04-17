@@ -1,16 +1,13 @@
 from typing import Annotated
 import json
 
-import pkce
-import urllib.parse
 import requests
 import jwt
 
-from fastapi import FastAPI, Request, Header, HTTPException, Depends, status, Form
-from fastapi.security import HTTPBasic, OAuth2PasswordRequestForm
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, Header, HTTPException, status, Form
+from fastapi.security import HTTPBasic
+from fastapi.responses import Response
 
-import datetime
 
 from . import models
 from . import conf
@@ -32,11 +29,6 @@ async def docs() -> dict:
     return {"docs": "/api-docs"}
 
 
-@app.get("/info")
-async def test(request: Request) -> dict:
-    return dict(request.headers.mutablecopy())
-
-
 @app.post("/api/v1/par", response_model=models.PushedAuthorizationResponse)
 async def pushed_authorization_request(
     response_type: Annotated[str, Form()],
@@ -50,8 +42,10 @@ async def pushed_authorization_request(
     """
     Store the request in redis, return a request_uri to the client
 
-    https://www.rfc-editor.org/rfc/rfc9126.html#section-2 - Pushed Authorization Request Endpoint
-    https://www.rfc-editor.org/rfc/rfc6749.html#section-3.2.1 - Client authentication methods
+    For more information see:
+
+    - [Pushed Authorization Request Endpoint](https://www.rfc-editor.org/rfc/rfc9126.html#section-2)
+    - [Client authentication methods](https://www.rfc-editor.org/rfc/rfc6749.html#section-3.2.1)
     """
     # Client authentication by mtls
     # In production the Perseus directory will be able to check certificates
@@ -74,13 +68,32 @@ async def pushed_authorization_request(
     print(parameters)
     token = par.get_token()
     par.store_request(token, parameters)
+    print(
+        {
+            "request_uri": f"urn:ietf:params:oauth:request_uri:{token}",
+            "expires_in": 600,
+        }
+    )
     return {
         "request_uri": f"urn:ietf:params:oauth:request_uri:{token}",
         "expires_in": 600,
     }
 
 
-@app.get("/api/v1/authorize")
+@app.get(
+    "/api/v1/authorize",
+    responses={
+        302: {
+            "description": "Redirects to authentication and consent",
+            "headers": {
+                "Location": {
+                    "description": "The URL to which the client should be redirected",
+                }
+            },
+        },
+        200: {"description": "This response is not expected.", "model": None},
+    },
+)
 async def authorize(
     request_uri: str,
     client_id: str,
@@ -110,7 +123,7 @@ async def authorize(
         f"{conf.AUTHORIZATION_ENDPOINT}?"
         f"client_id={conf.CLIENT_ID}&"
         f"response_type=code&"
-        f"redirect_uri={conf.REDIRECT_URI}&"
+        f"redirect_uri={par_request['redirect_uri']}&"
         f"scope={par_request['scope']}&"
         f"state={par_request['state']}&"
         f"code_challenge={par_request['code_challenge']}&"
@@ -119,10 +132,10 @@ async def authorize(
     )
 
     # Redirect the user to the authorization URL
-    return RedirectResponse(authorization_url, status_code=302)
+    return Response(status_code=302, headers={"Location": authorization_url})
 
 
-@app.post("/api/v1/authorize/token", response_model=models.FAPITokenResponse)
+@app.post("/api/v1/authorize/token", response_model=models.TokenResponse)
 async def token(
     grant_type: Annotated[str, Form()],
     client_id: Annotated[str, Form()],
@@ -130,7 +143,7 @@ async def token(
     code_verifier: Annotated[str, Form()],
     code: Annotated[str, Form()],
     x_amzn_mtls_clientcert: Annotated[str, Header()],
-) -> models.FAPITokenResponse:
+) -> models.TokenResponse:
     """
     Token issuing endpoint
 
@@ -165,14 +178,14 @@ async def token(
     )
     # Create our id_token
     id_token = auth.create_id_token(decoded_token["sub"])
-    return models.FAPITokenResponse(
+    return models.TokenResponse(
         access_token=enhanced_token,
         id_token=id_token,
         refresh_token=result["refresh_token"],
     )
 
 
-@app.post("/api/v1/authorize/introspect")
+@app.post("/api/v1/authorize/introspect", response_model=models.IntrospectionResponse)
 async def introspect(
     token: models.IntrospectionRequest,
     x_amzn_mtls_clientcert: Annotated[str, Header()],
@@ -180,7 +193,6 @@ async def introspect(
     """
     We have our token as a jwt, so we can do the introspection here
     """
-    print("Introspection: ", x_amzn_mtls_clientcert)
     try:
         introspection_response = auth.introspect(x_amzn_mtls_clientcert, token.token)
     except auth.AccessTokenValidatorError as e:

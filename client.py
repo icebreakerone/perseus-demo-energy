@@ -9,6 +9,8 @@ import pkce
 import time
 import secrets
 from authentication.api import conf
+import ssl
+
 
 AUTHENTICATION_API = os.environ.get("AUTHENTICATION_API", "https://0.0.0.0:8000")
 RESOURCE_API = os.environ.get("RESOURCE_API", "https://0.0.0.0:8010")
@@ -41,20 +43,18 @@ def get_session():
     return session
 
 
-def pushed_authorization_request():
+def pushed_authorization_request() -> tuple[str, dict]:
     code_verifier, code_challenge = pkce.generate_pkce_pair()
-    print(len(code_verifier), len(code_challenge))
-    print(code_verifier, code_challenge)
     response = requests.post(
         f"{AUTHENTICATION_API}/api/v1/par",
         data={
             "response_type": "code",
             "client_id": f"{conf.CLIENT_ID}",
-            "redirect_uri": "https://mobile.example.com/cb",
+            "redirect_uri": f"{conf.REDIRECT_URI}",
             "state": generate_state(),
             "code_challenge": code_challenge,
             "code_challenge_method": "S256",
-            "scope": "profile email offline_access",
+            "scope": "profile+offline_access",
         },
         verify=False,
         cert=(CLIENT_CERTIFICATE, CLIENT_PRIVATE_KEY),
@@ -138,11 +138,16 @@ def client_side_decoding(token: str):
     """
     Use the jwks to decode the token
     """
+    # Workaround for self-signed certificates, insecure
+    ssl._create_default_https_context = ssl._create_unverified_context
+
     jwks_url = conf.FAPI_API + "/.well-known/jwks.json"
+    print(jwks_url)
     jwks_client = jwt.PyJWKClient(jwks_url)
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
     decoded = jwt.decode(token, key, [header["alg"]], audience=f"{conf.CLIENT_ID}")
+    print(decoded, conf.FAPI_API)
     # Example of tests to apply
     if decoded["aud"] != conf.CLIENT_ID:
         raise ValueError("Invalid audience")
@@ -163,7 +168,6 @@ if __name__ == "__main__":
 
     code_verifier, par_response = pushed_authorization_request()
     print("Code verifier:", code_verifier)
-    # print(par_response)
     session = get_session()
     response = session.get(
         f"{AUTHENTICATION_API}/api/v1/authorize",
@@ -179,8 +183,14 @@ if __name__ == "__main__":
         print(response.headers["location"])
     else:
         print(response.status_code, response.text)
+    # The following two tests will use the values returned after login and consent has been given
     print(
         introspect_token(
-            "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJjbGllbnRfaWQiOiJmNjc5MTZjZS1kZTMzLTRlMmYtYThlMy1jYmQ1ZjY0NTljMzAiLCJleHAiOjE3MTI4NDY2NTYsImV4dCI6e30sImlhdCI6MTcxMjg0MzA1NSwiaXNzIjoiaHR0cHM6Ly92aWdvcm91cy1oZXlyb3Zza3ktMXRydnYwaWt4OS5wcm9qZWN0cy5vcnlhcGlzLmNvbSIsImp0aSI6IjkxYWMwZjRkLWJlZGEtNDE0Yy1hYjMxLTIzNDA1NmQ4YmRlNyIsIm5iZiI6MTcxMjg0MzA1NSwic2NwIjpbInByb2ZpbGUiLCJlbWFpbCIsIm9mZmxpbmVfYWNjZXNzIl0sInN1YiI6ImQ2ZmQ2ZTFjLWExMGUtNDBkOC1hYTJiLTk2MDZmM2QzNGQzYyIsImNuZiI6eyJ4NXQjUzI1NiI6Ims2Sm9jX1RiUkltX3ZJUXlyV2NNVElWel9RWm1SMEpSZUdBU1dSY0xkblEifX0.hOFJCiR0QVIIOJrfSU6cUevCy953Qg2vsRBwBKBvYbLiCCGkelIIFwObAUtdREaZktVoVAMFKC2X7yrER-PXSA"
+            "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOltdLCJjbGllbnRfaWQiOiJmNjc5MTZjZS1kZTMzLTRlMmYtYThlMy1jYmQ1ZjY0NTljMzAiLCJleHAiOjE3MTMyODU5MjUsImV4dCI6e30sImlhdCI6MTcxMzI4MjMyNSwiaXNzIjoiaHR0cHM6Ly92aWdvcm91cy1oZXlyb3Zza3ktMXRydnYwaWt4OS5wcm9qZWN0cy5vcnlhcGlzLmNvbSIsImp0aSI6ImNjYTQ5N2Y1LWYzYjAtNGM4MS1iODczLTdmOTdhNzRjZmNkYSIsIm5iZiI6MTcxMzI4MjMyNSwic2NwIjpbInByb2ZpbGUiLCJvZmZsaW5lX2FjY2VzcyJdLCJzdWIiOiJkNmZkNmUxYy1hMTBlLTQwZDgtYWEyYi05NjA2ZjNkMzRkM2MiLCJjbmYiOnsieDV0I1MyNTYiOiJrNkpvY19UYlJJbV92SVF5cldjTVRJVnpfUVptUjBKUmVHQVNXUmNMZG5RIn19.SxM9YvqE-vvXwemHNbLHNey7xbyLGsGu4T6bSmmhXNP2-nk8GMcmoHCLXhgYhQFJ3HcuLx7P9kQCqEUrY68xGQ"
         )
     )
+    # print(
+    #     client_side_decoding(
+    #         "eyJhbGciOiJFUzI1NiIsImtpZCI6IjEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3BlcnNldXMtZGVtby1lbmVyZ3kuaWIxLm9yZyIsInN1YiI6ImQ2ZmQ2ZTFjLWExMGUtNDBkOC1hYTJiLTk2MDZmM2QzNGQzYyIsImF1ZCI6ImY2NzkxNmNlLWRlMzMtNGUyZi1hOGUzLWNiZDVmNjQ1OWMzMCIsImV4cCI6MTcxMzI3OTgxMiwiaWF0IjoxNzEzMjc2MjEyLCJraWQiOjF9.SHpel4gQyrIS6RNM4VTZgsepgR-g-g5zQWeLwBVUzapeusDU2tsfT4yCczN6XMNYq9xCuL2WmIVEWKJBonp2Gw"
+    #     )
+    # )

@@ -5,20 +5,9 @@ import responses
 import pytest
 from fastapi.testclient import TestClient
 from api.main import app, conf
-from api import authentication, examples
+from api import examples
 
 client = TestClient(app)
-
-
-@pytest.fixture
-def mock_token(mocker):
-    access_token_expires = datetime.timedelta(
-        minutes=authentication.ACCESS_TOKEN_EXPIRE_MINUTES
-    )
-    access_token = authentication.create_access_token(
-        data={"sub": "platform_user"}, expires_delta=access_token_expires
-    )
-    return access_token
 
 
 # Mock the redis server, as pushed_authorization_request() uses it
@@ -63,21 +52,6 @@ def test_authorization_code():
     print(response.status_code, response.text)
     assert response.status_code == 200
     assert "ticket" in response.json()
-
-
-@responses.activate
-def test_issue(mock_token):
-    # Use responses library to mock the response from the FAPI API
-    responses.post(
-        f"{conf.FAPI_API}/auth/authorization/issue",
-        json=examples.ISSUE_RESPONSE,
-    )
-    response = client.post(
-        "/api/v1/authorize/issue",
-        json={"ticket": "test-ticket"},
-        headers={"Authorization": f"Bearer {mock_token}"},
-    )
-    assert response.status_code == 200
 
 
 @responses.activate
