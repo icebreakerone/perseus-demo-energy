@@ -27,9 +27,9 @@ def get_openid_configuration(issuer_url: str) -> dict:
     """
     Get the well-known configuration for a given issuer URL
     """
-    print(urllib.parse.urljoin(issuer_url, "/.well-known/openid-configuration"))
     response = requests.get(
         url=urllib.parse.urljoin(issuer_url, "/.well-known/openid-configuration"),
+        verify=False,
     )
     response.raise_for_status()
     return response.json()
@@ -37,11 +37,20 @@ def get_openid_configuration(issuer_url: str) -> dict:
 
 def check_token(token: str, client_certificate: str) -> dict:
     openid_config = get_openid_configuration(conf.ISSUER_URL)
+    introspection_endpoint = openid_config["introspection_endpoint"]
+    if (
+        "localhost" in introspection_endpoint
+    ):  # Bit of messing about for docker, consider bringing accounting app into the same project
+        introspection_endpoint = introspection_endpoint.replace(
+            "https://localhost:8000", conf.ISSUER_URL
+        )
+    log.debug("Token type", type(token))
     try:
         response = requests.post(
-            url=openid_config["introspection_endpoint"],
+            url=introspection_endpoint,
             json={"token": token, "client_certificate": client_certificate},
             auth=(conf.CLIENT_ID, conf.CLIENT_SECRET),
+            verify=False,
         )
         if response.status_code != 200:
             log.error(f"introspection request failed: {response.text}")
@@ -50,6 +59,7 @@ def check_token(token: str, client_certificate: str) -> dict:
     except requests.exceptions.RequestException as e:
         log.error(f"introspection request failed: {e}")
         raise AccessTokenValidatorError("Introspection request failed")
+    print(response.json())
     return response.json()
 
 

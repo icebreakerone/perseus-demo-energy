@@ -93,6 +93,7 @@ def introspect(client_certificate: str, token: str) -> dict:
         6. Certificate binding is enabled (default) and the fingerprint of the
            presented client cert isn't a match for the claim in the
            introspection response
+        7. Client ID does not match
 
     If introspection succeeds, return a dict suitable to use as headers
     including Date and x-fapi-interaction-id, as well as the introspection response
@@ -103,9 +104,12 @@ def introspect(client_certificate: str, token: str) -> dict:
     if cert is None:
         log.warning("no client cert presented")
         raise AccessTokenNoCertificateError("No client certificate presented")
-    introspection_response = jwt.decode(
-        token, algorithms=["ES256"], options={"verify_signature": False}
-    )
+    try:
+        introspection_response = jwt.decode(
+            token, algorithms=["ES256"], options={"verify_signature": False}
+        )
+    except jwt.exceptions.DecodeError as e:
+        raise AccessTokenValidatorError(f"Invalid token {str(e)} for token {token}")
     introspection_response["active"] = True
     log.debug(f"introspection response {introspection_response}")
 

@@ -14,7 +14,7 @@ CERTS = {
 }
 
 
-ISSUER_URL = os.environ.get("ISSUER_URL", "https://perseus-demo-energy.ib1.org")
+ISSUER_URL = os.environ.get("ISSUER_URL", "https://perseus-demo-authentication.ib1.org")
 CLIENT_ID = os.environ.get("CLIENT_ID", "21653835348762")
 CLIENT_SECRET = os.environ.get(
     "CLIENT_SECRET", "uE4NgqeIpuSV_XejQ7Ds3jsgA1yXhjR1MXJ1LbPuyls"

@@ -57,6 +57,11 @@ TOKEN_RESPONSE: JsonDict = {
     "refresh_token": "tXZjYfoK35I-djg9V3n6s58zsrVqRIzTNMXKIS_wkj8",
 }
 
+INTROSPECTION_REQUEST: JsonDict = {
+    "token": "SUtEVc3Tj3D3xOdysQtssQxe9egAhI4fimexNVMjRyU",
+    "client_certificate": CLIENT_CERTIFICATE,
+}
+INTROSPECTION_FAILED_RESPONSE: JsonDict = {"active": False}
 INTROSPECTION_RESPONSE = {
     "aud": [],
     "client_id": "f67916ce-de33-4e2f-a8e3-cbd5f6459c30",

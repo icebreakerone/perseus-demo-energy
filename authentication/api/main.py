@@ -1,11 +1,19 @@
 from typing import Annotated
 import json
+import secrets
 
 import requests
 import jwt
 
-from fastapi import FastAPI, Header, HTTPException, status, Form, Request
-from fastapi.security import HTTPBasic
+from fastapi import (
+    FastAPI,
+    Header,
+    HTTPException,
+    status,
+    Form,
+    Depends,
+)
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.responses import Response
 
 
@@ -24,6 +32,35 @@ app = FastAPI(
 security = HTTPBasic()
 
 
+def get_authentication_credentials(
+    credentials: Annotated[HTTPBasicCredentials, Depends(security)]
+):
+    """
+    The resource server will use client credentials to connect to the introspection endpoint
+    """
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": "Authorization required"},
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    current_username_bytes = credentials.username.encode("utf8")
+    is_correct_username = secrets.compare_digest(
+        current_username_bytes, conf.CLIENT_ID.encode("utf8")
+    )
+    current_password_bytes = credentials.password.encode("utf8")
+    is_correct_password = secrets.compare_digest(
+        current_password_bytes, conf.CLIENT_SECRET.encode("utf8")
+    )
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": "Invalid credentials"},
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
+
 @app.get("/")
 async def docs() -> dict:
     return {"docs": "/api-docs"}
@@ -31,7 +68,6 @@ async def docs() -> dict:
 
 @app.post("/api/v1/par", response_model=models.PushedAuthorizationResponse)
 async def pushed_authorization_request(
-    request: Request,
     response_type: Annotated[str, Form()],
     client_id: Annotated[str, Form()],
     redirect_uri: Annotated[str, Form()],
@@ -180,34 +216,38 @@ async def token(
     )
 
 
-@app.post("/api/v1/authorize/introspect", response_model=models.IntrospectionResponse)
-async def introspect(
-    token: models.IntrospectionRequest,
-    x_amzn_mtls_clientcert: Annotated[str, Header()],
+@app.post(
+    "/api/v1/authorize/introspect",
+    response_model=models.IntrospectionResponse | models.IntrospectionFailedResponse,
+)
+async def introspection(
+    client_id: Annotated[str, Depends(get_authentication_credentials)],
+    introspection_request: models.IntrospectionRequest,
 ) -> dict:
-    """
-    We have our token as a jwt, so we can do the introspection here
-    """
-    if x_amzn_mtls_clientcert is None:
-        raise HTTPException(status_code=401, detail="No client certificate provided")
+    if not introspection_request.client_certificate:
+        raise HTTPException(
+            status_code=400,
+            detail="Client certificate required",
+        )
     try:
-        introspection_response = auth.introspect(x_amzn_mtls_clientcert, token.token)
+        response = auth.introspect(
+            introspection_request.client_certificate, introspection_request.token
+        )
     except auth.AccessTokenValidatorError as e:
-        raise HTTPException(status_code=401, detail=str(e))
-    # The authentication server can use the response to make its own checks,
-    return introspection_response
+        print(str(e))
+        response = {"active": False}
+    return response
 
 
 @app.get("/.well-known/openid-configuration")
 async def get_openid_configuration():
-
     return {
         "issuer": f"{conf.ISSUER_URL}",
-        "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/auth/par/",
-        "authorization_endpoint": f"{conf.ISSUER_URL}/auth/authorization/",
-        "token_endpoint": f"{conf.ISSUER_URL}/auth/token/",
+        "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
+        "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+        "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
         "jwks_uri": f"{conf.ISSUER_URL}/.well-known/jwks.json",
-        "introspection_endpoint": f"{conf.ISSUER_URL}/auth/introspection/",
+        "introspection_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/introspect",
         "response_types_supported": ["code", "id_token", "token"],
         "subject_types_supported": ["public"],
         "id_token_signing_alg_values_supported": ["ES256"],

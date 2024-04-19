@@ -89,10 +89,22 @@ class TokenResponse(BaseModel):
 
 class IntrospectionRequest(BaseModel):
     token: str
+    client_certificate: str
     model_config = {
         "json_schema_extra": {
             "examples": [
-                {"token": "SUtEVc3T"},
+                examples.INTROSPECTION_REQUEST,
+            ]
+        }
+    }
+
+
+class IntrospectionFailedResponse(BaseModel):
+    active: bool
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                examples.INTROSPECTION_FAILED_RESPONSE,
             ]
         }
     }

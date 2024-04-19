@@ -17,11 +17,11 @@ services:
     build:
       context: authentication
     stop_signal: SIGINT
-    env_file:
-      - authentication/.env
+    env_file: authentication/.env
     environment:
+      - FAPI_API=http://host.docker.internal:8020
       - REDIS_HOST=redis
-      - CALLBACK_URL=http://host.docker.internal:3000/callback
+      # - FAPI_API=https://perseus-demo-fapi.ib1.org
     command:
       [
         "uvicorn",
@@ -51,8 +51,9 @@ services:
     build:
       context: resource
     stop_signal: SIGINT
+    env_file: resource/.env
     environment:
-      - ISSUER_URL=http://host.docker.internal:8020
+      - ISSUER_URL=https://host.docker.internal:8000 # As accounting app is outside docker we'll need to use this address
     command:
       [
         "uvicorn",
