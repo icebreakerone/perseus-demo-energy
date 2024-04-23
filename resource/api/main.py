@@ -63,7 +63,6 @@ def consumption(
             _, headers = auth.introspect(
                 x_amzn_mtls_clientcert, token.credentials, x_fapi_interaction_id
             )
-            print(headers)
         except auth.AccessTokenValidatorError as e:
             raise HTTPException(status_code=401, detail=str(e))
         else:

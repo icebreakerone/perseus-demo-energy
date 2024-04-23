@@ -22,7 +22,11 @@ def store_request(token: str, request: dict):
     connection.expire(token, 60)  # 1 minute
 
 
-def get_request(token: str) -> dict:
+def get_request(token: str) -> dict | None:
     connection = redis_connection()
     request = connection.get(token)
-    return json.loads(str(request))
+    try:
+        data = json.loads(str(request))
+    except json.decoder.JSONDecodeError:
+        return None
+    return data

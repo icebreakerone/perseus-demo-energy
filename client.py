@@ -65,50 +65,6 @@ def pushed_authorization_request() -> tuple[str, dict]:
     return code_verifier, response.json()
 
 
-def initiate_authorization(request_uri: str):
-    """
-    /as/authorise?request_uri=urn:ietf:params:oauth:request_uri:UymBrux4ZEMrBRKx9UyKyIm98zpX1cHmAPGAGNofmm4
-    """
-    response = requests.post(
-        f"{AUTHENTICATION_API}/api/v1/authorize",
-        json={
-            "request_uri": request_uri,
-            "client_id": f"{conf.CLIENT_ID}",
-        },
-        verify=False,
-    )
-    return response.json()
-
-
-def get_user_token():
-    response = requests.post(
-        f"{AUTHENTICATION_API}/api/v1/authenticate/token",
-        data={"username": "platform_user", "password": "perseus"},
-        verify=False,
-    )
-    return response.json()
-
-
-def authentication_issue_request(token: str, ticket: str):
-    response = requests.post(
-        f"{AUTHENTICATION_API}/api/v1/authorize/issue",
-        json={"ticket": ticket},
-        headers={"Authorization": "Bearer " + token},
-        verify=False,
-    )
-    return response.json()
-
-
-def give_consent(token: str):
-    response = requests.post(
-        f"{AUTHENTICATION_API}/api/v1/authenticate/consent",
-        json={"scopes": ["account"]},
-        headers={"Authorization": "Bearer " + token},
-        verify=False,
-    )
-    return response.json()
-
-
 def introspect_token(fapi_token: str):
     session = get_session()
     # session = requests.Session()
