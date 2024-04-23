@@ -56,7 +56,6 @@ def consumption(
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
 ):
-    print(token)
     if x_amzn_mtls_clientcert is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
     if token and token.credentials:
@@ -64,7 +63,6 @@ def consumption(
             _, headers = auth.introspect(
                 x_amzn_mtls_clientcert, token.credentials, x_fapi_interaction_id
             )
-            print(headers)
         except auth.AccessTokenValidatorError as e:
             raise HTTPException(status_code=401, detail=str(e))
         else:

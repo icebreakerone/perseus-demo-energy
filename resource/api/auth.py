@@ -59,7 +59,6 @@ def check_token(token: str, client_certificate: str) -> dict:
     except requests.exceptions.RequestException as e:
         log.error(f"introspection request failed: {e}")
         raise AccessTokenValidatorError("Introspection request failed")
-    print(response.json())
     return response.json()
 
 
