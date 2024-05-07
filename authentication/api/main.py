@@ -151,7 +151,7 @@ async def authorize(
     # Construct authorization URL with request object and PKCE parameters
     authorization_url = (
         f"{conf.AUTHORIZATION_ENDPOINT}?"
-        f"client_id={conf.CLIENT_ID}&"
+        f"client_id={conf.OAUTH_CLIENT_ID}&"
         f"response_type=code&"
         f"redirect_uri={par_request['redirect_uri']}&"
         f"scope={par_request['scope']}&"
@@ -187,7 +187,7 @@ async def token(
         "grant_type": grant_type,
         "code": code,
         "redirect_uri": redirect_uri,
-        "client_id": client_id,
+        "client_id": conf.OAUTH_CLIENT_ID,
         "code_verifier": code_verifier,
     }
     session = requests.Session()
