@@ -20,7 +20,10 @@ CLIENT_SECRET = os.environ.get(
     "CLIENT_SECRET", "uE4NgqeIpuSV_XejQ7Ds3jsgA1yXhjR1MXJ1LbPuyls"
 )
 OAUTH_URL = os.environ.get(
-    "OAUTH_URL", "https://musing-kirch-t48np94ikp.projects.oryapis.com"
+    "OAUTH_URL", "https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com"
+)
+OAUTH_CLIENT_ID = os.environ.get(
+    "OAUTH_CLIENT_ID", "f67916ce-de33-4e2f-a8e3-cbd5f6459c30"
 )
 AUTHORIZATION_ENDPOINT = os.environ.get(
     "AUTHORIZATION_ENDPOINT",
