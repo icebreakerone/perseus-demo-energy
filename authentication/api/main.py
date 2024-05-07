@@ -66,7 +66,7 @@ async def docs() -> dict:
     return {"docs": "/api-docs"}
 
 
-@app.post("/api/v1/par", response_model=models.PushedAuthorizationResponse)
+@app.post("/api/v1/par", response_model=models.PushedAuthorizationResponse, status_code=201)
 async def pushed_authorization_request(
     response_type: Annotated[str, Form()],
     client_id: Annotated[str, Form()],
