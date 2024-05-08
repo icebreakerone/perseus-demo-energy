@@ -167,7 +167,7 @@ def get_thumbprint(cert: str) -> str:
 
 def create_id_token(subject="platform_user") -> str:
     claims = {
-        "iss": "https://perseus-demo-energy.ib1.org",
+        "iss": f"{conf.ISSUER_URL}",
         "sub": subject,
         "aud": conf.CLIENT_ID,
         "exp": int(time.time()) + 3600,

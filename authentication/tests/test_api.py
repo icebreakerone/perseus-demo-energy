@@ -39,7 +39,7 @@ def test_pushed_authorization_request(mock_redis_connection):
         headers={"x-amzn-mtls-clientcert": client_certificate()},
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     print(response.json())
     assert "request_uri" in response.json()
 
