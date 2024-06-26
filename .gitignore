@@ -6,7 +6,7 @@ instance/
 .mypy_cache/
 .env
 
-.env*
+.env
 .pytest_cache
 __pycache__
 .DS_Store
