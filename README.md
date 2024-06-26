@@ -14,6 +14,10 @@ The resource api is in the [resource](resource) directory. It demonstrates how t
 
 Resource API documentation is available at https://perseus-demo-energy.ib1.org/api-docs.
 
+## Environment variables
+
+Both apps have example `.env.template` files in their root directories. These should be copied to `.env` and edited as required, filling CLIENT_ID and CLIENT_SECRET with the values provided by Ory Hydra, or on request from ib1 for the demo apps.
+
 ## Running a dev server
 
 ```bash
@@ -56,8 +60,6 @@ The included docker compose file will bring up both APIs. It uses nginx to proxy
 docker-compose up
 ```
 
-The environment variables in the docker compose file point to the FAPI api running on localhost port 8020 (http://host.docker.internal:8020). As the FAPI api is not running in the docker environment, you may need to change these environment variables to match your local environment. It will also work with the live FAPI api by changing these values to "https://perseus-demo-authentication.ib1.org".
-
 ## Pushed Authorization Request (PAR)
 
 As PAR is not available on the Ory Hydra service that this demo is based on, a PAR endpoint has been implemented in this example service. It is expected that production ipmlementations may use the PAR endpoint of their Fapi provider.
@@ -91,10 +93,10 @@ Code verifier: c6P-FfD0ayLslzCUESCsay8QHEg71O0SnKLeHPkOSyOZ6KubKPRaclM4u5veKcqI7
 https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com/oauth2/auth?client_id=f67916ce-de33-4e2f-a8e3-cbd5f6459c30&response_type=code&redirect_uri=http://127.0.0.1:3000/callback&scope=profile+offline_access&state=9mpb2gDwhp2fLTa_MwJGM21R7FjOQCJq&code_challenge=cksXMlSWrcflDTJoyrpiWX0u2VRV6C--pzetmBIo6LQ&code_challenge_method=S256
 ```
 
-By default the client will use the local docker environment and expects a local instance of the FAPI api to be running on localhost:8020. Testing against the deployed API can be achieved by setting the `AUTHENTICATION_API` and `RESOURCE_API` environment variables, and optionally the FAPI_API environment variable.
+By default the client will use the local docker environment and expects instances to be running on ports 8000 (authentication) and 8010 (resource). Testing against other endpoints can be achieved by setting the `AUTHENTICATION_API` and `RESOURCE_API` environment variables, eg. to test against the deployed demo:
 
 ```bash
-FAPI_API=https://perseus-demo-authentication.ib1.org AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" RESOURCE_API=https://perseus-demo-energy.ib1.org python -W ignore  client.py auth
+AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" RESOURCE_API=https://perseus-demo-energy.ib1.org python -W ignore  client.py auth
 ```
 
 Opening the redirect url will present you with the default Ory Hydra log in/ sign up screen, followed by a consent screen:
