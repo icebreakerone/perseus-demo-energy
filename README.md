@@ -39,7 +39,7 @@ You will need to create a "certs" directory in the root of the project, and move
 
 ### Using client certificates
 
-Most of the endpoints require a client certificate to be presented. As the directory service is not yet available, the contents of the certificate will not be checked with an external, so any valid certificate will be acceptable. The certificate **is** used to confirm identity, so the same one must be presented in all requests.
+Most of the endpoints require a client certificate to be presented. As the directory service is not yet available, the contents of the certificate will not be checked with an external CA, so any valid certificate will be acceptable. The certificate **is** used to confirm identity, so the same one must be presented in all requests.
 
 ## Creating signing certificates
 
@@ -106,6 +106,11 @@ Opening the redirect url will present you with the default Ory Hydra log in/ sig
 Granting consent will redirect to our demo client application, with the authorisation code appended to the url. The authorisation code can be exchanged for an access token by adding the code_verifier value to the form and submitting:
 
 ![Redirect](docs/exchange.png)
+
+### Client demo app
+
+As an alternative to the command line client, the authorisation flow can be completed in a browser at https://perseus-demo-accounting.ib1.org/start. Technical information such as the code verifier, token, and the contents of the introspected token are displayed
+at each step.
 
 ### Introspection
 
