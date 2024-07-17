@@ -68,7 +68,7 @@ In this simple implementation, the request is stored in a redis instance, using 
 
 ## Testing the API with client.py
 
-client.py can be used to test authorisation code flow, introspection, id_token decoding and retrieving data from the resource URL.
+client.py can be used to test authorization code flow, introspection, id_token decoding and retrieving data from the resource URL.
 
 Four commands are available, and are run using:
 
@@ -80,7 +80,7 @@ nb. The optional `-W ignore` switch suppresses multiple warnings about the self-
 
 ### Auth
 
-Running `client.py auth` will perform the initial steps in the authorisation code flow, outputting a URL that will open the UI to log in and confirm consent. The PKCE code verifier will also be in the output, which will be needed after the redirect
+Running `client.py auth` will perform the initial steps in the authorization code flow, outputting a URL that will open the UI to log in and confirm consent. The PKCE code verifier will also be in the output, which will be needed after the redirect
 
 ```bash
 python -W ignore  client.py auth
@@ -103,13 +103,13 @@ Opening the redirect url will present you with the default Ory Hydra log in/ sig
 
 ![Consent screen](docs/consent.png)
 
-Granting consent will redirect to our demo client application, with the authorisation code appended to the url. The authorisation code can be exchanged for an access token by adding the code_verifier value to the form and submitting:
+Granting consent will redirect to our demo client application, with the authorization code appended to the url. The authorization code can be exchanged for an access token by adding the code_verifier value to the form and submitting:
 
 ![Redirect](docs/exchange.png)
 
 ### Client demo app
 
-As an alternative to the command line client, the authorisation flow can be completed in a browser at https://perseus-demo-accounting.ib1.org/start. Technical information such as the code verifier, token, and the contents of the introspected token are displayed
+As an alternative to the command line client, the authorization flow can be completed in a browser at https://perseus-demo-accounting.ib1.org/start. Technical information such as the code verifier, token, and the contents of the introspected token are displayed
 at each step.
 
 ### Introspection
@@ -120,7 +120,7 @@ To show the response of the introspection endpoint, run:
 python -W ignore  client.py introspect --token <token>
 ```
 
-with token being the `token` value obtained from authorisation code flow
+with token being the `token` value obtained from authorization code flow
 
 ### Client side id_token decoding
 
@@ -130,7 +130,7 @@ To show the response of client side id_token decoding, run:
 python -W ignore  client.py id-token --token <token>
 ```
 
-with token being the `id_token` value obtained from authorisation code flow
+with token being the `id_token` value obtained from authorization code flow
 
 ### Retrieve data from protected endpoint
 
@@ -143,7 +143,7 @@ python -W ignore  client.py resource --token <token>
 Please contact IB1 for the Client ID and secret if you would like to test against our demo Ory account. Alternatively you can set up a free developer account and create an Oauth2 client with your own details. The client should have:
 
 - Authentication method set to None
-- Grant types Authorisation Code and Refresh Token
+- Grant types authorization Code and Refresh Token
 - Response types Code and ID Token
 - Access Token Type jwt
 - Scopes profile and offline_access
@@ -157,7 +157,7 @@ Please contact IB1 for the Client ID and secret if you would like to test agains
 
 ### Authentication and consent
 
-For this demo, we have used Ory hydra user management platform to provide authentication and consent as part of the authorisation code flow. In production, data providers will be using existing user management systems. Whilst some user management platforms may provide Oauth2 endpoints as Ory Hydra does, in other cases the implementation may need to integrate separate Oauth and user management and consent services. Whilst it is outside of the scope this demo to anticipate all possible configurations, the following steps explain how a separate user management and consent service might be integrated, using Ory Oauth2 as an example.
+For this demo, we have used Ory hydra user management platform to provide authentication and consent as part of the authorization code flow. In production, data providers will be using existing user management systems. Whilst some user management platforms may provide Oauth2 endpoints as Ory Hydra does, in other cases the implementation may need to integrate separate Oauth and user management and consent services. Whilst it is outside of the scope this demo to anticipate all possible configurations, the following steps explain how a separate user management and consent service might be integrated, using Ory Oauth2 as an example.
 
 #### Flow steps for Ory Hydra with external user management and consent services
 
