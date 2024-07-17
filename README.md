@@ -155,6 +155,28 @@ Please contact IB1 for the Client ID and secret if you would like to test agains
 
 ![Scopes and redirecs](docs/scope-redirects.png)
 
+### Authentication and consent
+
+For this demo, we have used Ory hydra user management platform to provide authentication and consent as part of the authorisation code flow. In production, data providers will be using existing user management systems. Whilst some user management platforms may provide Oauth2 endpoints as Ory Hydra does, in other cases the implementation may need to integrate separate Oauth and user management and consent services. Whilst it is outside of the scope this demo to anticipate all possible configurations, the following steps explain how a separate user management and consent service could be integrated, using Ory Oauth2 as an example.
+
+#### Flow steps for Ory Hydra with external user management and consent services
+
+1. The OAuth 2.0 Client initiates an Authorize Code flow, and the user is redirected to Ory OAuth2
+
+2. Ory OAuth2, if unable to authenticate the user (no session cookie exists), redirects the user's user agent to the Login Provider's login page. The URL the user is redirected to looks like https://data-provider.com/oauth2-screens/login?login_challenge=1234....
+
+3. The Login Provider, once the user has logged in, tells Ory OAuth2 some information about who the user is (for example the user's ID) and also that the login attempt was successful. This is done using a REST request which returns another redirect URL like https://{project-slug}.projects.oryapis.com/oauth2/auth?client_id=...&...&login_verifier=4321.
+
+4. The user's user agent follows the redirect and lands back at Ory OAuth2. Next, Ory OAuth2 redirects the user's user agent to the Consent Provider, hosted at - for example - https://example.org/oauth2-screens/consent?consent_challenge=4567...
+
+5. The Consent Provider shows a user interface which asks the user if they would like to grant the OAuth 2.0 Client the requested permissions ("OAuth 2.0 Scope").
+
+6. The Consent Provider makes another REST request to Ory OAuth2 to let it know which permissions the user authorized, and if the user declined consent. In the response to that REST request, a redirect URL is included like https://{project-slug}.projects.oryapis.com/oauth2/auth?client_id=...&...&consent_verifier=7654....
+
+7. The user's user agent follows that redirect.
+
+8. Now, the user has authenticated and authorized the application. Ory OAuth2 will run checks and if all is well issue access, refresh, and ID tokens.
+
 ## FAPI Flow
 
 ![FAPI Flow diagram](docs/fapi-authlete-flow.png)
