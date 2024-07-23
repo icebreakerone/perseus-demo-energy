@@ -157,7 +157,7 @@ Please contact [tf-ops@icebreakerone.org](mailto:tf-ops@icebreakerone.org) for t
 
 ### Authentication and consent
 
-For this demo, we have used Ory hydra user management platform to provide authentication and consent as part of the authorization code flow. In production, data providers will be using existing user management systems. Whilst some user management platforms may provide OAuth2 endpoints as Ory Hydra does, in other cases the implementation may need to integrate separate OAuth and user management and consent services. Whilst it is outside of the scope this demo to anticipate all possible configurations, the following steps explain how a separate user management and consent service might be integrated, using Ory OAuth2 as an example.
+For this demo, we have used Ory hydra user management platform to provide authentication and consent as part of the authorization code flow. In production, data providers will be using existing user management systems. Some user management platforms may provide OAuth2 endpoints as Ory Hydra does, in other cases the implementation may need to integrate separate OAuth and user management and consent services. Whilst it is outside of the scope of this demo to anticipate all configurations, the following steps explain how a separate user management and consent service might be integrated, using Ory OAuth2 as an example.
 
 #### Flow steps for Ory Hydra with external user management and consent services
 
@@ -176,6 +176,8 @@ For this demo, we have used Ory hydra user management platform to provide authen
 7. The user's user agent follows that redirect.
 
 8. Now, the user has authenticated and authorized the application. Ory OAuth2 will run checks and if all is well issue access, refresh, and ID tokens.
+
+A full example is available at [https://www.ory.sh/docs/hydra/guides/custom-ui-oauth2](https://www.ory.sh/docs/hydra/guides/custom-ui-oauth2).
 
 ## FAPI Flow
 
