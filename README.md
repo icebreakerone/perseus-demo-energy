@@ -80,7 +80,7 @@ nb. The optional `-W ignore` switch suppresses multiple warnings about the self-
 
 ### Auth
 
-Running `client.py auth` will perform the initial steps in the authorization code flow, outputting a URL that will open the UI to log in and confirm consent. The PKCE code verifier will also be in the output, which will be needed after the redirect
+Running `client.py auth` will perform the initial steps in the authorization code flow, outputting the URL of a UI to log in and confirm consent. The PKCE code verifier will also be in the output, which will be needed after the redirect
 
 ```bash
 python -W ignore  client.py auth
@@ -140,7 +140,7 @@ python -W ignore  client.py resource --token <token>
 
 ## Ory Hydra
 
-Please contact IB1 for the Client ID and secret if you would like to test against our demo Ory account. Alternatively you can set up a free developer account and create an Oauth2 client with your own details. The client should have:
+Please contact [tf-ops@icebreakerone.org](mailto:tf-ops@icebreakerone.org) for the Client ID and secret if you would like to test against our demo Ory account. Alternatively you can set up a free developer account and create an OAuth2 client with your own details. The client should have:
 
 - Authentication method set to None
 - Grant types authorization Code and Refresh Token
@@ -157,7 +157,7 @@ Please contact IB1 for the Client ID and secret if you would like to test agains
 
 ### Authentication and consent
 
-For this demo, we have used Ory hydra user management platform to provide authentication and consent as part of the authorization code flow. In production, data providers will be using existing user management systems. Whilst some user management platforms may provide Oauth2 endpoints as Ory Hydra does, in other cases the implementation may need to integrate separate Oauth and user management and consent services. Whilst it is outside of the scope this demo to anticipate all possible configurations, the following steps explain how a separate user management and consent service might be integrated, using Ory Oauth2 as an example.
+For this demo, we have used Ory hydra user management platform to provide authentication and consent as part of the authorization code flow. In production, data providers will be using existing user management systems. Whilst some user management platforms may provide OAuth2 endpoints as Ory Hydra does, in other cases the implementation may need to integrate separate OAuth and user management and consent services. Whilst it is outside of the scope this demo to anticipate all possible configurations, the following steps explain how a separate user management and consent service might be integrated, using Ory OAuth2 as an example.
 
 #### Flow steps for Ory Hydra with external user management and consent services
 
