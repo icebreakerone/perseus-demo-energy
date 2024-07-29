@@ -49,7 +49,7 @@ def check_token(token: str, client_certificate: str) -> dict:
         response = requests.post(
             url=introspection_endpoint,
             json={"token": token, "client_certificate": client_certificate},
-            auth=(conf.CLIENT_ID, conf.CLIENT_SECRET),
+            auth=(conf.OAUTH_CLIENT_ID, conf.CLIENT_SECRET),
             verify=False,
         )
         if response.status_code != 200:

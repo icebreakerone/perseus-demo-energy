@@ -37,6 +37,10 @@ def get_authentication_credentials(
 ):
     """
     The resource server will use client credentials to connect to the introspection endpoint
+
+    This function is a placeholder. Authentication will be provided
+    by Perseus Directory issued client certificates in production, and necessary client
+    information will be available in the certificate.
     """
     if not credentials:
         raise HTTPException(
@@ -46,11 +50,11 @@ def get_authentication_credentials(
         )
     current_username_bytes = credentials.username.encode("utf8")
     is_correct_username = secrets.compare_digest(
-        current_username_bytes, conf.CLIENT_ID.encode("utf8")
+        current_username_bytes, conf.OAUTH_CLIENT_ID.encode("utf8")
     )
     current_password_bytes = credentials.password.encode("utf8")
     is_correct_password = secrets.compare_digest(
-        current_password_bytes, conf.CLIENT_SECRET.encode("utf8")
+        current_password_bytes, conf.OAUTH_CLIENT_SECRET.encode("utf8")
     )
     if not (is_correct_username and is_correct_password):
         raise HTTPException(
@@ -66,7 +70,9 @@ async def docs() -> dict:
     return {"docs": "/api-docs"}
 
 
-@app.post("/api/v1/par", response_model=models.PushedAuthorizationResponse, status_code=201)
+@app.post(
+    "/api/v1/par", response_model=models.PushedAuthorizationResponse, status_code=201
+)
 async def pushed_authorization_request(
     response_type: Annotated[str, Form()],
     client_id: Annotated[str, Form()],
@@ -172,7 +178,7 @@ async def token(
     redirect_uri: Annotated[str, Form()],
     code_verifier: Annotated[str, Form()],
     code: Annotated[str, Form()],
-    x_amzn_mtls_clientcert: Annotated[str, Header()],
+    x_amzn_mtls_clientcert: Annotated[str|None, Header()],
 ) -> models.TokenResponse:
     """
     Token issuing endpoint
@@ -191,7 +197,7 @@ async def token(
         "code_verifier": code_verifier,
     }
     session = requests.Session()
-    session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
+    session.auth = (conf.OAUTH_CLIENT_ID, conf.CLIENT_SECRET)
     response = requests.post(
         f"{conf.TOKEN_ENDPOINT}",
         data=payload,

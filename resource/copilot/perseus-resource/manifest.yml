@@ -33,12 +33,12 @@ network:
 variables:                    # Pass environment variables as key value pairs.
   LOG_LEVEL: info
   ISSUER_URL: "https://perseus-demo-authentication.ib1.org"
-  CLIENT_ID: f67916ce-de33-4e2f-a8e3-cbd5f6459c30
+  OAUTH_CLIENT_ID: f67916ce-de33-4e2f-a8e3-cbd5f6459c30
 
 
 # You can override any of the values defined above by environment.
 secrets:
-    CLIENT_SECRET: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/client_secret
+    OAUTH_CLIENT_SECRET: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/client_secret
 
 environments:
  prod:

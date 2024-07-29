@@ -30,7 +30,7 @@ It may also be a useful reference for developers who are creating secure data en
 
 ## Authentication API
 
-The authentication app is in the [authentication](authentication) directory. It provides endpoints for authenticating and identifying users, and for handling and passing on requests from the client API to the FAPI API. It uses a
+The authentication app is in the [authentication](authentication) directory. It provides endpoints for authenticating and identifying users, and for handling and passing on requests from the client API to the FAPI API. It uses the Ory Hydra service to handle most of the OAuth2 flow, with additional endpoints added to handle the FAPI specific requirements.
 
 Authentication API documentation is available at https://perseus-demo-authentication.ib1.org/api-docs.
 
@@ -42,15 +42,32 @@ Resource API documentation is available at https://perseus-demo-energy.ib1.org/a
 
 ## Environment variables
 
-Both apps have example `.env.template` files in their root directories. These should be copied to `.env` and edited as required, filling CLIENT_ID and CLIENT_SECRET with the values provided by Ory Hydra, or on request from ib1 for the demo apps.
+Both apps have example `.env.template` files in their root directories. These should be copied to `.env` and edited as required. The following environment variables are used in the authentication app:
+
+- `REDIS_HOST`: a local redis instance is used to store PAR requests
+- `OAUTH_CLIENT_ID`: Client ID for the Ory Hydra client
+- `OAUTH_URL`: URL for the Ory Hydra client
+- `OAUTH_CLIENT_SECRET`: Client secret for the Ory Hydra client
+- `REDIRECT_URI`: The page to return to after authentication and authorisation eg. for local development http://127.0.0.1:3000/callback
+- `ISSUER_URL`: URL of the Oauth issuer eg. for docker compose https://authentication_web
+
+The following environment variables are used in the resource app:
+
+- `OAUTH_CLIENT_ID`: Client ID for the Ory Hydra client (same as for authentication)
+- `OAUTH_CLIENT_SECRET`: Client secret for the Ory Hydra client (same as for authentication)
+- `ISSUER_URL`: URL of the Oauth issuer eg. for docker compose https://authentication_web
 
 ## Running a dev server
+
+The fastapi servers for each app can be run using:
 
 ```bash
 cd authentication|resource
 pipenv install --dev
 pipenv run uvicorn api.main:app --reload
 ```
+
+**nb** the recommended way to run the apps is using the docker compose environment, as the apps require a redis instance and the resource app requires the authentication app to be running.
 
 ## Creating self-signed certificates
 

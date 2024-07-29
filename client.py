@@ -52,7 +52,7 @@ def pushed_authorization_request() -> tuple[str, dict]:
         f"{AUTHENTICATION_API}/api/v1/par",
         data={
             "response_type": "code",
-            "client_id": f"{conf.CLIENT_ID}",
+            "client_id": f"{conf.OAUTH_CLIENT_ID}",
             "redirect_uri": f"{conf.REDIRECT_URI}",
             "state": generate_state(),
             "code_challenge": code_challenge,
@@ -88,10 +88,12 @@ def client_side_decoding(token: str):
     jwks_client = jwt.PyJWKClient(jwks_url)
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
-    decoded = jwt.decode(token, key, [header["alg"]], audience=f"{conf.CLIENT_ID}")
+    decoded = jwt.decode(
+        token, key, [header["alg"]], audience=f"{conf.OAUTH_CLIENT_ID}"
+    )
     print(decoded, conf.ISSUER_URL)
     # Example of tests to apply
-    if decoded["aud"] != conf.CLIENT_ID:
+    if decoded["aud"] != conf.OAUTH_CLIENT_ID:
         raise ValueError("Invalid audience")
     if decoded["iss"] != conf.ISSUER_URL:
         raise ValueError("Invalid issuer")
@@ -140,7 +142,7 @@ def auth():
     response = session.get(
         f"{AUTHENTICATION_API}/api/v1/authorize",
         params={
-            "client_id": f"{conf.CLIENT_ID}",
+            "client_id": f"{conf.OAUTH_CLIENT_ID}",
             "request_uri": par_response["request_uri"],
         },
         verify=False,

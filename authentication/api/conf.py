@@ -15,15 +15,15 @@ CERTS = {
 
 
 ISSUER_URL = os.environ.get("ISSUER_URL", "https://perseus-demo-authentication.ib1.org")
-CLIENT_ID = os.environ.get("CLIENT_ID", "21653835348762")
-CLIENT_SECRET = os.environ.get(
-    "CLIENT_SECRET", "uE4NgqeIpuSV_XejQ7Ds3jsgA1yXhjR1MXJ1LbPuyls"
+
+OAUTH_CLIENT_SECRET = os.environ.get(
+    "OAUTH_CLIENT_SECRET"
 )
 OAUTH_URL = os.environ.get(
-    "OAUTH_URL", "https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com"
+    "OAUTH_URL"
 )
 OAUTH_CLIENT_ID = os.environ.get(
-    "OAUTH_CLIENT_ID", "f67916ce-de33-4e2f-a8e3-cbd5f6459c30"
+    "OAUTH_CLIENT_ID"
 )
 AUTHORIZATION_ENDPOINT = os.environ.get(
     "AUTHORIZATION_ENDPOINT",
