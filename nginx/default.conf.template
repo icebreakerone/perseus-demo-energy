@@ -10,10 +10,10 @@ server {
     server_name localhost;
     # add hosts your domain for local requests
     # server certificate
-    ssl_certificate     /etc/nginx/certs/server-cert.pem;
+    ssl_certificate     /etc/nginx/certs/server-cert-bundle.pem;
     ssl_certificate_key /etc/nginx/certs/server-key.pem;
     # CA certificate
-    ssl_client_certificate /etc/nginx/certs/ca-cert.pem;
+    ssl_client_certificate /etc/nginx/certs/client-ca-cert.pem;
     # need to validate client certificate(if this flag optional_no_ca it won't validate client certificates)
     ssl_verify_client optional_no_ca;
     location / {

@@ -54,11 +54,17 @@ pipenv run uvicorn api.main:app --reload
 
 ## Creating self-signed certificates
 
-The docker compose and client.py scripts require a set of self-signed certificates in a certs/ folder. These can be generated using the `certmaker.sh` script in the `scripts` directory.
+The docker compose and client.py scripts require a set of self-signed certificates in a certs/ folder. `certmaker.sh` generates a set of certificates suitable for emulating the certificates issued by the Perseus Scheme, and are used by the development server and client testing scripts.
 
 ```bash
 cd scripts
 ./certmaker.sh
+```
+
+By default, the certmaker script will create a server certificate for the local host it is run on (ie. using the output of `hostname`). This value can be changed by setting the SERVER_HOSTNAME environment variable, eg.
+
+```bash
+SERVER_HOSTNAME="perseus-demo-authentication.ib1.org" ./certmaker.sh
 ```
 
 You will need to create a "certs" directory in the root of the project, and move the generated certificates into it.
