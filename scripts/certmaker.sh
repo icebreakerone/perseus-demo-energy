@@ -28,7 +28,7 @@ openssl genpkey -algorithm RSA -out client-key.pem
 
 # Client CSR
 openssl req -new -key client-key.pem -out client-csr.pem \
-    -subj "/C=GB/ST=London/O=Application One/OU=carbon-accounting@perseus/CN=https:\/\/directory.perseus.ib1.org\/member\/2876152"
+    -subj "/C=GB/ST=London/O=Application One/OU=carbon-accounting@perseus/CN=https:\/\/directory.core.demo.ib1.org\/member\/81524"
 openssl x509 -req -in client-csr.pem -out client-cert.pem \
     -CA client-ca-cert.pem -CAkey client-ca-key.pem -days 365
 cat client-cert.pem client-ca-cert.pem > client-bundle.pem
