@@ -1,8 +1,8 @@
 name: test
 description: Run python tests
 inputs:
-  folder: 
-    description: 'The folder to run tests in'
+  folder:
+    description: "The folder to run tests in"
     required: true
 
 runs:
@@ -19,7 +19,7 @@ runs:
       run: |
         # stop the build if there are Python syntax errors or undefined names
         cd ${{ inputs.folder }}
-        pipenv run ruff .
+        pipenv run ruff check .
     - name: Run ${{ inputs.folder }} tests
       shell: bash
       run: |
