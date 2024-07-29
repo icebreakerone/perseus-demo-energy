@@ -1,6 +1,32 @@
 # Perseus demo energy provider
 
-Emulates authentication and resource api endpoints for the Perseus demo. Authentication is built on top of [Ory Hydra](https://www.ory.sh).
+This repository contains two apps that demonstrate securing a data endpoint using the Fapi standard, in a way that is compliant with the [Perseus trust framework](https://ib1.org/perseus/)
+
+It contains a docker compose based development environment that is helpful for developing client applications.
+
+It may also be a useful reference for developers who are creating secure data endpoints that are compliant with the Perseus trust framework, but is not intended to be a production ready implementation.
+
+## Contents
+
+- [Authentication API](#authentication-api)
+- [Resource API](#resource-api)
+- [Environment variables](#environment-variables)
+- [Running a dev server](#running-a-dev-server)
+- [Creating self-signed certificates](#creating-self-signed-certificates)
+  - [Using client certificates](#using-client-certificates)
+- [Creating signing certificates](#creating-signing-certificates)
+- [Running the local docker environment](#running-the-local-docker-environment)
+- [Pushed Authorization Request (PAR)](#pushed-authorization-request-par)
+- [Testing the API with client.py](#testing-the-api-with-clientpy)
+  - [Auth](#auth)
+  - [Client demo app](#client-demo-app)
+  - [Introspection](#introspection)
+  - [Client side id_token decoding](#client-side-id_token-decoding)
+  - [Retrieve data from protected endpoint](#retrieve-data-from-protected-endpoint)
+- [Ory Hydra](#ory-hydra)
+  - [Authentication and consent](#authentication-and-consent)
+    - [Flow steps for Ory Hydra with external user management and consent services](#flow-steps-for-ory-hydra-with-external-user-management-and-consent-services)
+- [FAPI Flow](#fapi-flow)
 
 ## Authentication API
 
