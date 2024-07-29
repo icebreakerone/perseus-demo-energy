@@ -69,6 +69,8 @@ SERVER_HOSTNAME="perseus-demo-authentication.ib1.org" ./certmaker.sh
 
 You will need to create a "certs" directory in the root of the project, and move the generated certificates into it.
 
+**nb** The generated certificates include reasonable values suitable for testing, but in production certificates will be issued by the Perseus directory service.
+
 ### Using client certificates
 
 Most of the endpoints require a client certificate to be presented. As the directory service is not yet available, the contents of the certificate will not be checked with an external CA, so any valid certificate will be acceptable. The certificate **is** used to confirm identity, so the same one must be presented in all requests.
