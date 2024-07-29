@@ -1,10 +1,10 @@
 # Perseus demo energy provider
 
-This repository contains two apps that demonstrate securing a data endpoint using the Fapi standard, in a way that is compliant with the [Perseus trust framework](https://ib1.org/perseus/)
+This repository contains two apps that demonstrate securing a mockup smart meter data endpoint using the FAPI standard, in a way that is compliant with the [Perseus Scheme](https://ib1.org/perseus/)
 
 It contains a docker compose based development environment that is helpful for developing client applications.
 
-It may also be a useful reference for developers who are creating secure data endpoints that are compliant with the Perseus trust framework, but is not intended to be a production ready implementation.
+It may also be a useful reference for developers who are creating secure data endpoints that are compliant with the Perseus Scheme, but is not intended to be a production ready implementation.
 
 ## Contents
 
