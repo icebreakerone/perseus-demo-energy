@@ -172,7 +172,7 @@ async def token(
     redirect_uri: Annotated[str, Form()],
     code_verifier: Annotated[str, Form()],
     code: Annotated[str, Form()],
-    x_amzn_mtls_clientcert: Annotated[str, Header()],
+    x_amzn_mtls_clientcert: Annotated[str | None, Header()],
 ) -> models.TokenResponse:
     """
     Token issuing endpoint

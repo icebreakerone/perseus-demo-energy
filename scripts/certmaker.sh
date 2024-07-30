@@ -1,42 +1,35 @@
-# Generate CA private key
-openssl genpkey -algorithm RSA -out ca-key.pem
-
-# Generate CA self-signed certificate
-openssl req -new -x509 -key ca-key.pem -out ca-cert.pem -subj "/C=GB/ST=London/O=Perseus CA/CN=perseus-demo-fapi.ib1.org"
+# Perseus Trust Framework CA 
+openssl genpkey -algorithm RSA -out server-ca-key.pem
+openssl req -new -x509 -key server-ca-key.pem -out server-ca-cert.pem -days 3560 \
+    -subj "/C=GB/O=Perseus Trust Framework/CN=Perseus Trust Framework Server CA"
 
 # Generate server private key
 openssl genpkey -algorithm RSA -out server-key.pem
 
 # Generate server CSR
-openssl req -new -key server-key.pem -out server-csr.pem -subj "/C=GB/ST=London/O=Perseus Demo Authentication/CN=perseus-demo-authentication.ib1.org"
+openssl req -new -key server-key.pem -out server-csr.pem \
+    -subj "/C=GB/ST=London/O=Perseus Trust Framework/CN=${SERVER_HOSTNAME:-`hostname`}"
 
 # Sign the server CSR with CA key and certificate
-openssl x509 -req -in server-csr.pem -out server-cert.pem -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial -days 365
+openssl x509 -req -in server-csr.pem -out server-cert.pem -CA server-ca-cert.pem \
+    -CAkey server-ca-key.pem -days 365
 
-# Generate client private key
+# Bundle server and CA certificates
+cat server-cert.pem  server-ca-cert.pem > server-cert-bundle.pem
+
+
+# Perseus Trust Framework Client CA
+openssl genpkey -algorithm RSA -out client-ca-key.pem
+openssl req -new -x509 -key client-ca-key.pem -out client-ca-cert.pem -days 3560 \
+    -subj "/C=GB/O=Perseus Trust Framework/CN=Perseus Trust Framework Client CA"
+
+# Client Key
 openssl genpkey -algorithm RSA -out client-key.pem
 
-# Generate client CSR
-openssl req -new -key client-key.pem -out client-csr.pem -subj "/C=GB/ST=London/O=Perseus Demo Accountancy/CN=perseus-demo-accountancy.ib1.org"
+# Client CSR
+openssl req -new -key client-key.pem -out client-csr.pem \
+    -subj "/C=GB/ST=London/O=Application One/OU=carbon-accounting@perseus/CN=https:\/\/directory.core.demo.ib1.org\/member\/81524"
+openssl x509 -req -in client-csr.pem -out client-cert.pem \
+    -CA client-ca-cert.pem -CAkey client-ca-key.pem -days 365
+cat client-cert.pem client-ca-cert.pem > client-bundle.pem
 
-# Sign the client CSR with CA key and certificate
-openssl x509 -req -in client-csr.pem -out client-cert.pem -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial -days 365
-
-
-# # Generate private key for the server
-# openssl genpkey -algorithm RSA -out server-key.pem
-
-# # Generate CSR for the server with subject information
-# openssl req -new -key server-key.pem -out server-csr.pem -subj "/C=GB/ST=London/O=Perseus Demo Authentication/CN=perseus-demo-authentication.ib1.org"
-
-# # Create PEM
-# openssl x509 -req -days 365 -in server-csr.pem -signkey server-key.pem -out server-cert.pem
-
-# # Generate private key for the client
-# openssl genpkey -algorithm RSA -out client-key.pem
-
-# # Generate CSR for the client with subject information
-# openssl req -new -key client-key.pem -out client-csr.pem -subj "/C=GB/ST=London/O=Perseus Demo Accountancy/CN=perseus-demo-accountancy.ib1.org"
-
-# # Create PEM
-# openssl x509 -req -days 365 -in client-csr.pem -signkey client-key.pem -out client-cert.pem
