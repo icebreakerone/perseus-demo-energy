@@ -197,7 +197,7 @@ async def token(
         "code_verifier": code_verifier,
     }
     session = requests.Session()
-    session.auth = (conf.OAUTH_CLIENT_ID, conf.CLIENT_SECRET)
+    session.auth = (conf.OAUTH_CLIENT_ID, conf.OAUTH_CLIENT_SECRET)
     response = requests.post(
         f"{conf.TOKEN_ENDPOINT}",
         data=payload,
