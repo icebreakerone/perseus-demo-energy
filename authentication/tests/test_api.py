@@ -1,7 +1,6 @@
 import os
 from unittest.mock import patch, MagicMock
 import urllib.parse
-
 import jwt
 import responses
 from fastapi.testclient import TestClient
@@ -10,6 +9,19 @@ from api.main import app, conf
 
 client = TestClient(app)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+class FakeConf:
+    def __init__(self) -> None:
+        self.DIRNAME = conf.DIRNAME
+        self.CERTS = conf.CERTS
+        self.ISSUER_URL = os.environ.get("ISSUER_URL", "https://perseus-demo-authentication.ib1.org")
+        self.OAUTH_CLIENT_SECRET = '123abc'
+        self.OAUTH_URL = 'https://test-oauth.io'
+        self.OAUTH_CLIENT_ID = 'abc-123'
+        self.AUTHORIZATION_ENDPOINT = f"{self.OAUTH_URL}/oauth2/auth"
+        self.TOKEN_ENDPOINT = f"{self.OAUTH_URL}/oauth2/token"
+        self.REDIRECT_URI = "https://test-accounting.org/callback"
+        self.REDIS_HOST = "redis"
 
 
 def client_certificate() -> str:
@@ -70,6 +82,7 @@ def test_authorization_code(mock_get_request):
 
 
 @patch("api.auth.get_key")
+@patch("api.main.conf", FakeConf())
 @responses.activate
 def test_token(mocked_auth_key):
     test_key = f"{ROOT_DIR}/fixtures/server-signing-private-key.pem"
@@ -91,7 +104,7 @@ def test_token(mocked_auth_key):
         private_key = f.read()
     token = jwt.encode(valid_response, private_key, algorithm="ES256")
     responses.post(
-        f"{conf.TOKEN_ENDPOINT}",
+        f"{FakeConf().TOKEN_ENDPOINT}",
         json={
             "access_token": token,
             "id_token": "ID_TOKEN",
@@ -113,6 +126,7 @@ def test_token(mocked_auth_key):
     assert "access_token" in response.json()
     assert "id_token" in response.json()
     assert "refresh_token" in response.json()
+    
 
 
 def test_introspect():
