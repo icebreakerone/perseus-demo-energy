@@ -52,7 +52,6 @@ def test_pushed_authorization_request(mock_redis_connection):
     )
 
     assert response.status_code == 201
-    print(response.json())
     assert "request_uri" in response.json()
 
 
@@ -76,7 +75,6 @@ def test_authorization_code(mock_get_request):
         headers={"x-amzn-mtls-clientcert": "client-certificate"},
         follow_redirects=False,
     )
-    print(response.status_code, response.text)
     assert response.status_code == 302
     assert "Location" in response.headers
 
