@@ -57,6 +57,8 @@ The following environment variables are used in the resource app:
 - `OAUTH_CLIENT_SECRET`: Client secret for the Ory Hydra client (same as for authentication)
 - `ISSUER_URL`: URL of the Oauth issuer eg. for docker compose https://authentication_web
 
+For more information on generating the client ID and secret, see the [Ory Hydra](#ory-hydra) section.
+
 ## Running a dev server
 
 The fastapi servers for each app can be run using:
