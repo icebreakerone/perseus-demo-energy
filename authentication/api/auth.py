@@ -169,7 +169,7 @@ def create_id_token(subject="platform_user") -> str:
     claims = {
         "iss": f"{conf.ISSUER_URL}",
         "sub": subject,
-        "aud": conf.CLIENT_ID,
+        "aud": conf.OAUTH_CLIENT_ID,
         "exp": int(time.time()) + 3600,
         "iat": int(time.time()),
         "kid": 1,
