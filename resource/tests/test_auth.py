@@ -12,6 +12,7 @@ from unittest.mock import patch, MagicMock
 
 import api.auth
 
+CLIENT_ID = "https://directory.core.demo.ib1.org/member/81524"
 
 
 @pytest.fixture
@@ -32,11 +33,15 @@ def client_certificate():
     )
     subject = issuer = x509.Name(
         [
-            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
-            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "California"),
-            x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "My Test Org"),
-            x509.NameAttribute(NameOID.COMMON_NAME, "mock_client_id"),
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "GB"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "London"),
+            x509.NameAttribute(
+                NameOID.ORGANIZATIONAL_UNIT_NAME, "carbon-accounting@perseus"
+            ),
+            x509.NameAttribute(
+                NameOID.COMMON_NAME,
+                CLIENT_ID,
+            ),
         ]
     )
     valid_from = datetime.datetime.utcnow()
@@ -74,7 +79,7 @@ def jwt_token(client_certificate):
     _, private_key_pem, _, cert_thumprint = client_certificate
     headers = {"alg": "RS256", "kid": "testkey"}
     payload = {
-        "aud": "mock_client_id",
+        "aud": CLIENT_ID,
         "exp": int(time.time()) + 3600,
         "iat": int(time.time()) - 3600,
         "active": True,
@@ -104,5 +109,5 @@ def test_check_token_integration(
     result, headers = api.auth.check_token(cert_pem, jwt_token)
 
     # Assert
-    assert result["aud"] == "mock_client_id"
+    assert result["aud"] == CLIENT_ID
     assert "x-fapi-interaction-id" in headers

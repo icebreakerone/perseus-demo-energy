@@ -6,6 +6,8 @@ from urllib.parse import unquote
 import logging
 
 from cryptography.hazmat.primitives import hashes
+from cryptography.x509.oid import NameOID
+
 import jwt
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -23,7 +25,8 @@ def parse_cert(client_certificate: str) -> x509.Certificate:
     nb. the method and naming of passing the client certificate may vary depending on the deployment
     """
     cert_data = unquote(client_certificate).encode("utf-8")
-    cert = x509.load_pem_x509_certificate(cert_data, default_backend())
+    print(cert_data)
+    cert = x509.load_pem_x509_certificate(cert_data)
     return cert
 
 
@@ -114,3 +117,16 @@ def create_jwks(public_key_pem_path, kid=1):
     jwks = {"keys": [jwk]}
 
     return jwks
+
+
+def require_role(role_name, quoted_certificate) -> bool:
+    """Check that the certificate presented by the client includes the given role,
+    throwing an exception if the requirement isn't met. Assumes the proxy has verified
+    the certificate.
+    """
+    # Extract a list of roles from the certificate
+    cert = parse_cert(quoted_certificate)
+    return role_name in [
+        ou.value
+        for ou in cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)
+    ]
