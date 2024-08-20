@@ -1,7 +1,4 @@
-import json
 import os
-from typing import Optional
-import time
 from urllib.parse import quote
 
 from cryptography import x509
