@@ -119,7 +119,7 @@ def check_token(
     if client_certificate is None:
         log.warning("no client cert presented")
         raise AccessTokenNoCertificateError("No client certificate presented")
-    cert = x509.load_pem_x509_certificate(bytes(unquote(client_certificate), "utf-8"))
+    cert = parse_cert(client_certificate)
     client_id = cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value
     # get the jwks endpoints from well-known configuration
     openid_config = get_openid_configuration(conf.ISSUER_URL)
