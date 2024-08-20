@@ -10,7 +10,6 @@ from cryptography.x509.oid import NameOID
 
 import jwt
 from cryptography import x509
-from cryptography.hazmat.backends import default_backend
 
 from . import conf
 
