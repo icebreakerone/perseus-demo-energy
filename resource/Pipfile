@@ -9,6 +9,7 @@ requests = "*"
 cryptography = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 typing-extensions = "*"
+pyjwt = "*"
 
 [dev-packages]
 pytest = "*"

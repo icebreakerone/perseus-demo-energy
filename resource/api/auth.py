@@ -2,8 +2,15 @@ import logging
 import urllib.parse
 import uuid
 from typing import Optional, Tuple
+import email.utils
+import time
+from urllib.parse import unquote
+import ssl
+import base64
+from cryptography.hazmat.primitives import hashes
 import requests
-
+import jwt
+from cryptography import x509
 
 from . import conf
 
@@ -23,6 +30,65 @@ class AccessTokenInactiveError(AccessTokenValidatorError):
     pass
 
 
+class AccessTokenTimeError(AccessTokenValidatorError):
+    pass
+
+
+class AccessTokenAudienceError(AccessTokenValidatorError):
+    pass
+
+
+class AccessTokenCertificateError(AccessTokenValidatorError):
+    pass
+
+
+def parse_cert(client_certificate: str) -> x509.Certificate:
+    """
+    Given a certificate in the request context, return a Certificate object
+
+    If a certificate is present, on our deployment it will be in request.headers['X-Amzn-Mtls-Clientcert']
+    nb. the method and naming of passing the client certificate may vary depending on the deployment
+    """
+    cert_data = unquote(client_certificate).encode("utf-8")
+    cert = x509.load_pem_x509_certificate(cert_data)
+    return cert
+
+
+def _check_certificate(cert: x509.Certificate, decoded_token: dict):
+
+    if "cnf" in decoded_token:
+        # thumbprint from introspection response
+        try:
+            sha256 = decoded_token["cnf"]["x5t#S256"]
+        except KeyError:
+            log.warning("No x5t#S256 claim in token response, unable to proceed!")
+            raise AccessTokenCertificateError(
+                "Token does not contain a certificate binding"
+            )
+        # thumbprint from presented client certificate
+        fingerprint = str(
+            base64.urlsafe_b64encode(cert.fingerprint(hashes.SHA256())).replace(
+                b"=", b""
+            ),
+            "utf-8",
+        )
+        if fingerprint != sha256:
+            log.warning(
+                f"introspection response thumbprint {sha256} does not match "
+                f"presented client cert thumbprint {fingerprint}"
+            )
+            raise AccessTokenCertificateError(
+                "Token certificate binding does not match presented client cert"
+            )
+    else:
+        # No CNF claim in the introspection response
+        log.warning("No cnf claim in token response, unable to proceed!")
+        raise AccessTokenCertificateError(
+            "Token does not contain a certificate binding"
+        )
+    return True
+
+
 def get_openid_configuration(issuer_url: str) -> dict:
     """
     Get the well-known configuration for a given issuer URL
@@ -35,65 +101,47 @@ def get_openid_configuration(issuer_url: str) -> dict:
     return response.json()
 
 
-def check_token(token: str, client_certificate: str) -> dict:
-    openid_config = get_openid_configuration(conf.ISSUER_URL)
-    introspection_endpoint = openid_config["introspection_endpoint"]
-    if (
-        "localhost" in introspection_endpoint
-    ):  # Bit of messing about for docker, consider bringing accounting app into the same project
-        introspection_endpoint = introspection_endpoint.replace(
-            "https://localhost:8000", conf.ISSUER_URL
-        )
-    log.debug("Token type", type(token))
-    try:
-        response = requests.post(
-            url=introspection_endpoint,
-            json={"token": token, "client_certificate": client_certificate},
-            auth=(conf.OAUTH_CLIENT_ID, conf.OAUTH_CLIENT_SECRET),
-            verify=False,
-        )
-        if response.status_code != 200:
-            log.error(f"introspection request failed: {response.text}")
-            raise AccessTokenValidatorError("Introspection request failed")
-
-    except requests.exceptions.RequestException as e:
-        log.error(f"introspection request failed: {e}")
-        raise AccessTokenValidatorError("Introspection request failed")
-    return response.json()
-
-
-def introspect(
-    client_certificate: str, token: str, x_fapi_interaction_id: Optional[str] = None
+def check_token(
+    client_certificate: str | None,
+    token: str,
+    x_fapi_interaction_id: Optional[str] = None,
 ) -> Tuple[dict, dict]:
     """
-    Introspection fails if:
-        1. Querying the token introspection endpoint fails
-        2. A token is returned with active: false
-        3. Scope is specified, and the required scope is not in the token scopes
-        4. No client certificate is presented
-    If introspection succeeds, return a dict suitable to use as headers
-    including Date and x-fapi-interaction-id, as well as the introspection response
+    Check token fails if:
+        1. Basic token checks (expiry, active, etc) fail
+        2. The token is not bound to the client certificate
+        3. The token is not correctly signed
+    If check succeeds, return a dict suitable to use as headers
+    including Date and x-fapi-interaction-id, as well as the check token result
     """
 
     # Deny access to non-MTLS connections
     if client_certificate is None:
         log.warning("no client cert presented")
         raise AccessTokenNoCertificateError("No client certificate presented")
-    introspection_response = check_token(token, client_certificate)
-    log.debug(f"introspection response {introspection_response}")
-
-    # All valid introspection responses contain 'active', as the default behaviour
-    # for an invalid token is to create a simple JSON {'active':false} response
-    if (
-        "active" not in introspection_response
-        or introspection_response["active"] is not True
-    ):
-        raise AccessTokenInactiveError(
-            "Invalid introspection response, does not contain 'active' or is not True"
-        )
+    cert = x509.load_pem_x509_certificate(bytes(unquote(client_certificate), "utf-8"))
+    client_id = cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value
+    # get the jwks endpoints from well-known configuration
+    openid_config = get_openid_configuration(conf.ISSUER_URL)
+    jwks_uri = openid_config["jwks_uri"]
+    jwks_client = jwt.PyJWKClient(jwks_uri)
+    ssl._create_default_https_context = (
+        ssl._create_unverified_context
+    )  # Must be removed for production
+    header = jwt.get_unverified_header(token)
+    key = jwks_client.get_signing_key(header["kid"]).key
+    decoded = jwt.decode(token, key, [header["alg"]], audience=client_id)
+    # Examples of tests to apply
+    if decoded["aud"] != client_id:
+        raise AccessTokenAudienceError("Invalid audience")
+    if decoded["exp"] < int(time.time()):
+        raise AccessTokenTimeError("Token expired")
+    if decoded["iat"] > int(time.time()):
+        raise AccessTokenTimeError("Token issued in the future")
+    _check_certificate(cert, decoded)
     headers = {}
     # FAPI requires that the resource server set the date header in the response
-    # headers["Date"] = email.utils.formatdate()
+    headers["Date"] = email.utils.formatdate()
 
     # Get FAPI interaction ID if set, or create a new one otherwise
     if x_fapi_interaction_id is None:
@@ -102,4 +150,4 @@ def introspect(
     else:
         log.debug(f"using existing interaction ID = {x_fapi_interaction_id}")
     headers["x-fapi-interaction-id"] = x_fapi_interaction_id
-    return introspection_response, headers
+    return decoded, headers

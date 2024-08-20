@@ -59,8 +59,10 @@ def consumption(
     if x_amzn_mtls_clientcert is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
     if token and token.credentials:
+        # TODO don't use instrospection, check the token signature
+        # And check the certificate binding
         try:
-            _, headers = auth.introspect(
+            _, headers = auth.check_token(
                 x_amzn_mtls_clientcert, token.credentials, x_fapi_interaction_id
             )
         except auth.AccessTokenValidatorError as e:
