@@ -1,7 +1,7 @@
 from urllib.parse import quote
 import pytest
 from fastapi.testclient import TestClient
-from tests import client_certificate
+from tests import client_certificate  # noqa
 from api.main import app
 
 client = TestClient(app)
@@ -22,7 +22,7 @@ def test_consumption_bad_token():
     assert response.status_code == 401
 
 
-def test_consumption(mock_check_token, client_certificate):
+def test_consumption(mock_check_token, client_certificate):  # noqa
     """
     If introspection is successful, return data and 200
     """

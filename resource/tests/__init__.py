@@ -6,8 +6,6 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.backends import default_backend
-from cryptography.x509.oid import NameOID
-from cryptography import x509
 import pytest
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
