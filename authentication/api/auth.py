@@ -10,6 +10,7 @@ from cryptography.x509.oid import NameOID
 
 import jwt
 from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 from . import conf
 
@@ -24,8 +25,7 @@ def parse_cert(client_certificate: str) -> x509.Certificate:
     nb. the method and naming of passing the client certificate may vary depending on the deployment
     """
     cert_data = unquote(client_certificate).encode("utf-8")
-    print(cert_data)
-    cert = x509.load_pem_x509_certificate(cert_data)
+    cert = x509.load_pem_x509_certificate(cert_data, default_backend())
     return cert
 
 
