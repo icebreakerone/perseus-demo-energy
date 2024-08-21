@@ -23,7 +23,8 @@ def client_certificate():
             x509.NameAttribute(NameOID.COUNTRY_NAME, "GB"),
             x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "London"),
             x509.NameAttribute(
-                NameOID.ORGANIZATIONAL_UNIT_NAME, "carbon-accounting@perseus"
+                NameOID.ORGANIZATIONAL_UNIT_NAME,
+                "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
             ),
             x509.NameAttribute(
                 NameOID.COMMON_NAME,

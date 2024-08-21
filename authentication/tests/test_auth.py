@@ -7,13 +7,21 @@ def test_require_role_success(mock_parse_cert):
     # Mock certificate object
     mock_cert = MagicMock()
     mock_cert.subject.get_attributes_for_oid.return_value = [
-        MagicMock(value="carbon-accounting@perseus"),
+        MagicMock(
+            value="https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"
+        ),
     ]
 
     mock_parse_cert.return_value = mock_cert
 
     # Test when the role is present
-    assert require_role("carbon-accounting@perseus", "mock_quoted_certificate") is True
+    assert (
+        require_role(
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            "mock_quoted_certificate",
+        )
+        is True
+    )
 
 
 @patch("api.auth.parse_cert")
