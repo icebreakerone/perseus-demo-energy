@@ -150,7 +150,7 @@ async def token(
     """
     if x_amzn_mtls_clientcert is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
-    if not auth.require_role(
+    if not auth.certificate_has_role(
         "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
         x_amzn_mtls_clientcert,
     ):

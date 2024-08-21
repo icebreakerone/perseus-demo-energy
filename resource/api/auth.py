@@ -154,7 +154,7 @@ def check_token(
     return decoded, headers
 
 
-def require_role(role_name, quoted_certificate) -> bool:
+def certificate_has_role(role_name, quoted_certificate) -> bool:
     """Check that the certificate presented by the client includes the given role,
     throwing an exception if the requirement isn't met. Assumes the proxy has verified
     the certificate.
