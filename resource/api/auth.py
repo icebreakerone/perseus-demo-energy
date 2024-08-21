@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives import hashes
 import requests
 import jwt
 from cryptography import x509
+from cryptography.x509.oid import NameOID
 
 from . import conf
 
@@ -151,3 +152,16 @@ def check_token(
         log.debug(f"using existing interaction ID = {x_fapi_interaction_id}")
     headers["x-fapi-interaction-id"] = x_fapi_interaction_id
     return decoded, headers
+
+
+def require_role(role_name, quoted_certificate) -> bool:
+    """Check that the certificate presented by the client includes the given role,
+    throwing an exception if the requirement isn't met. Assumes the proxy has verified
+    the certificate.
+    """
+    # Extract a list of roles from the certificate
+    cert = parse_cert(quoted_certificate)
+    return role_name in [
+        ou.value
+        for ou in cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)
+    ]
