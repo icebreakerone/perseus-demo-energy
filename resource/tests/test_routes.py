@@ -1,6 +1,7 @@
+from urllib.parse import quote
 import pytest
 from fastapi.testclient import TestClient
-from tests import cert_response
+from tests import client_certificate
 from api.main import app
 
 client = TestClient(app)
@@ -21,16 +22,17 @@ def test_consumption_bad_token():
     assert response.status_code == 401
 
 
-def test_consumption(mock_check_token):
+def test_consumption(mock_check_token, client_certificate):
     """
     If introspection is successful, return data and 200
     """
     mock_check_token.return_value = ({}, {})
+    pem, _, _, _ = client_certificate
     response = client.get(
         "/api/v1/consumption",
         headers={
-            "Authorization": "Bearer abc123",
-            "x-amzn-mtls-clientcert": cert_response(urlencoded=True),
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert": quote(pem),
         },
     )
     assert response.status_code == 200
