@@ -6,13 +6,14 @@ from urllib.parse import unquote
 import logging
 
 from cryptography.hazmat.primitives import hashes
-from cryptography.x509.oid import NameOID
+from cryptography.x509 import ObjectIdentifier
 
 import jwt
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
 from . import conf
+from . import certificate_extensions
 
 log = logging.getLogger(__name__)
 
@@ -24,9 +25,9 @@ def parse_cert(client_certificate: str) -> x509.Certificate:
     If a certificate is present, on our deployment it will be in request.headers['X-Amzn-Mtls-Clientcert']
     nb. the method and naming of passing the client certificate may vary depending on the deployment
     """
-    cert_data = unquote(client_certificate).encode("utf-8")
-    cert = x509.load_pem_x509_certificate(cert_data, default_backend())
-    return cert
+    return x509.load_pem_x509_certificate(
+        bytes(unquote(client_certificate), "utf-8"), default_backend()
+    )
 
 
 def get_thumbprint(cert: str) -> str:
@@ -125,7 +126,14 @@ def certificate_has_role(role_name, quoted_certificate) -> bool:
     """
     # Extract a list of roles from the certificate
     cert = parse_cert(quoted_certificate)
-    return role_name in [
-        ou.value
-        for ou in cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)
-    ]
+    try:
+        role_der = cert.extensions.get_extension_for_oid(
+            ObjectIdentifier("1.3.6.1.4.1.62329.1.1")
+        ).value.value  # type: ignore
+    except x509.ExtensionNotFound:
+        return False  # We need a way of raising an exception here, there are two types of failure
+    roles = certificate_extensions.decode(
+        der_bytes=role_der,
+    )
+
+    return role_name in roles

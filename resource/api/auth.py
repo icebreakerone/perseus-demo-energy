@@ -11,36 +11,13 @@ from cryptography.hazmat.primitives import hashes
 import requests
 import jwt
 from cryptography import x509
-from cryptography.x509.oid import NameOID
-
+from cryptography.hazmat.backends import default_backend
+from cryptography.x509 import ObjectIdentifier
 from . import conf
-
+from .exceptions import *
+from . import certificate_extensions
 
 log = logging.getLogger(__name__)
-
-
-class AccessTokenValidatorError(Exception):
-    pass
-
-
-class AccessTokenNoCertificateError(AccessTokenValidatorError):
-    pass
-
-
-class AccessTokenInactiveError(AccessTokenValidatorError):
-    pass
-
-
-class AccessTokenTimeError(AccessTokenValidatorError):
-    pass
-
-
-class AccessTokenAudienceError(AccessTokenValidatorError):
-    pass
-
-
-class AccessTokenCertificateError(AccessTokenValidatorError):
-    pass
 
 
 def parse_cert(client_certificate: str) -> x509.Certificate:
@@ -50,9 +27,9 @@ def parse_cert(client_certificate: str) -> x509.Certificate:
     If a certificate is present, on our deployment it will be in request.headers['X-Amzn-Mtls-Clientcert']
     nb. the method and naming of passing the client certificate may vary depending on the deployment
     """
-    cert_data = unquote(client_certificate).encode("utf-8")
-    cert = x509.load_pem_x509_certificate(cert_data)
-    return cert
+    return x509.load_pem_x509_certificate(
+        bytes(unquote(client_certificate), "utf-8"), default_backend()
+    )
 
 
 def _check_certificate(cert: x509.Certificate, decoded_token: dict):
@@ -75,14 +52,14 @@ def _check_certificate(cert: x509.Certificate, decoded_token: dict):
         )
         if fingerprint != sha256:
             log.warning(
-                f"introspection response thumbprint {sha256} does not match "
+                f"Token thumbprint {sha256} does not match "
                 f"presented client cert thumbprint {fingerprint}"
             )
             raise AccessTokenCertificateError(
                 "Token certificate binding does not match presented client cert"
             )
     else:
-        # No CNF claim in the introspection response
+        # No CNF claim in the token
         log.warning("No cnf claim in token response, unable to proceed!")
         raise AccessTokenCertificateError(
             "Token does not contain a certificate binding"
@@ -119,9 +96,12 @@ def check_token(
     # Deny access to non-MTLS connections
     if client_certificate is None:
         log.warning("no client cert presented")
-        raise AccessTokenNoCertificateError("No client certificate presented")
+        raise CertificateMissingError("No client certificate presented")
     cert = parse_cert(client_certificate)
-    client_id = cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value
+    client_id = str(
+        cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value
+    )
+    print("CHECKING CLIENT ID", client_id)
     # get the jwks endpoints from well-known configuration
     openid_config = get_openid_configuration(conf.ISSUER_URL)
     jwks_uri = openid_config["jwks_uri"]
@@ -131,7 +111,10 @@ def check_token(
     )  # Must be removed for production
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
+    print(type(key))
+    print(key)
     decoded = jwt.decode(token, key, [header["alg"]], audience=client_id)
+    print(decoded)
     # Examples of tests to apply
     if decoded["aud"] != client_id:
         raise AccessTokenAudienceError("Invalid audience")
@@ -154,14 +137,30 @@ def check_token(
     return decoded, headers
 
 
-def certificate_has_role(role_name, quoted_certificate) -> bool:
+def require_role(role_name, quoted_certificate) -> bool:
     """Check that the certificate presented by the client includes the given role,
     throwing an exception if the requirement isn't met. Assumes the proxy has verified
     the certificate.
     """
-    # Extract a list of roles from the certificate
-    cert = parse_cert(quoted_certificate)
-    return role_name in [
-        ou.value
-        for ou in cert.subject.get_attributes_for_oid(NameOID.ORGANIZATIONAL_UNIT_NAME)
-    ]
+    print("CCHECK FOR ", role_name)
+    cert = x509.load_pem_x509_certificate(
+        bytes(unquote(quoted_certificate), "utf-8"), default_backend()
+    )
+    try:
+        role_der = cert.extensions.get_extension_for_oid(
+            ObjectIdentifier("1.3.6.1.4.1.62329.1.1")
+        ).value.value  # type: ignore [attr-defined]
+
+    except x509.ExtensionNotFound:
+        raise CertificateRoleMissingError(
+            "Client certificate does not include role information"
+        )
+    roles = certificate_extensions.decode(
+        der_bytes=role_der,
+    )
+
+    if role_name not in roles:
+        raise CertificateRoleError(
+            "Client certificate does not include role " + role_name
+        )
+    return True

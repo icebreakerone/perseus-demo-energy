@@ -56,16 +56,20 @@ def consumption(
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
 ):
-    if x_amzn_mtls_clientcert is None:
-        raise HTTPException(status_code=401, detail="No client certificate provided")
-    print(x_amzn_mtls_clientcert)
-    if not auth.certificate_has_role(
-        "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
-        x_amzn_mtls_clientcert,
-    ):
+    if not x_amzn_mtls_clientcert:
         raise HTTPException(
-            status_code=403,
-            detail="Client certificate does not have the required role",
+            status_code=401,
+            detail="Client certificate required",
+        )
+    try:
+        auth.require_role(
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            x_amzn_mtls_clientcert,
+        )
+    except auth.CertificateError as e:
+        raise HTTPException(
+            status_code=401,
+            detail=str(e),
         )
     if token and token.credentials:
         # TODO don't use instrospection, check the token signature

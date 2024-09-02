@@ -22,12 +22,14 @@ def test_consumption_bad_token():
     assert response.status_code == 401
 
 
-def test_consumption(mock_check_token, client_certificate):  # noqa
+def test_consumption(mock_check_token):  # noqa
     """
     If introspection is successful, return data and 200
     """
     mock_check_token.return_value = ({}, {})
-    pem, _, _, _ = client_certificate
+    pem, _, _, _ = client_certificate(
+        roles=["https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"]
+    )
     response = client.get(
         "/api/v1/consumption",
         headers={
