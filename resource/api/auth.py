@@ -111,8 +111,7 @@ def check_token(
     )  # Must be removed for production
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
-    print(type(key))
-    print(key)
+    print("CLIENT ID", client_id)
     decoded = jwt.decode(token, key, [header["alg"]], audience=client_id)
     print(decoded)
     # Examples of tests to apply

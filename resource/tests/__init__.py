@@ -22,9 +22,8 @@ def client_certificate(
     private_key = rsa.generate_private_key(
         public_exponent=65537, key_size=2048, backend=default_backend()
     )
-
     # Define certificate details
-    subject = issuer = x509.Name(
+    issuer = x509.Name(
         [
             x509.NameAttribute(NameOID.COUNTRY_NAME, "GB"),
             x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "London"),
@@ -32,6 +31,15 @@ def client_certificate(
             x509.NameAttribute(
                 NameOID.COMMON_NAME, "Core Trust Framework Client Issuer"
             ),
+        ]
+    )
+
+    subject = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "GB"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "London"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Carbon Accounting app"),
+            x509.NameAttribute(NameOID.COMMON_NAME, CLIENT_ID),
         ]
     )
 
