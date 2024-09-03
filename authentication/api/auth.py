@@ -14,7 +14,11 @@ from cryptography.hazmat.backends import default_backend
 
 from . import conf
 from . import certificate_extensions
-from .exceptions import *
+from .exceptions import (
+    CertificateMissingError,
+    CertificateRoleError,
+    CertificateRoleMissingError,
+)
 
 
 log = logging.getLogger(__name__)

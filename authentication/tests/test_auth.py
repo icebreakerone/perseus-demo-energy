@@ -1,6 +1,5 @@
 import pytest
 
-from fastapi.exceptions import HTTPException
 
 from tests import client_certificate, TEST_ROLE, SCHEME_URL
 

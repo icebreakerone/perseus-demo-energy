@@ -14,7 +14,14 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509 import ObjectIdentifier
 from . import conf
-from .exceptions import *
+from .exceptions import (
+    CertificateMissingError,
+    CertificateRoleError,
+    AccessTokenCertificateError,
+    CertificateRoleMissingError,
+    AccessTokenAudienceError,
+    AccessTokenTimeError,
+)
 from . import certificate_extensions
 
 log = logging.getLogger(__name__)

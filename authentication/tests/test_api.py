@@ -4,7 +4,7 @@ import jwt
 import responses
 from fastapi.testclient import TestClient
 from api.main import app, conf
-from tests import client_certificate, TEST_ROLE, SCHEME_URL, CLIENT_ID
+from tests import client_certificate, CLIENT_ID
 
 client = TestClient(app)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -53,7 +53,6 @@ def test_pushed_authorization_request(mock_redis_connection):
 
 @patch("api.par.get_request")
 def test_authorization_code(mock_get_request):
-    client_id = "aaaa-1111-2222"
     redirect = "http://anywhere.com"
     mock_get_request.return_value = {
         "client_id": CLIENT_ID,

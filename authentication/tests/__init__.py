@@ -8,7 +8,7 @@ from cryptography.x509.oid import NameOID
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
-import base64
+
 from api import certificate_extensions
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
