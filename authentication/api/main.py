@@ -150,13 +150,15 @@ async def token(
     """
     if x_amzn_mtls_clientcert is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
-    if not auth.certificate_has_role(
-        "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
-        x_amzn_mtls_clientcert,
-    ):
+    try:
+        auth.require_role(
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            x_amzn_mtls_clientcert,
+        )
+    except auth.CertificateError as e:
         raise HTTPException(
-            status_code=403,
-            detail="Client certificate does not have the required role",
+            status_code=401,
+            detail=str(e),
         )
     payload = {
         "grant_type": grant_type,

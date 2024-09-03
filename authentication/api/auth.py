@@ -14,6 +14,8 @@ from cryptography.hazmat.backends import default_backend
 
 from . import conf
 from . import certificate_extensions
+from .exceptions import *
+
 
 log = logging.getLogger(__name__)
 
@@ -25,9 +27,13 @@ def parse_cert(client_certificate: str) -> x509.Certificate:
     If a certificate is present, on our deployment it will be in request.headers['X-Amzn-Mtls-Clientcert']
     nb. the method and naming of passing the client certificate may vary depending on the deployment
     """
-    return x509.load_pem_x509_certificate(
-        bytes(unquote(client_certificate), "utf-8"), default_backend()
-    )
+    try:
+        return x509.load_pem_x509_certificate(
+            bytes(unquote(client_certificate), "utf-8"), default_backend()
+        )
+    except TypeError:
+        log.warning("No client certificate presented")
+        raise CertificateMissingError("No client certificate presented")
 
 
 def get_thumbprint(cert: str) -> str:
@@ -119,21 +125,27 @@ def create_jwks(public_key_pem_path, kid=1):
     return jwks
 
 
-def certificate_has_role(role_name, quoted_certificate) -> bool:
+def require_role(role_name, quoted_certificate) -> bool:
     """Check that the certificate presented by the client includes the given role,
     throwing an exception if the requirement isn't met. Assumes the proxy has verified
     the certificate.
     """
-    # Extract a list of roles from the certificate
     cert = parse_cert(quoted_certificate)
     try:
         role_der = cert.extensions.get_extension_for_oid(
             ObjectIdentifier("1.3.6.1.4.1.62329.1.1")
-        ).value.value  # type: ignore
+        ).value.value  # type: ignore [attr-defined]
+
     except x509.ExtensionNotFound:
-        return False  # We need a way of raising an exception here, there are two types of failure
+        raise CertificateRoleMissingError(
+            "Client certificate does not include role information"
+        )
     roles = certificate_extensions.decode(
         der_bytes=role_der,
     )
 
-    return role_name in roles
+    if role_name not in roles:
+        raise CertificateRoleError(
+            "Client certificate does not include role " + role_name
+        )
+    return True

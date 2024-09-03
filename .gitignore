@@ -18,3 +18,5 @@ requirements.txt
 .python-version
 
 .vscode
+
+*.pem

@@ -1,53 +1,71 @@
-from unittest.mock import patch, MagicMock
-from api.auth import certificate_has_role
+import pytest
+
+from fastapi.exceptions import HTTPException
+
+from tests import client_certificate, TEST_ROLE, SCHEME_URL
+
+# from auth import require_role
+from api.auth import require_role
+
+from api.exceptions import (
+    CertificateRoleMissingError,
+    CertificateRoleError,
+    CertificateMissingError,
+)
 
 
-@patch("api.auth.parse_cert")
-def test_certificate_has_role_success(mock_parse_cert):
-    # Mock certificate object
-    mock_cert = MagicMock()
-    mock_cert.subject.get_attributes_for_oid.return_value = [
-        MagicMock(
-            value="https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"
-        ),
-    ]
+def test_role_in_certificate():
+    cert_urlencoded, _, _, _ = client_certificate(
+        roles=[
+            TEST_ROLE,
+            f"{SCHEME_URL}/role/another-role",
+        ]
+    )
+    require_role(  # No assertion, just checking for exceptions
+        TEST_ROLE,
+        cert_urlencoded,
+    )
 
-    mock_parse_cert.return_value = mock_cert
 
-    # Test when the role is present
-    assert (
-        certificate_has_role(
-            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
-            "mock_quoted_certificate",
+def test_role_not_in_certificate():
+    cert_urlencoded, _, _, _ = client_certificate(
+        roles=[
+            f"{SCHEME_URL}/role/another-role",
+        ]
+    )
+    with pytest.raises(CertificateRoleError):
+        require_role(TEST_ROLE, cert_urlencoded)
+
+
+def test_certificate_with_no_roles():
+    cert_urlencoded, _, _, _ = client_certificate()
+    with pytest.raises(CertificateRoleMissingError):
+        require_role(
+            TEST_ROLE,
+            cert_urlencoded,
         )
-        is True
-    )
 
 
-@patch("api.auth.parse_cert")
-def test_certificate_has_role_failure(mock_parse_cert):
-    # Mock certificate object
-    mock_cert = MagicMock()
-    mock_cert.subject.get_attributes_for_oid.return_value = [
-        MagicMock(value="another-role@another-tf")
-    ]
-
-    mock_parse_cert.return_value = mock_cert
-
-    # Test when the role is not present
-    assert certificate_has_role("Admin", "mock_quoted_certificate") is False
+def test_empty_role():
+    cert_urlencoded, _, _, _ = client_certificate(roles=[""])
+    with pytest.raises(CertificateRoleError):
+        require_role(
+            TEST_ROLE,
+            cert_urlencoded,
+        )
 
 
-@patch("api.auth.parse_cert")
-def test_certificate_has_role_empty_roles(mock_parse_cert):
-    # Mock certificate object with no roles
-    mock_cert = MagicMock()
-    mock_cert.subject.get_attributes_for_oid.return_value = []
+def test_no_certificate_supplied():
+    with pytest.raises(CertificateMissingError):
+        require_role(
+            TEST_ROLE,
+            None,
+        )
 
-    mock_parse_cert.return_value = mock_cert
 
-    # Test when there are no roles in the certificate
-    assert (
-        certificate_has_role("another-role@another-tf", "mock_quoted_certificate")
-        is False
-    )
+def test_bad_certificate():
+    with pytest.raises(ValueError):
+        require_role(
+            TEST_ROLE,
+            "Not a PEM encoded certificate",
+        )
