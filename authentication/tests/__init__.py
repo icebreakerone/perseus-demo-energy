@@ -12,7 +12,6 @@ import base64
 from api import certificate_extensions
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-
 REGISTRY_URL = "https://registry.core.ib1.org"
 SCHEME_URL = f"{REGISTRY_URL}/scheme/perseus"
 TEST_ROLE = f"{SCHEME_URL}/role/carbon-accounting"
@@ -21,7 +20,7 @@ CLIENT_ID = "https://directory.core.ib1.org/member/836153"
 
 def client_certificate(
     roles: list[str] | None = None,
-) -> tuple[str, str, rsa.RSAPrivateKey, str]:
+) -> str:
     # Generate private key
     private_key = rsa.generate_private_key(
         public_exponent=65537, key_size=2048, backend=default_backend()
@@ -72,16 +71,5 @@ def client_certificate(
     )
     # Encode the certificate to PEM format
     cert_pem = certificate.public_bytes(serialization.Encoding.PEM).decode("utf-8")
-    private_key_pem = private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode("utf-8")
-
     # Calculate the thumbprint of the certificate
-    cert_thumprint = (
-        base64.urlsafe_b64encode(certificate.fingerprint(hashes.SHA256()))
-        .decode("utf-8")
-        .replace("=", "")
-    )
-    return cert_pem, private_key_pem, private_key, cert_thumprint
+    return cert_pem

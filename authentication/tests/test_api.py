@@ -30,7 +30,7 @@ class FakeConf:
 # @responses.activate
 @patch("api.par.redis_connection")
 def test_pushed_authorization_request(mock_redis_connection):
-    cert, _, _, _ = client_certificate()
+    cert_urlencoded = client_certificate()
     mock_redis = MagicMock()
     mock_redis.set.return_value = True
     mock_redis_connection.return_value = mock_redis
@@ -44,7 +44,7 @@ def test_pushed_authorization_request(mock_redis_connection):
             "state": "abc123",
             "response_type": "code",
         },
-        headers={"x-amzn-mtls-clientcert": cert},
+        headers={"x-amzn-mtls-clientcert": cert_urlencoded},
     )
 
     assert response.status_code == 201
@@ -79,7 +79,7 @@ def test_authorization_code(mock_get_request):
 @patch("api.main.conf", FakeConf())
 @responses.activate
 def test_token(mocked_auth_key):  # noqa
-    cert, _, _, _ = client_certificate(
+    cert_urlencoded = client_certificate(
         roles=["https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"]
     )
     test_key = f"{ROOT_DIR}/fixtures/server-signing-private-key.pem"
@@ -116,9 +116,8 @@ def test_token(mocked_auth_key):  # noqa
             "code_verifier": "abc123",
             "grant_type": "authorization_code",
         },
-        headers={"x-amzn-mtls-clientcert": cert},
+        headers={"x-amzn-mtls-clientcert": cert_urlencoded},
     )
-    print(response.json())
     assert response.status_code == 200
     assert "access_token" in response.json()
     assert "id_token" in response.json()

@@ -15,7 +15,7 @@ from api.exceptions import (
 
 
 def test_role_in_certificate():
-    cert_urlencoded, _, _, _ = client_certificate(
+    cert_urlencoded = client_certificate(
         roles=[
             TEST_ROLE,
             f"{SCHEME_URL}/role/another-role",
@@ -28,7 +28,7 @@ def test_role_in_certificate():
 
 
 def test_role_not_in_certificate():
-    cert_urlencoded, _, _, _ = client_certificate(
+    cert_urlencoded = client_certificate(
         roles=[
             f"{SCHEME_URL}/role/another-role",
         ]
@@ -38,7 +38,7 @@ def test_role_not_in_certificate():
 
 
 def test_certificate_with_no_roles():
-    cert_urlencoded, _, _, _ = client_certificate()
+    cert_urlencoded = client_certificate()
     with pytest.raises(CertificateRoleMissingError):
         require_role(
             TEST_ROLE,
@@ -47,7 +47,7 @@ def test_certificate_with_no_roles():
 
 
 def test_empty_role():
-    cert_urlencoded, _, _, _ = client_certificate(roles=[""])
+    cert_urlencoded = client_certificate(roles=[""])
     with pytest.raises(CertificateRoleError):
         require_role(
             TEST_ROLE,
