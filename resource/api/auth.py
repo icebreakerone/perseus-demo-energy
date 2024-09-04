@@ -5,7 +5,6 @@ from typing import Optional, Tuple
 import email.utils
 import time
 from urllib.parse import unquote
-import ssl
 import base64
 from cryptography.hazmat.primitives import hashes
 import requests
