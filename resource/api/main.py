@@ -9,6 +9,7 @@ from fastapi import Request
 from . import models
 from . import auth
 from . import conf
+from .exceptions import CertificateError, AccessTokenValidatorError
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -66,7 +67,7 @@ def consumption(
             "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
             x_amzn_mtls_clientcert,
         )
-    except auth.CertificateError as e:
+    except CertificateError as e:
         raise HTTPException(
             status_code=401,
             detail=str(e),
@@ -76,9 +77,12 @@ def consumption(
         # And check the certificate binding
         try:
             _, headers = auth.check_token(
-                x_amzn_mtls_clientcert, token.credentials, x_fapi_interaction_id
+                x_amzn_mtls_clientcert,
+                token.credentials,
+                conf.CATALOG_ENTRY_URL,
+                x_fapi_interaction_id,
             )
-        except auth.AccessTokenValidatorError as e:
+        except AccessTokenValidatorError as e:
             raise HTTPException(status_code=401, detail=str(e))
         else:
             for key, value in headers.items():

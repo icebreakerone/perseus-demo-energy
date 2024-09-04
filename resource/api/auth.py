@@ -93,6 +93,7 @@ def get_openid_configuration(issuer_url: str) -> dict:
 def check_token(
     client_certificate: str | None,
     token: str,
+    aud: str,
     x_fapi_interaction_id: Optional[str] = None,
 ) -> Tuple[dict, dict]:
     """
@@ -116,15 +117,17 @@ def check_token(
     openid_config = get_openid_configuration(conf.ISSUER_URL)
     jwks_uri = openid_config["jwks_uri"]
     jwks_client = jwt.PyJWKClient(jwks_uri)
-    ssl._create_default_https_context = (
-        ssl._create_unverified_context
-    )  # Must be removed for production
+    # ssl._create_default_https_context = (
+    #     ssl._create_unverified_context
+    # )  # Must be removed for production
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
-    decoded = jwt.decode(token, key, [header["alg"]], audience=client_id)
+    decoded = jwt.decode(token, key, [header["alg"]], audience=aud)
     # Examples of tests to apply
-    if decoded["aud"] != client_id:
-        raise AccessTokenAudienceError("Invalid audience")
+    if decoded["client_id"] != client_id:
+        raise AccessTokenAudienceError("Invalid Client ID")
+    if decoded["aud"] != aud:
+        raise AccessTokenAudienceError("Invalid Audience")
     if decoded["exp"] < int(time.time()):
         raise AccessTokenTimeError("Token expired")
     if decoded["iat"] > int(time.time()):
@@ -159,7 +162,7 @@ def require_role(role_name, quoted_certificate) -> bool:
         raise CertificateRoleMissingError(
             "Client certificate does not include role information"
         )
-    roles = certificate_extensions.decode(
+    roles = certificate_extensions.decode_roles(
         der_bytes=role_der,
     )
 

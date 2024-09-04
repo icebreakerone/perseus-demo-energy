@@ -60,7 +60,7 @@ def client_certificate(
         certificate_builder = certificate_builder.add_extension(
             x509.UnrecognizedExtension(
                 x509.ObjectIdentifier("1.3.6.1.4.1.62329.1.1"),
-                certificate_extensions.encode(roles),
+                certificate_extensions.encode_roles(roles),
             ),
             critical=False,
         )

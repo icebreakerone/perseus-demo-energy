@@ -13,6 +13,7 @@ from api import certificate_extensions
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 CLIENT_ID = "https://directory.core.ib1.org/member/836153"
+CATALOG_ENTRY_URL = "https://perseus-demo-energy.ib1.org/data-service/consumption"
 
 
 def client_certificate(
@@ -57,7 +58,7 @@ def client_certificate(
         certificate_builder = certificate_builder.add_extension(
             x509.UnrecognizedExtension(
                 x509.ObjectIdentifier("1.3.6.1.4.1.62329.1.1"),
-                certificate_extensions.encode(roles),
+                certificate_extensions.encode_roles(roles),
             ),
             critical=False,
         )
@@ -75,9 +76,9 @@ def client_certificate(
     ).decode("utf-8")
 
     # Calculate the thumbprint of the certificate
-    cert_thumprint = (
+    cert_thumbprint = (
         base64.urlsafe_b64encode(certificate.fingerprint(hashes.SHA256()))
         .decode("utf-8")
         .replace("=", "")
     )
-    return cert_pem, private_key_pem, private_key, cert_thumprint
+    return cert_pem, private_key_pem, private_key, cert_thumbprint

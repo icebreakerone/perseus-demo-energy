@@ -144,7 +144,7 @@ def require_role(role_name, quoted_certificate) -> bool:
         raise CertificateRoleMissingError(
             "Client certificate does not include role information"
         )
-    roles = certificate_extensions.decode(
+    roles = certificate_extensions.decode_roles(
         der_bytes=role_der,
     )
 

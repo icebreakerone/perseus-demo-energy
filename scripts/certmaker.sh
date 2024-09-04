@@ -25,7 +25,7 @@ openssl req -new -x509 -key server-ca-key.pem -out server-ca-cert.pem -days 3560
 # Core Trust Framework Issuer
 openssl genpkey -algorithm RSA -out server-issuer-key.pem
 openssl req -new -key server-issuer-key.pem -out server-issuer-csr.pem \
-    -subj "/C=GB/ST=London/O=Core Trust Framework/CN=Core  Trust Framework Server Issuer"
+    -subj "/C=GB/ST=London/O=Core Trust Framework/CN=Core Trust Framework Server Issuer"
 openssl x509 -req -in server-issuer-csr.pem -out server-issuer-ca.pem -extfile ../scripts/extensions.cnf \
     -extensions v3_ca -CA server-ca-cert.pem -CAkey server-ca-key.pem -days 365
 

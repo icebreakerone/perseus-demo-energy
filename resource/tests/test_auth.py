@@ -3,7 +3,7 @@ import jwt
 import time
 
 from unittest.mock import patch, MagicMock
-from tests import CLIENT_ID, client_certificate  # noqa
+from tests import CLIENT_ID, CATALOG_ENTRY_URL, client_certificate  # noqa
 import api.auth
 
 
@@ -20,13 +20,14 @@ def mock_check_token(mocker):
 @patch("api.auth.get_openid_configuration")
 @patch("api.auth.jwt.PyJWKClient")
 def test_check_token_integration(mock_jwk_client, mock_get_openid_config):  # noqa
-
+    aud = "https://perseus-demo-energy.ib1.org/data-service/consumption"
     cert_pem, private_key_pem, private_key, cert_thumbprint = (
         client_certificate()
     )  # noqa
     headers = {"alg": "RS256", "kid": "testkey"}
     payload = {
-        "aud": CLIENT_ID,
+        "client_id": CLIENT_ID,
+        "aud": CATALOG_ENTRY_URL,
         "exp": int(time.time()) + 3600,
         "iat": int(time.time()) - 3600,
         "active": True,
@@ -43,8 +44,10 @@ def test_check_token_integration(mock_jwk_client, mock_get_openid_config):  # no
     mock_jwk_client.return_value = mock_jwk_client_instance
 
     # Act
-    result, headers = api.auth.check_token(cert_pem, jwt_token)
+    result, headers = api.auth.check_token(cert_pem, jwt_token, CATALOG_ENTRY_URL)
 
     # Assert
-    assert result["aud"] == CLIENT_ID
+    print(result)
+    assert result["aud"] == aud
+    assert result["client_id"] == CLIENT_ID
     assert "x-fapi-interaction-id" in headers
