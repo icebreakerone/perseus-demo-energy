@@ -36,7 +36,7 @@ network:
 # Optional fields for more advanced use-cases.
 #
 variables:                    # Pass environment variables as key value pairs.
-  CLIENT_ID: f67916ce-de33-4e2f-a8e3-cbd5f6459c30
+  OAUTH_CLIENT_ID: f67916ce-de33-4e2f-a8e3-cbd5f6459c30
   REDIS_HOST: redis.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local
   OAUTH_URL: https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com
 
@@ -52,9 +52,9 @@ environments:
       secrets: 
         SERVER_KEY: /copilot/perseus-demo-fapi/prod/secrets/server_key
         SERVER_CERT: /copilot/perseus-demo-fapi/prod/secrets/server_cert
-        CLIENT_SECRET: /copilot/perseus-demo-authentication/prod/secrets/client_secret
+        OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/prod/secrets/client_secret
     dev:
       secrets: 
         SERVER_KEY: /copilot/perseus-demo-fapi/dev/secrets/server_key
         SERVER_CERT: /copilot/perseus-demo-fapi/dev/secrets/server_cert
-        CLIENT_SECRET: /copilot/perseus-demo-authentication/dev/secrets/client_secret
+        OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/dev/secrets/client_secret

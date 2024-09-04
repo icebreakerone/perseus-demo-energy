@@ -9,12 +9,15 @@ requests = "*"
 cryptography = "*"
 uvicorn = {extras = ["standard"], version = "*"}
 typing-extensions = "*"
+pyjwt = "*"
+asn1crypto = "*"
 
 [dev-packages]
 pytest = "*"
 pytest-mock = "*"
 httpx = "*"
 ruff = "*"
+mypy = "*"
 
 [requires]
 python_version = "3.12"

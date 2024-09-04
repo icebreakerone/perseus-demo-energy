@@ -9,6 +9,7 @@ from fastapi import Request
 from . import models
 from . import auth
 from . import conf
+from .exceptions import CertificateError, AccessTokenValidatorError
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -56,14 +57,32 @@ def consumption(
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
 ):
-    if x_amzn_mtls_clientcert is None:
-        raise HTTPException(status_code=401, detail="No client certificate provided")
+    if not x_amzn_mtls_clientcert:
+        raise HTTPException(
+            status_code=401,
+            detail="Client certificate required",
+        )
+    try:
+        auth.require_role(
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            x_amzn_mtls_clientcert,
+        )
+    except CertificateError as e:
+        raise HTTPException(
+            status_code=401,
+            detail=str(e),
+        )
     if token and token.credentials:
+        # TODO don't use instrospection, check the token signature
+        # And check the certificate binding
         try:
-            _, headers = auth.introspect(
-                x_amzn_mtls_clientcert, token.credentials, x_fapi_interaction_id
+            _, headers = auth.check_token(
+                x_amzn_mtls_clientcert,
+                token.credentials,
+                conf.CATALOG_ENTRY_URL,
+                x_fapi_interaction_id,
             )
-        except auth.AccessTokenValidatorError as e:
+        except AccessTokenValidatorError as e:
             raise HTTPException(status_code=401, detail=str(e))
         else:
             for key, value in headers.items():

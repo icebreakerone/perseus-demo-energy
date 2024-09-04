@@ -1,6 +1,5 @@
 from typing import Annotated
 import json
-import secrets
 
 import requests
 import jwt
@@ -11,9 +10,7 @@ from fastapi import (
     HTTPException,
     status,
     Form,
-    Depends,
 )
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.responses import Response
 
 
@@ -29,44 +26,14 @@ app = FastAPI(
 )
 
 
-security = HTTPBasic()
-
-
-def get_authentication_credentials(
-    credentials: Annotated[HTTPBasicCredentials, Depends(security)]
-):
-    """
-    The resource server will use client credentials to connect to the introspection endpoint
-    """
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"error": "Authorization required"},
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    current_username_bytes = credentials.username.encode("utf8")
-    is_correct_username = secrets.compare_digest(
-        current_username_bytes, conf.CLIENT_ID.encode("utf8")
-    )
-    current_password_bytes = credentials.password.encode("utf8")
-    is_correct_password = secrets.compare_digest(
-        current_password_bytes, conf.CLIENT_SECRET.encode("utf8")
-    )
-    if not (is_correct_username and is_correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"error": "Invalid credentials"},
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
-
-
 @app.get("/")
 async def docs() -> dict:
     return {"docs": "/api-docs"}
 
 
-@app.post("/api/v1/par", response_model=models.PushedAuthorizationResponse, status_code=201)
+@app.post(
+    "/api/v1/par", response_model=models.PushedAuthorizationResponse, status_code=201
+)
 async def pushed_authorization_request(
     response_type: Annotated[str, Form()],
     client_id: Annotated[str, Form()],
@@ -172,7 +139,7 @@ async def token(
     redirect_uri: Annotated[str, Form()],
     code_verifier: Annotated[str, Form()],
     code: Annotated[str, Form()],
-    x_amzn_mtls_clientcert: Annotated[str, Header()],
+    x_amzn_mtls_clientcert: Annotated[str | None, Header()],
 ) -> models.TokenResponse:
     """
     Token issuing endpoint
@@ -183,6 +150,16 @@ async def token(
     """
     if x_amzn_mtls_clientcert is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
+    try:
+        auth.require_role(
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            x_amzn_mtls_clientcert,
+        )
+    except auth.CertificateError as e:
+        raise HTTPException(
+            status_code=401,
+            detail=str(e),
+        )
     payload = {
         "grant_type": grant_type,
         "code": code,
@@ -191,7 +168,13 @@ async def token(
         "code_verifier": code_verifier,
     }
     session = requests.Session()
-    session.auth = (conf.CLIENT_ID, conf.CLIENT_SECRET)
+    if conf.OAUTH_CLIENT_ID and conf.OAUTH_CLIENT_SECRET:
+        session.auth = (conf.OAUTH_CLIENT_ID, conf.OAUTH_CLIENT_SECRET)
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Client ID and Secret not set in environment",
+        )
     response = requests.post(
         f"{conf.TOKEN_ENDPOINT}",
         data=payload,
@@ -214,29 +197,6 @@ async def token(
         id_token=id_token,
         refresh_token=result["refresh_token"],
     )
-
-
-@app.post(
-    "/api/v1/authorize/introspect",
-    response_model=models.IntrospectionResponse | models.IntrospectionFailedResponse,
-)
-async def introspection(
-    client_id: Annotated[str, Depends(get_authentication_credentials)],
-    introspection_request: models.IntrospectionRequest,
-) -> dict:
-    if not introspection_request.client_certificate:
-        raise HTTPException(
-            status_code=400,
-            detail="Client certificate required",
-        )
-    try:
-        response = auth.introspect(
-            introspection_request.client_certificate, introspection_request.token
-        )
-    except auth.AccessTokenValidatorError as e:
-        print(str(e))
-        response = {"active": False}
-    return response
 
 
 @app.get("/.well-known/openid-configuration")
