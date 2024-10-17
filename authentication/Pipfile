@@ -18,6 +18,7 @@ pkce = "*"
 boto3 = "*"
 pytest-coverage = "*"
 asn1crypto = "*"
+ib1-directory = "*"
 
 [dev-packages]
 black = "*"

@@ -11,6 +11,7 @@ uvicorn = {extras = ["standard"], version = "*"}
 typing-extensions = "*"
 pyjwt = "*"
 asn1crypto = "*"
+ib1-directory = "*"
 
 [dev-packages]
 pytest = "*"
