@@ -4,20 +4,15 @@ import uuid
 from typing import Optional, Tuple
 import email.utils
 import time
-from urllib.parse import unquote
 import base64
 from cryptography.hazmat.primitives import hashes
 import requests
 import jwt
 from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.x509 import ObjectIdentifier
 from . import conf
 from .exceptions import (
     CertificateMissingError,
-    CertificateRoleError,
     AccessTokenCertificateError,
-    CertificateRoleMissingError,
     AccessTokenAudienceError,
     AccessTokenTimeError,
 )
