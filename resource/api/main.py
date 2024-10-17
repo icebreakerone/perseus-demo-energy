@@ -11,6 +11,8 @@ from . import auth
 from . import conf
 from .exceptions import CertificateError, AccessTokenValidatorError
 
+from ib1 import directory
+
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 security = HTTPBearer(auto_error=False)
@@ -62,10 +64,11 @@ def consumption(
             status_code=401,
             detail="Client certificate required",
         )
+    cert = directory.parse_cert(x_amzn_mtls_clientcert)
     try:
-        auth.require_role(
+        directory.require_role(
             "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
-            x_amzn_mtls_clientcert,
+            cert,
         )
     except CertificateError as e:
         raise HTTPException(

@@ -9,7 +9,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 import base64
-from api import certificate_extensions
+from ib1 import directory
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 CLIENT_ID = "https://directory.core.ib1.org/member/836153"
@@ -55,12 +55,8 @@ def client_certificate(
         .not_valid_after(datetime.strptime("2025-08-28 12:51:03", "%Y-%m-%d %H:%M:%S"))
     )
     if roles:
-        certificate_builder = certificate_builder.add_extension(
-            x509.UnrecognizedExtension(
-                x509.ObjectIdentifier("1.3.6.1.4.1.62329.1.1"),
-                certificate_extensions.encode_roles(roles),
-            ),
-            critical=False,
+        certificate_builder = directory.extensions.encode_roles(
+            certificate_builder, roles
         )
 
     # Sign the certificate
