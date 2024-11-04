@@ -2,49 +2,24 @@ import os
 import tempfile
 import base64
 import time
-from urllib.parse import unquote
 import logging
 
 from cryptography.hazmat.primitives import hashes
-from cryptography.x509 import ObjectIdentifier
 
 import jwt
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
 
 from . import conf
-from . import certificate_extensions
-from .exceptions import (
-    CertificateMissingError,
-    CertificateRoleError,
-    CertificateRoleMissingError,
-)
+from ib1 import directory
 
 
 log = logging.getLogger(__name__)
-
-
-def parse_cert(client_certificate: str) -> x509.Certificate:
-    """
-    Given a certificate in the request context, return a Certificate object
-
-    If a certificate is present, on our deployment it will be in request.headers['X-Amzn-Mtls-Clientcert']
-    nb. the method and naming of passing the client certificate may vary depending on the deployment
-    """
-    try:
-        return x509.load_pem_x509_certificate(
-            bytes(unquote(client_certificate), "utf-8"), default_backend()
-        )
-    except TypeError:
-        log.warning("No client certificate presented")
-        raise CertificateMissingError("No client certificate presented")
 
 
 def get_thumbprint(cert: str) -> str:
     """
     Returns the thumbprint of a certificate
     """
-    parsed_cert = parse_cert(cert)
+    parsed_cert = directory.parse_cert(cert)
     thumbprint = str(
         base64.urlsafe_b64encode(parsed_cert.fingerprint(hashes.SHA256())).replace(
             b"=", b""
@@ -127,29 +102,3 @@ def create_jwks(public_key_pem_path, kid=1):
     jwks = {"keys": [jwk]}
 
     return jwks
-
-
-def require_role(role_name, quoted_certificate) -> bool:
-    """Check that the certificate presented by the client includes the given role,
-    throwing an exception if the requirement isn't met. Assumes the proxy has verified
-    the certificate.
-    """
-    cert = parse_cert(quoted_certificate)
-    try:
-        role_der = cert.extensions.get_extension_for_oid(
-            ObjectIdentifier("1.3.6.1.4.1.62329.1.1")
-        ).value.value  # type: ignore [attr-defined]
-
-    except x509.ExtensionNotFound:
-        raise CertificateRoleMissingError(
-            "Client certificate does not include role information"
-        )
-    roles = certificate_extensions.decode_roles(
-        der_bytes=role_der,
-    )
-
-    if role_name not in roles:
-        raise CertificateRoleError(
-            "Client certificate does not include role " + role_name
-        )
-    return True

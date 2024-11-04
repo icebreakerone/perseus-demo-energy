@@ -13,7 +13,7 @@ from fastapi import (
 )
 from fastapi.responses import Response
 
-
+from ib1 import directory
 from . import models
 from . import conf
 from . import par
@@ -151,11 +151,11 @@ async def token(
     if x_amzn_mtls_clientcert is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
     try:
-        auth.require_role(
+        directory.require_role(
             "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
-            x_amzn_mtls_clientcert,
+            directory.parse_cert(x_amzn_mtls_clientcert),
         )
-    except auth.CertificateError as e:
+    except directory.CertificateRoleError as e:
         raise HTTPException(
             status_code=401,
             detail=str(e),
