@@ -58,6 +58,7 @@ def consumption(
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
 ):
     if not x_amzn_mtls_clientcert:
+        print("No certificate")
         raise HTTPException(
             status_code=401,
             detail="Client certificate required",
@@ -69,6 +70,7 @@ def consumption(
             cert,
         )
     except CertificateError as e:
+        print("Certificate error")
         raise HTTPException(
             status_code=401,
             detail=str(e),
@@ -108,7 +110,6 @@ def consumption(
             "timestamp": "2024-09-16T15:32:56Z",  # in the past, signing is independent of times in steps
         }
     )
-    record.add_transfer_step()
     record.add_step(
         {
             "id": "itINsGtU",
@@ -118,6 +119,6 @@ def consumption(
         }
     )
     record.sign()
-    with open(f"{ROOT_DIR}/data/7_day_consumption.json") as f:
+    with open(f"{ROOT_DIR}/data/sample_data.json") as f:
         data = json.load(f)
     return {"data": data, "provenance": record.encode()}
