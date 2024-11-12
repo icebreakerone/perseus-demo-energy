@@ -1,6 +1,8 @@
 import json
 import os
+import datetime
 from typing import Annotated
+
 
 from fastapi import FastAPI, HTTPException, Response, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -9,6 +11,7 @@ from fastapi import Request
 from . import models
 from . import auth
 from . import conf
+from . import provenance
 from .exceptions import CertificateError, AccessTokenValidatorError
 
 from ib1 import directory
@@ -27,33 +30,28 @@ app = FastAPI(
 
 @app.get("/", response_model=dict)
 def root():
-    return {"urls": ["/api/v1/"]}
+    return {"urls": ["/datasources", "/datasources/{id}/{measure}"]}
 
 
-@app.get("/api/v1", response_model=dict)
-def api_urls():
-    return {"urls": ["/api/v1/consumption"]}
-
-
-# @app.get("/api/v1/info")
-@app.get("/api/v1/info")
-def request_info(request: Request):
-    """Return full details about the received request, including http and https headers
-    Useful for testing and debugging
-    """
+@app.get("/datasources", response_model=models.Datasources)
+def datasources() -> dict:
     return {
-        "request": {
-            "headers": dict(request.headers),
-            "method": request.method,
-            "url": request.url,
-            # "body": request.body().decode("utf-8"),
-        },
-        # "environ": str(request.environ),
+        "data": [
+            {
+                "id": "abcd1234",
+                "type": "Electricity",
+                "availableMeasures": ["Import"],
+            },
+        ]
     }
 
 
-@app.get("/api/v1/consumption", response_model=models.MeterData)
+@app.get("/datasources/{id}/{measure}", response_model=models.MeterData)
 def consumption(
+    id: str,
+    measure: str,
+    from_date: datetime.date,
+    to_date: datetime.date,
     response: Response,
     token: HTTPAuthorizationCredentials = Depends(security),
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
@@ -92,6 +90,34 @@ def consumption(
                 response.headers[key] = value
     else:
         raise HTTPException(status_code=401, detail="No token provided")
+    # Create a new provenance record
+    record = provenance.Record()
+    record.add_step(
+        {
+            "id": "URd0wgs",
+            "type": "transfer",
+            "from": "https://directory.estf.ib1.org/member/28761",
+            "source": {
+                "endpoint": "https://api65.example.com/energy",
+                "parameters": {
+                    "from": "2024-09-16T00:00:00Z",
+                    "to": "2024-09-16T12:00:00Z",
+                },
+                "permission": {"encoded": "permission record"},
+            },
+            "timestamp": "2024-09-16T15:32:56Z",  # in the past, signing is independent of times in steps
+        }
+    )
+    record.add_transfer_step()
+    record.add_step(
+        {
+            "id": "itINsGtU",
+            "type": "receipt",
+            "from": "https://directory.estf.ib1.org/member/237346",
+            "of": "URd0wgs",
+        }
+    )
+    record.sign()
     with open(f"{ROOT_DIR}/data/7_day_consumption.json") as f:
         data = json.load(f)
-    return {"data": data}
+    return {"data": data, "provenance": record.encode()}

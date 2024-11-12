@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 def _check_certificate(cert: x509.Certificate, decoded_token: dict):
 
     if "cnf" in decoded_token:
-        # thumbprint from introspection response
+        # thumbprint from token
         try:
             sha256 = decoded_token["cnf"]["x5t#S256"]
         except KeyError:
