@@ -6,7 +6,6 @@ from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Response, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import Request
 
 from . import models
 from . import auth
