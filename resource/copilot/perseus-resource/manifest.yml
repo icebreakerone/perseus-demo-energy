@@ -47,5 +47,5 @@ environments:
     hosted_zone: Z06253313MKVN98JLAQRK
   dev:
     http:
-      alias: preprod.perseus-demo-energy-dev.ib1.org
+      alias: preprod.perseus-demo-energy.ib1.org
       hosted_zone: Z06253313MKVN98JLAQRK
