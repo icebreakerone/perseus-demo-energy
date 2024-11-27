@@ -12,7 +12,6 @@ import secrets
 import click
 
 from authentication.api import conf
-import ssl
 
 
 AUTHENTICATION_API = os.environ.get("AUTHENTICATION_API", "https://0.0.0.0:8000")

@@ -36,7 +36,6 @@ async def docs() -> dict:
 )
 async def pushed_authorization_request(
     response_type: Annotated[str, Form()],
-    client_id: Annotated[str, Form()],
     redirect_uri: Annotated[str, Form()],
     state: Annotated[str, Form()],
     code_challenge: Annotated[str, Form()],
@@ -58,12 +57,13 @@ async def pushed_authorization_request(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Client certificate required",
         )
-
+    client_cert = directory.parse_cert(x_amzn_mtls_clientcert)
+    client_id = directory.extensions.decode_application(client_cert)
     # Get args as dict
     parameters = {
         "response_type": response_type,
-        "client_id": client_id,
         "code_challenge": code_challenge,
+        "client_id": client_id,
         "code_challenge_method": "S256",  # "plain" or "S256
         "redirect_uri": redirect_uri,
         "state": state,
@@ -93,9 +93,15 @@ async def pushed_authorization_request(
 )
 async def authorize(
     request_uri: str,
-    client_id: str,
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
 ):
+    if not x_amzn_mtls_clientcert:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Client certificate required",
+        )
+    client_cert = directory.parse_cert(x_amzn_mtls_clientcert)
+    client_id = directory.extensions.decode_application(client_cert)
     if not request_uri:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -135,7 +141,6 @@ async def authorize(
 @app.post("/api/v1/authorize/token", response_model=models.TokenResponse)
 async def token(
     grant_type: Annotated[str, Form()],
-    client_id: Annotated[str, Form()],
     redirect_uri: Annotated[str, Form()],
     code_verifier: Annotated[str, Form()],
     code: Annotated[str, Form()],
@@ -150,16 +155,18 @@ async def token(
     """
     if x_amzn_mtls_clientcert is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
+    client_cert = directory.parse_cert(x_amzn_mtls_clientcert)
     try:
         directory.require_role(
             "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
-            directory.parse_cert(x_amzn_mtls_clientcert),
+            client_cert,
         )
     except directory.CertificateRoleError as e:
         raise HTTPException(
             status_code=401,
             detail=str(e),
         )
+
     payload = {
         "grant_type": grant_type,
         "code": code,
@@ -190,11 +197,8 @@ async def token(
     enhanced_token = auth.create_enhanced_access_token(
         decoded_token, x_amzn_mtls_clientcert
     )
-    # Create our id_token
-    id_token = auth.create_id_token(decoded_token["sub"])
     return models.TokenResponse(
         access_token=enhanced_token,
-        id_token=id_token,
         refresh_token=result["refresh_token"],
     )
 

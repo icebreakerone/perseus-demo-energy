@@ -4,7 +4,7 @@ import datetime
 from typing import Annotated
 
 
-from fastapi import FastAPI, HTTPException, Response, Depends, Header
+from fastapi import FastAPI, HTTPException, Response, Depends, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from . import models
@@ -49,15 +49,14 @@ def datasources() -> dict:
 def consumption(
     id: str,
     measure: str,
-    from_date: datetime.date,
-    to_date: datetime.date,
     response: Response,
+    from_date: datetime.date = Query(alias="from"),
+    to_date: datetime.date = Query(alias="to"),
     token: HTTPAuthorizationCredentials = Depends(security),
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
 ):
     if not x_amzn_mtls_clientcert:
-        print("No certificate")
         raise HTTPException(
             status_code=401,
             detail="Client certificate required",
@@ -69,7 +68,6 @@ def consumption(
             cert,
         )
     except CertificateError as e:
-        print("Certificate error")
         raise HTTPException(
             status_code=401,
             detail=str(e),

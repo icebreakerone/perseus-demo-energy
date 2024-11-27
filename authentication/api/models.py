@@ -82,7 +82,6 @@ class TokenRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
-    id_token: str
     refresh_token: str
     model_config = {"json_schema_extra": {"examples": [examples.TOKEN_RESPONSE]}}
 
