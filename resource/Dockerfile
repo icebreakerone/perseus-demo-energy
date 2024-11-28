@@ -1,5 +1,6 @@
 FROM python:3.12-slim
-ARG GITHUB_INSTALL_TOKEN
+# Should be removed once the package is public
+ARG PROVENANCE_INSTALL_TOKEN 
 RUN apt update && apt install -y git
 RUN pip install pipenv
 COPY Pipfile* /code/

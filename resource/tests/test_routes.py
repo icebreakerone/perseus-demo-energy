@@ -17,7 +17,7 @@ def mock_check_token(mocker):
 def api_consumption_url():
     from_date = datetime.date.today().isoformat()
     to_date = datetime.date.today().isoformat()
-    return f"/datasources/anyid/anymeasure?from_date={from_date}&to_date={to_date}"
+    return f"/datasources/anyid/anymeasure?from={from_date}&to={to_date}"
 
 
 def test_consumption_no_token(api_consumption_url):

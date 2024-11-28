@@ -49,7 +49,7 @@ services:
     build:
       context: resource
       args:
-        GITHUB_INSTALL_TOKEN: ${GITHUB_INSTALL_TOKEN}
+        PROVENANCE_INSTALL_TOKEN: ${PROVENANCE_INSTALL_TOKEN}
     stop_signal: SIGINT
     env_file: resource/.env
     environment:
