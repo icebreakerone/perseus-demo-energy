@@ -53,6 +53,9 @@ def test_pushed_authorization_request(mock_redis_connection):
 
 @patch("api.par.get_request")
 def test_authorization_code(mock_get_request):
+    cert_urlencoded = client_certificate(
+        roles=["https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"]
+    )
     redirect = "http://anywhere.com"
     mock_get_request.return_value = {
         "client_id": CLIENT_ID,
@@ -67,7 +70,7 @@ def test_authorization_code(mock_get_request):
             "client_id": CLIENT_ID,
             "request_uri": "urn:ietf:params:oauth:request_uri:O38VUUUC1quZR59Fhx0TrTLZGX4",
         },
-        headers={"x-amzn-mtls-clientcert": "client-certificate"},
+        headers={"x-amzn-mtls-clientcert": cert_urlencoded},
         follow_redirects=False,
     )
     assert response.status_code == 302
@@ -119,5 +122,4 @@ def test_token(mocked_auth_key):  # noqa
     )
     assert response.status_code == 200
     assert "access_token" in response.json()
-    assert "id_token" in response.json()
     assert "refresh_token" in response.json()

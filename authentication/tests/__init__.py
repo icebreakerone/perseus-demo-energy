@@ -9,7 +9,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 
-from ib1.directory.extensions import encode_roles
+from ib1.directory.extensions import encode_roles, encode_application
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 REGISTRY_URL = "https://registry.core.ib1.org"
@@ -20,6 +20,7 @@ CLIENT_ID = "https://directory.core.ib1.org/member/836153"
 
 def client_certificate(
     roles: list[str] | None = None,
+    client_id: str = CLIENT_ID,
 ) -> str:
     # Generate private key
     private_key = rsa.generate_private_key(
@@ -58,7 +59,7 @@ def client_certificate(
     )
     if roles:
         certificate_builder = encode_roles(certificate_builder, roles)
-
+    certificate_builder = encode_application(certificate_builder, client_id)
     # Sign the certificate
     certificate = certificate_builder.sign(
         private_key=private_key, algorithm=hashes.SHA256(), backend=default_backend()
