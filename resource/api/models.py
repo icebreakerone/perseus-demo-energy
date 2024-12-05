@@ -9,19 +9,11 @@ class Consumption(BaseModel):
 
 class Reading(BaseModel):
     type: str
-    from_: datetime.datetime = Field(None, alias="from")
-    to: datetime.datetime
+    from_date: datetime.datetime = Field(alias="from")
+    to_date: datetime.datetime = Field(alias="to")
     takenAt: datetime.datetime
     energy: Consumption
     cumulative: Consumption
-
-
-class Provenance(BaseModel):
-    source: str
-    id: str
-    measure: str
-    from_: datetime.datetime = Field(None, alias="from")
-    to: datetime.datetime
 
 
 class Datasource(BaseModel):
@@ -53,12 +45,12 @@ class MeterData(BaseModel):
                     ],
                     "provenance": [
                         [
-                            "eyJpZCI6IlVSZDB3Z3MiLCJ0eXBlIjoidHJhbnNmZXIiLCJmcm9tIjoiaHR0cHM6……...MyOjU2WiJ9",
-                            "eyJpZCI6Iml0SU5zR3RVIiwidHlwZSI6InJlY2VpcHQiLCJmcm9tIjoiaHR0cH………..jE2OjMxWiJ9",
+                            "eyJpZCI6IlVSZDB3Z3MiLCJ0eXBlIjoidHJhbnNmZXIiLCJmcm9tIjoiaHR0cHM6...MyOjU2WiJ9",
+                            "eyJpZCI6Iml0SU5zR3RVIiwidHlwZSI6InJlY2VpcHQiLCJmcm9tIjoiaHR0c...jE2OjMxWiJ9",
                             [
                                 "123456",
                                 "2024-10-17T12:16:31Z",
-                                "MEUCIQDNk3nS64bmGvMJwfdVWfyGuheGDEbB8-b5Ur2H9Iat9gIgc……..eGO3GvzH2EJut707lA=",
+                                "MEUCIQDNk3nS64bmGvMJwfdVWfyGuheGDEbB8-b5Ur2H9Iat9gIgc...eGO3GvzH2EJut707lA=",
                             ],
                         ],
                     ],

@@ -15,7 +15,6 @@ from .exceptions import CertificateError, AccessTokenValidatorError
 
 from ib1 import directory
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 security = HTTPBearer(auto_error=False)
 
@@ -90,32 +89,12 @@ def consumption(
     else:
         raise HTTPException(status_code=401, detail="No token provided")
     # Create a new provenance record
-    record = provenance.Record()
-    record.add_step(
-        {
-            "id": "URd0wgs",
-            "type": "transfer",
-            "from": "https://directory.estf.ib1.org/member/28761",
-            "source": {
-                "endpoint": "https://api65.example.com/energy",
-                "parameters": {
-                    "from": "2024-09-16T00:00:00Z",
-                    "to": "2024-09-16T12:00:00Z",
-                },
-                "permission": {"encoded": "permission record"},
-            },
-            "timestamp": "2024-09-16T15:32:56Z",  # in the past, signing is independent of times in steps
-        }
+    record = provenance.create_provenance_records(
+        from_date,
+        to_date,
+        fapi_id=headers["x-fapi-interaction-id"],
+        cap_member=directory.extensions.decode_application(cert),
     )
-    record.add_step(
-        {
-            "id": "itINsGtU",
-            "type": "receipt",
-            "from": "https://directory.estf.ib1.org/member/237346",
-            "of": "URd0wgs",
-        }
-    )
-    record.sign()
-    with open(f"{ROOT_DIR}/data/sample_data.json") as f:
+    with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:
         data = json.load(f)
-    return {"data": data, "provenance": record.encode()}
+    return {"data": data, "provenance": record}
