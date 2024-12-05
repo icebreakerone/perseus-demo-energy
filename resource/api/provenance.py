@@ -21,6 +21,9 @@ TRUST_FRAMEWORK_URL = "https://registry.core.trust.ib1.org/trust-framework"
 def create_provenance_records(
     from_date: datetime.date,
     to_date: datetime.date,
+    permission_granted: datetime.datetime,
+    permission_expires: datetime.datetime,
+    service_url: str,
     account: str = "/yl4Y/aV6b80fo5cnmuDDByfuEA=",
     fapi_id: str = "C25D0B85-B7C4-4543-B058-7DA57B8D9A24",
     cap_member: str = "https://directory.core.trust.ib1.org/member/81524",
@@ -43,24 +46,22 @@ def create_provenance_records(
     edp_permission_id = edp_record.add_step(
         {
             "type": "permission",
-            "scheme": "https://registry.core.trust.ib1.org/scheme/perseus",
-            "timestamp": "2024-09-20T12:16:11Z",  # granted in past; must match audit trail
+            "scheme": "https://registry.core.pilot.trust.ib1.org/scheme/perseus",
+            "timestamp": permission_granted,
             "account": account,
             "allows": {
                 "licences": [
-                    "https://smartenergycodecompany.co.uk/documents/sec/consolidated-sec/",
-                    "https://registry.core.trust.ib1.org/scheme/perseus/licence/energy-consumption-data/0.1",
+                    "https://registry.core.pilot.trust.ib1.org/scheme/perseus/licence/energy-consumption-data/2024-12-05"
                 ]
             },
-            "expires": "2025-09-20T12:16:11Z",  # 1 year
+            "expires": permission_expires,
         }
     )
-    # - Origin step for the smart meter data
     origin_id = edp_record.add_step(
         {
             "type": "origin",
-            "scheme": "https://registry.core.trust.ib1.org/scheme/perseus",
-            "sourceType": "https://registry.core.trust.ib1.org/scheme/perseus/source-type/Meter",
+            "scheme": "https://registry.core.pilot.trust.ib1.org/scheme/perseus",
+            "sourceType": "https://registry.core.pilot.trust.ib1.org/scheme/perseus/source-type/Meter",
             "origin": "https://www.smartdcc.co.uk/",
             "originLicence": "https://smartenergycodecompany.co.uk/documents/sec/consolidated-sec/",
             "external": True,
@@ -69,25 +70,26 @@ def create_provenance_records(
                 "meteringPeriod": {
                     "from": f"{from_date.isoformat()}Z",
                     "to": f"{to_date.isoformat()}Z",
-                },
+                }
             },
-            "perseus:assurance": {
+            "perseus:assurance": {  # TODO add logic to select correct assurance
                 "dataSource": "https://registry.core.trust.ib1.org/scheme/perseus/assurance/data-source/SmartMeter",
                 "missingData": "https://registry.core.trust.ib1.org/scheme/perseus/assurance/missing-data/Missing",
                 "processing": "https://registry.core.trust.ib1.org/scheme/perseus/assurance/processing/SmartDCCOtherUser",
             },
         }
     )
+
     # - Transfer step to send it to the CAP
     edp_record.add_step(
         {
             "type": "transfer",
-            "scheme": "https://registry.core.trust.ib1.org/scheme/perseus",
+            "scheme": "https://registry.core.pilot.trust.ib1.org/scheme/perseus",
             "of": origin_id,
-            "to": cap_member,  # CAP
-            "standard": "https://registry.core.trust.ib1.org/scheme/perseus/standard/energy-consumption-data",
-            "licence": "https://registry.core.trust.ib1.org/scheme/perseus/licence/energy-consumption-data/0.1",
-            "service": "https://api.example.com/meter-readings/0",
+            "to": cap_member,
+            "standard": "https://registry.core.pilot.trust.ib1.org/scheme/perseus/standard/energy-consumption-data/2024-12-05",
+            "licence": "https://registry.core.pilot.trust.ib1.org/scheme/perseus/licence/energy-consumption-data/2024-12-05",
+            "service": service_url,
             "path": "/readings",
             "parameters": {
                 "measure": "import",
@@ -98,8 +100,10 @@ def create_provenance_records(
             "transaction": fapi_id,
         }
     )
+
     # EDP signs the steps
     edp_record_signed = edp_record.sign(signer_edp)
+    edp_record_signed.verify(certificate_provider)
     # Get encoded data for inclusion in data response
     edp_data_attachment = edp_record_signed.encoded()
     return edp_data_attachment

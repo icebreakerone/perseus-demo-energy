@@ -89,9 +89,16 @@ def consumption(
     else:
         raise HTTPException(status_code=401, detail="No token provided")
     # Create a new provenance record
+    permission_granted = datetime.datetime.now(datetime.timezone.utc)
+    permission_expires = datetime.datetime.now(
+        datetime.timezone.utc
+    ) + datetime.timedelta(days=365)
     record = provenance.create_provenance_records(
         from_date,
         to_date,
+        permission_expires,
+        permission_granted,
+        service_url=f"https://perseus-demo-energy.ib1.org/consumption/datasources/{id}/{measure}",
         fapi_id=headers["x-fapi-interaction-id"],
         cap_member=directory.extensions.decode_application(cert),
     )
