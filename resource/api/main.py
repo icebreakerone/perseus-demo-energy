@@ -75,7 +75,7 @@ def consumption(
         # TODO don't use instrospection, check the token signature
         # And check the certificate binding
         try:
-            _, headers = auth.check_token(
+            decoded, headers = auth.check_token(
                 x_amzn_mtls_clientcert,
                 token.credentials,
                 conf.CATALOG_ENTRY_URL,
@@ -98,6 +98,7 @@ def consumption(
         to_date,
         permission_expires,
         permission_granted,
+        account=decoded["sub"],
         service_url=f"https://perseus-demo-energy.ib1.org/consumption/datasources/{id}/{measure}",
         fapi_id=headers["x-fapi-interaction-id"],
         cap_member=directory.extensions.decode_application(cert),

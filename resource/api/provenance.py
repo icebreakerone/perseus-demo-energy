@@ -24,7 +24,7 @@ def create_provenance_records(
     permission_granted: datetime.datetime,
     permission_expires: datetime.datetime,
     service_url: str,
-    account: str = "/yl4Y/aV6b80fo5cnmuDDByfuEA=",
+    account: str,
     fapi_id: str = "C25D0B85-B7C4-4543-B058-7DA57B8D9A24",
     cap_member: str = "https://directory.core.trust.ib1.org/member/81524",
 ) -> bytes:
