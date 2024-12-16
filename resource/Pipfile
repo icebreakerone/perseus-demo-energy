@@ -12,7 +12,7 @@ typing-extensions = "*"
 pyjwt = "*"
 asn1crypto = "*"
 ib1-directory = "*"
-ib1-provenance = {git = "git+https://${PROVENANCE_INSTALL_TOKEN}@github.com/kipparker/provenance.git"}
+ib1-provenance = "*"
 
 [dev-packages]
 pytest = "*"

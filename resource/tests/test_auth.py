@@ -2,7 +2,7 @@ import pytest
 import jwt
 import time
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from tests import CLIENT_ID, CATALOG_ENTRY_URL, client_certificate  # noqa
 import api.auth
 

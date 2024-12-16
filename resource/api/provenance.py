@@ -3,11 +3,10 @@ Placeholder for provenance records
 """
 
 from cryptography import x509
-from cryptography.hazmat.primitives import serialization
 import datetime
 
 from ib1.provenance import Record
-from ib1.provenance.signing import SignerFiles, SignerInMemory
+from ib1.provenance.signing import SignerInMemory
 from ib1.provenance.certificates import (
     CertificatesProviderSelfContainedRecord,
 )
@@ -25,14 +24,15 @@ def create_provenance_records(
     permission_expires: datetime.datetime,
     service_url: str,
     account: str,
-    fapi_id: str = "C25D0B85-B7C4-4543-B058-7DA57B8D9A24",
-    cap_member: str = "https://directory.core.trust.ib1.org/member/81524",
+    fapi_id: str,
+    cap_member: str,
 ) -> bytes:
+    """ """
     certificate_provider = CertificatesProviderSelfContainedRecord(
-        f"{conf.ROOT_DIR}/certs/smart-meter-data-download-cert.pem"
+        f"{conf.ROOT_DIR}/certs/signing-ca-cert.pem"
     )
     with open(
-        f"{conf.ROOT_DIR}/certs/smart-meter-data-download-bundle.pem", "rb"
+        f"{conf.ROOT_DIR}/certs/energy-data-provider-api-bundle.pem", "rb"
     ) as certs:
         signer_edp_certs = x509.load_pem_x509_certificates(certs.read())
     signer_edp = SignerInMemory(
@@ -47,14 +47,14 @@ def create_provenance_records(
         {
             "type": "permission",
             "scheme": "https://registry.core.pilot.trust.ib1.org/scheme/perseus",
-            "timestamp": permission_granted,
+            "timestamp": f"{permission_granted.isoformat()[0:-7]}Z",
             "account": account,
             "allows": {
                 "licences": [
                     "https://registry.core.pilot.trust.ib1.org/scheme/perseus/licence/energy-consumption-data/2024-12-05"
                 ]
             },
-            "expires": permission_expires,
+            "expires": f"{permission_expires.isoformat()[0:-7]}Z",
         }
     )
     origin_id = edp_record.add_step(

@@ -28,7 +28,7 @@ class Datasources(BaseModel):
 
 class MeterData(BaseModel):
     data: list[Reading]
-    provenance: list[str | list]
+    provenance: dict
     model_config = {
         "json_schema_extra": {
             "examples": [

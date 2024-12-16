@@ -1,5 +1,4 @@
 import json
-import os
 import datetime
 from typing import Annotated
 
@@ -94,10 +93,10 @@ def consumption(
         datetime.timezone.utc
     ) + datetime.timedelta(days=365)
     record = provenance.create_provenance_records(
-        from_date,
-        to_date,
-        permission_expires,
-        permission_granted,
+        from_date=from_date,
+        to_date=to_date,
+        permission_expires=permission_expires,
+        permission_granted=permission_granted,
         account=decoded["sub"],
         service_url=f"https://perseus-demo-energy.ib1.org/consumption/datasources/{id}/{measure}",
         fapi_id=headers["x-fapi-interaction-id"],
