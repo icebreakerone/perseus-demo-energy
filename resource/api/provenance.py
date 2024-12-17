@@ -29,11 +29,9 @@ def create_provenance_records(
 ) -> bytes:
     """ """
     certificate_provider = CertificatesProviderSelfContainedRecord(
-        f"{conf.ROOT_DIR}/certs/signing-ca-cert.pem"
+        conf.ROOT_CA_CERTIFICATE
     )
-    with open(
-        f"{conf.ROOT_DIR}/certs/energy-data-provider-api-bundle.pem", "rb"
-    ) as certs:
+    with open(conf.SIGNING_BUNDLE, "rb") as certs:
         signer_edp_certs = x509.load_pem_x509_certificates(certs.read())
     signer_edp = SignerInMemory(
         certificate_provider,

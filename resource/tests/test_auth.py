@@ -21,18 +21,18 @@ def mock_check_token(mocker):
 @patch("api.auth.jwt.PyJWKClient")
 def test_check_token_integration(mock_jwk_client, mock_get_openid_config):  # noqa
     aud = "https://perseus-demo-energy.ib1.org/data-service/consumption"
-    application_uri = "https://directory.ib1.org/application/123456"
     cert_pem, private_key_pem, private_key, cert_thumbprint = client_certificate(
         roles=["https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"],
-        application=application_uri,
+        application=CLIENT_ID,
     )  # noqa
     headers = {"alg": "RS256", "kid": "testkey"}
     payload = {
-        "client_id": application_uri,
+        "client_id": CLIENT_ID,
         "aud": CATALOG_ENTRY_URL,
         "exp": int(time.time()) + 3600,
         "iat": int(time.time()) - 3600,
         "active": True,
+        "sub": "account123",
         "iss": "https://some-issuer.com",
         "cnf": {"x5t#S256": cert_thumbprint},
     }
