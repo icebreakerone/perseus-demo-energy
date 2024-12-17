@@ -48,10 +48,13 @@ services:
   resource_backend:
     build:
       context: resource
+      args:
+        PROVENANCE_INSTALL_TOKEN: ${PROVENANCE_INSTALL_TOKEN}
     stop_signal: SIGINT
     env_file: resource/.env
     environment:
       - ISSUER_URL=https://host.docker.internal:8000 # As accounting app is outside docker we'll need to use this address
+
     command:
       [
         "uvicorn",

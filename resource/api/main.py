@@ -1,19 +1,19 @@
 import json
-import os
+import datetime
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Response, Depends, Header
+
+from fastapi import FastAPI, HTTPException, Response, Depends, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import Request
 
 from . import models
 from . import auth
 from . import conf
+from . import provenance
 from .exceptions import CertificateError, AccessTokenValidatorError
 
 from ib1 import directory
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 security = HTTPBearer(auto_error=False)
 
@@ -27,34 +27,29 @@ app = FastAPI(
 
 @app.get("/", response_model=dict)
 def root():
-    return {"urls": ["/api/v1/"]}
+    return {"urls": ["/datasources", "/datasources/{id}/{measure}"]}
 
 
-@app.get("/api/v1", response_model=dict)
-def api_urls():
-    return {"urls": ["/api/v1/consumption"]}
-
-
-# @app.get("/api/v1/info")
-@app.get("/api/v1/info")
-def request_info(request: Request):
-    """Return full details about the received request, including http and https headers
-    Useful for testing and debugging
-    """
+@app.get("/datasources", response_model=models.Datasources)
+def datasources() -> dict:
     return {
-        "request": {
-            "headers": dict(request.headers),
-            "method": request.method,
-            "url": request.url,
-            # "body": request.body().decode("utf-8"),
-        },
-        # "environ": str(request.environ),
+        "data": [
+            {
+                "id": "abcd1234",
+                "type": "Electricity",
+                "availableMeasures": ["Import"],
+            },
+        ]
     }
 
 
-@app.get("/api/v1/consumption", response_model=models.MeterData)
+@app.get("/datasources/{id}/{measure}", response_model=models.MeterData)
 def consumption(
+    id: str,
+    measure: str,
     response: Response,
+    from_date: datetime.date = Query(alias="from"),
+    to_date: datetime.date = Query(alias="to"),
     token: HTTPAuthorizationCredentials = Depends(security),
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
@@ -79,7 +74,7 @@ def consumption(
         # TODO don't use instrospection, check the token signature
         # And check the certificate binding
         try:
-            _, headers = auth.check_token(
+            decoded, headers = auth.check_token(
                 x_amzn_mtls_clientcert,
                 token.credentials,
                 conf.CATALOG_ENTRY_URL,
@@ -92,6 +87,21 @@ def consumption(
                 response.headers[key] = value
     else:
         raise HTTPException(status_code=401, detail="No token provided")
-    with open(f"{ROOT_DIR}/data/7_day_consumption.json") as f:
+    # Create a new provenance record
+    permission_granted = datetime.datetime.now(datetime.timezone.utc)
+    permission_expires = datetime.datetime.now(
+        datetime.timezone.utc
+    ) + datetime.timedelta(days=365)
+    record = provenance.create_provenance_records(
+        from_date=from_date,
+        to_date=to_date,
+        permission_expires=permission_expires,
+        permission_granted=permission_granted,
+        account=decoded["sub"],
+        service_url=f"https://perseus-demo-energy.ib1.org/consumption/datasources/{id}/{measure}",
+        fapi_id=headers["x-fapi-interaction-id"],
+        cap_member=directory.extensions.decode_application(cert),
+    )
+    with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:
         data = json.load(f)
-    return {"data": data}
+    return {"data": data, "provenance": record}

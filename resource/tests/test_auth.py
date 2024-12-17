@@ -2,7 +2,7 @@ import pytest
 import jwt
 import time
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from tests import CLIENT_ID, CATALOG_ENTRY_URL, client_certificate  # noqa
 import api.auth
 
@@ -21,8 +21,9 @@ def mock_check_token(mocker):
 @patch("api.auth.jwt.PyJWKClient")
 def test_check_token_integration(mock_jwk_client, mock_get_openid_config):  # noqa
     aud = "https://perseus-demo-energy.ib1.org/data-service/consumption"
-    cert_pem, private_key_pem, private_key, cert_thumbprint = (
-        client_certificate()
+    cert_pem, private_key_pem, private_key, cert_thumbprint = client_certificate(
+        roles=["https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"],
+        application=CLIENT_ID,
     )  # noqa
     headers = {"alg": "RS256", "kid": "testkey"}
     payload = {
@@ -31,18 +32,11 @@ def test_check_token_integration(mock_jwk_client, mock_get_openid_config):  # no
         "exp": int(time.time()) + 3600,
         "iat": int(time.time()) - 3600,
         "active": True,
+        "sub": "account123",
         "iss": "https://some-issuer.com",
         "cnf": {"x5t#S256": cert_thumbprint},
     }
     jwt_token = jwt.encode(payload, private_key_pem, algorithm="RS256", headers=headers)
-    # Mock the OpenID configuration to use our test JWKS endpoint
-    mock_get_openid_config.return_value = {"jwks_uri": "https://mock_jwks_uri"}
-
-    # Create a mock signing key to be returned by the JWK client
-    mock_jwk_client_instance = MagicMock()
-    mock_jwk_client_instance.get_signing_key.return_value.key = private_key.public_key()
-    mock_jwk_client.return_value = mock_jwk_client_instance
-
     # Act
     result, headers = api.auth.check_token(cert_pem, jwt_token, CATALOG_ENTRY_URL)
 

@@ -14,10 +14,13 @@ from ib1 import directory
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 CLIENT_ID = "https://directory.core.ib1.org/member/836153"
 CATALOG_ENTRY_URL = "https://perseus-demo-energy.ib1.org/data-service/consumption"
+with open(f"{ROOT_DIR}/fixtures/test-suite-key.pem") as f:
+    SIGNING_KEY = f.read()
 
 
 def client_certificate(
     roles: list[str] | None = None,
+    application: str | None = None,
 ) -> tuple[str, str, rsa.RSAPrivateKey, str]:
     # Generate private key
     private_key = rsa.generate_private_key(
@@ -58,7 +61,10 @@ def client_certificate(
         certificate_builder = directory.extensions.encode_roles(
             certificate_builder, roles
         )
-
+    if application:
+        certificate_builder = directory.extensions.encode_application(
+            certificate_builder, application
+        )
     # Sign the certificate
     certificate = certificate_builder.sign(
         private_key=private_key, algorithm=hashes.SHA256(), backend=default_backend()

@@ -9,9 +9,7 @@ from cryptography.hazmat.primitives import hashes
 import requests
 import jwt
 from cryptography import x509
-from . import conf
 from .exceptions import (
-    CertificateMissingError,
     AccessTokenCertificateError,
     AccessTokenAudienceError,
     AccessTokenTimeError,
@@ -24,7 +22,7 @@ log = logging.getLogger(__name__)
 def _check_certificate(cert: x509.Certificate, decoded_token: dict):
 
     if "cnf" in decoded_token:
-        # thumbprint from introspection response
+        # thumbprint from token
         try:
             sha256 = decoded_token["cnf"]["x5t#S256"]
         except KeyError:
@@ -69,43 +67,33 @@ def get_openid_configuration(issuer_url: str) -> dict:
 
 
 def check_token(
-    client_certificate: str | None,
+    client_certificate: str,
     token: str,
     aud: str,
     x_fapi_interaction_id: Optional[str] = None,
 ) -> Tuple[dict, dict]:
     """
-    Check token fails if:
-        1. Basic token checks (expiry, active, etc) fail
-        2. The token is not bound to the client certificate
-        3. The token is not correctly signed
+    Check token is valid if:
+        [ ] is valid
+        [ ] has not expired,
+        [ ] has not been revoked,
+        [ ] has a client_id that matches the MTLS client certificate, and
+        [ ] has a scope which matches the required licence.
     If check succeeds, return a dict suitable to use as headers
     including Date and x-fapi-interaction-id, as well as the check token result
     """
 
     # Deny access to non-MTLS connections
-    if client_certificate is None:
-        log.warning("no client cert presented")
-        raise CertificateMissingError("No client certificate presented")
     cert = directory.parse_cert(client_certificate)
-    client_id = str(
-        cert.subject.get_attributes_for_oid(x509.NameOID.COMMON_NAME)[0].value
+    client_id = directory.extensions.decode_application(cert)
+
+    decoded = jwt.decode(
+        token,
+        options={"verify_signature": False},
     )
-    # get the jwks endpoints from well-known configuration
-    openid_config = get_openid_configuration(conf.ISSUER_URL)
-    jwks_uri = openid_config["jwks_uri"]
-    jwks_client = jwt.PyJWKClient(jwks_uri)
-    # ssl._create_default_https_context = (
-    #     ssl._create_unverified_context
-    # )  # Must be removed for production
-    header = jwt.get_unverified_header(token)
-    key = jwks_client.get_signing_key(header["kid"]).key
-    decoded = jwt.decode(token, key, [header["alg"]], audience=aud)
     # Examples of tests to apply
     if decoded["client_id"] != client_id:
         raise AccessTokenAudienceError("Invalid Client ID")
-    if decoded["aud"] != aud:
-        raise AccessTokenAudienceError("Invalid Audience")
     if decoded["exp"] < int(time.time()):
         raise AccessTokenTimeError("Token expired")
     if decoded["iat"] > int(time.time()):

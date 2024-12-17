@@ -10,10 +10,10 @@ server {
     server_name localhost;
     # add hosts your domain for local requests
     # server certificate
-    ssl_certificate     /etc/nginx/certs/server-cert-bundle.pem;
-    ssl_certificate_key /etc/nginx/certs/server-key.pem;
+    ssl_certificate     /etc/nginx/certs/localhost-bundle.pem;
+    ssl_certificate_key /etc/nginx/certs/localhost-key.pem;
     # CA certificate
-    ssl_client_certificate /etc/nginx/certs/client-ca-cert.pem;
+    ssl_client_certificate /etc/nginx/certs/client-signing-ca-bundle.pem;
     ssl_verify_client optional;
     location / {
         # remote ip and forwarding ip

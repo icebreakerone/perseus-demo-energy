@@ -1,18 +1,14 @@
 import os
 import tempfile
 import base64
-import time
-import logging
 
 from cryptography.hazmat.primitives import hashes
 
 import jwt
 
 from . import conf
+from .logger import logger
 from ib1 import directory
-
-
-log = logging.getLogger(__name__)
 
 
 def get_thumbprint(cert: str) -> str:
@@ -29,24 +25,14 @@ def get_thumbprint(cert: str) -> str:
     return thumbprint
 
 
-def create_id_token(subject="platform_user") -> str:
-    claims = {
-        "iss": f"{conf.ISSUER_URL}",
-        "sub": subject,
-        "aud": conf.OAUTH_CLIENT_ID,
-        "exp": int(time.time()) + 3600,
-        "iat": int(time.time()),
-        "kid": 1,
-        # "nonce": "abc123",  # nonce is optional for authorisation code flow
-    }
-    private_key_path = get_key("key")
-    with open(private_key_path, "rb") as f:
-        private_key = f.read()
-    return jwt.encode(claims, private_key, algorithm="ES256", headers={"kid": "1"})
-
-
 def create_enhanced_access_token(claims: dict, client_certificate: str) -> str:
+    logger.info("Creating enhanced access token")
+    logger.info(f"Claims: {claims}")
     claims["cnf"] = {"x5t#S256": get_thumbprint(client_certificate)}
+    client_id = directory.extensions.decode_application(
+        directory.parse_cert(client_certificate)
+    )
+    claims["client_id"] = client_id
     private_key_path = get_key("key")
     with open(private_key_path, "rb") as f:
         private_key = f.read()

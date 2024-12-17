@@ -7,11 +7,12 @@ name = "pypi"
 fastapi = "*"
 requests = "*"
 cryptography = "*"
-uvicorn = {extras = ["standard"], version = "*"}
+uvicorn = {extras = ["standard"] }
 typing-extensions = "*"
 pyjwt = "*"
 asn1crypto = "*"
 ib1-directory = "*"
+ib1-provenance = "*"
 
 [dev-packages]
 pytest = "*"

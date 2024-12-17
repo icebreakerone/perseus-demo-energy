@@ -14,3 +14,8 @@ type: Environment
 # Configure observability for your environment resources.
 observability:
   container_insights: false
+
+http:
+  public:
+    certificates:
+      - arn:aws:acm:eu-west-2:232615051732:certificate/535b09e0-4f69-41ad-853a-316754f81e6b
