@@ -8,12 +8,18 @@ type: Load Balanced Web Service
 
 # Distribute traffic to your service.
 http:
-  # Requests to this path will be forwarded to your service.
-  # To match all requests you can use the "/" path.
   path: '/'
   # You can specify a custom health check path. The default is "/".
-  # healthcheck: '/'
-# in copilot/{service name}/manifest.yml
+  healthcheck: 
+    path: '/'
+    healthy_threshold: 2
+    interval: 15s
+    timeout: 10s
+  additional_rules:
+    - path: "/api-docs"
+      alias: docs.preprod.perseus-demo-authentication.ib1.org
+  
+    
 
 # Configuration for your containers and service.
 image:
@@ -49,6 +55,7 @@ environments:
         # To match all requests you can use the "/" path.
         alias: perseus-demo-authentication.ib1.org
         hosted_zone: Z080590727V6ALTWMJ7N5
+
       secrets: 
         SERVER_KEY: /copilot/perseus-demo-fapi/prod/secrets/server_key
         SERVER_CERT: /copilot/perseus-demo-fapi/prod/secrets/server_cert
@@ -58,3 +65,12 @@ environments:
         SERVER_KEY: /copilot/perseus-demo-fapi/dev/secrets/server_key
         SERVER_CERT: /copilot/perseus-demo-fapi/dev/secrets/server_cert
         OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/dev/secrets/client_secret
+      http:
+        # Requests to this path will be forwarded to your service.
+        # To match all requests you can use the "/" path.
+        alias: preprod.perseus-demo-authentication.ib1.org
+        hosted_zone: Z080590727V6ALTWMJ7N5
+        additional_rules:
+          - path: "/api-docs"
+            alias: docs.preprod.perseus-demo-authentication.ib1.org
+        cer

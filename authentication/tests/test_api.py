@@ -77,7 +77,7 @@ def test_authorization_code(mock_get_request):
     assert "Location" in response.headers
 
 
-@patch("api.auth.get_key")
+@patch("api.auth.get_pem")
 @patch("api.main.conf", FakeConf())
 @responses.activate
 def test_token(mocked_auth_key):  # noqa

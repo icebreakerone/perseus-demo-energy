@@ -1,6 +1,6 @@
 from typing import Annotated
 import json
-
+from logging import getLogger
 import requests
 import jwt
 
@@ -11,29 +11,18 @@ from fastapi import (
     status,
     Form,
 )
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.utils import get_openapi
 from fastapi.responses import Response
+from mangum import Mangum
 
 from ib1 import directory
-from . import models
-from . import conf
-from . import par
-from . import auth
+from edp_auth import models, conf, par, auth  # noqa
 
+logger = getLogger()
 
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Demo Authentication Server",
     # root_path=conf.OPEN_API_ROOT,
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 
@@ -238,20 +227,13 @@ async def get_jwks():
     return jwks
 
 
-# Custom OpenAPI schema configuration
-def custom_openapi():
-    if app.openapi_schema:
-        return app.openapi_schema
-    openapi_schema = get_openapi(
-        title="Perseus Demo Authentication Server",
-        version="1.0.0",
-        description="Perseus Demo Authentication Server",
-        routes=app.routes,
-    )
-    # Set the OpenAPI URL to the root domain
-    openapi_schema["servers"] = [{"url": conf.API_DOMAIN}]
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
+def handler(event, context):
+    logger.info(json.dumps(event))
 
+    asgi_handler = Mangum(app)
+    response = asgi_handler(
+        event, context
+    )  # Call the instance with the event arguments
 
-app.openapi = custom_openapi  # type: ignore
+    logger.info(json.dumps(response))
+    return response
