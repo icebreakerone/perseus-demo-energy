@@ -13,3 +13,4 @@ ROOT_CA_CERTIFICATE = f"{ROOT_DIR}/certs/signing-ca-cert.pem"
 SIGNING_BUNDLE = os.environ.get(
     "SIGNING_BUNDLE", f"{ROOT_DIR}/certs/energy-data-provider-api-bundle.pem"
 )
+API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")

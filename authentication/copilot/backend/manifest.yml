@@ -43,7 +43,7 @@ variables:                    # Pass environment variables as key value pairs.
   OAUTH_CLIENT_ID: f67916ce-de33-4e2f-a8e3-cbd5f6459c30
   REDIS_HOST: redis.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local
   OAUTH_URL: https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com
-
+  API_DOMAIN: perseus-demo-authentication.ib1.org
 
 
 environments:
@@ -68,3 +68,5 @@ environments:
         # To match all requests you can use the "/" path.
         alias: preprod.perseus-demo-authentication.ib1.org
         hosted_zone: Z080590727V6ALTWMJ7N5
+      variables:
+        API_DOMAIN: preprod.perseus-demo-authentication.ib1.org

@@ -34,7 +34,7 @@ variables:                    # Pass environment variables as key value pairs.
   LOG_LEVEL: info
   ISSUER_URL: "https://perseus-demo-authentication.ib1.org"
   OAUTH_CLIENT_ID: f67916ce-de33-4e2f-a8e3-cbd5f6459c30
-
+  API_DOMAIN: perseus-demo-energy.ib1.org
 
 # You can override any of the values defined above by environment.
 secrets:
@@ -49,3 +49,5 @@ environments:
     http:
       alias: preprod.perseus-demo-energy.ib1.org
       hosted_zone: Z06253313MKVN98JLAQRK
+    variables:
+      API_DOMAIN: preprod.perseus-demo-energy.ib1.org
