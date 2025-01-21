@@ -9,8 +9,7 @@ type: Environment
 http:
   public:
     certificates:
-      - arn:aws:acm:eu-west-2:232615051732:certificate/990d9abe-6dcd-44ca-819f-ab1287c97634
-      - arn:aws:acm:eu-west-2:232615051732:certificate/80845339-7a0a-4692-b362-797439b3bfff
+      - arn:aws:acm:eu-west-2:232615051732:certificate/88c2f2f8-1b4e-47d5-a598-6487c8dbf681
 # Configure observability for your environment resources.
 observability:
   container_insights: true
