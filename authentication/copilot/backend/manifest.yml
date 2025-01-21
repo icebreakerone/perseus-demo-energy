@@ -15,9 +15,7 @@ http:
     healthy_threshold: 2
     interval: 15s
     timeout: 10s
-  additional_rules:
-    - path: "/api-docs"
-      alias: docs.preprod.perseus-demo-authentication.ib1.org
+
   
     
 
@@ -70,7 +68,3 @@ environments:
         # To match all requests you can use the "/" path.
         alias: preprod.perseus-demo-authentication.ib1.org
         hosted_zone: Z080590727V6ALTWMJ7N5
-        additional_rules:
-          - path: "/api-docs"
-            alias: docs.preprod.perseus-demo-authentication.ib1.org
-        cer
