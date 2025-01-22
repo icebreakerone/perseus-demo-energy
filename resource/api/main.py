@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Response, Depends, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.openapi.utils import get_openapi
 
 from . import models
 from . import auth
@@ -105,3 +106,22 @@ def consumption(
     with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:
         data = json.load(f)
     return {"data": data, "provenance": record}
+
+
+# Custom OpenAPI schema configuration
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="Perseus Demo EDP",
+        version="1.0.0",
+        description="Perseus Demo EDP",
+        routes=app.routes,
+    )
+    # Set the OpenAPI URL to the root domain
+    openapi_schema["servers"] = [{"url": conf.API_DOMAIN}]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi  # type: ignore

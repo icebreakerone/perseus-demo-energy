@@ -33,13 +33,13 @@ def create_enhanced_access_token(claims: dict, client_certificate: str) -> str:
         directory.parse_cert(client_certificate)
     )
     claims["client_id"] = client_id
-    private_key_path = get_key("key")
+    private_key_path = get_pem("key")
     with open(private_key_path, "rb") as f:
         private_key = f.read()
     return jwt.encode(claims, private_key, algorithm="ES256")
 
 
-def get_key(type: str = "key") -> str:
+def get_pem(type: str = "key") -> str:
     """
     Returns the local path to a certificate if it exists,
     or the tmp path to the matching certificate stored as an env var
