@@ -47,26 +47,25 @@ variables:                    # Pass environment variables as key value pairs.
 
 
 environments:
-    prod:
-      http:
-        # Requests to this path will be forwarded to your service.
-        # To match all requests you can use the "/" path.
-        alias: perseus-demo-authentication.ib1.org
-        hosted_zone: Z080590727V6ALTWMJ7N5
-
-      secrets: 
-        SERVER_KEY: /copilot/perseus-demo-fapi/prod/secrets/server_key
-        SERVER_CERT: /copilot/perseus-demo-fapi/prod/secrets/server_cert
-        OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/prod/secrets/client_secret
-    dev:
-      secrets: 
-        SERVER_KEY: /copilot/perseus-demo-fapi/dev/secrets/server_key
-        SERVER_CERT: /copilot/perseus-demo-fapi/dev/secrets/server_cert
-        OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/dev/secrets/client_secret
-      http:
-        # Requests to this path will be forwarded to your service.
-        # To match all requests you can use the "/" path.
-        alias: preprod.perseus-demo-authentication.ib1.org
-        hosted_zone: Z080590727V6ALTWMJ7N5
-      variables:
-        API_DOMAIN: preprod.perseus-demo-authentication.ib1.org
+  prod:
+    http:
+      # Requests to this path will be forwarded to your service.
+      # To match all requests you can use the "/" path.
+      alias: perseus-demo-authentication.ib1.org
+      hosted_zone: Z080590727V6ALTWMJ7N5
+    secrets: 
+      SERVER_KEY: /copilot/perseus-demo-fapi/prod/secrets/server_key
+      SERVER_CERT: /copilot/perseus-demo-fapi/prod/secrets/server_cert
+      OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/prod/secrets/client_secret
+  dev:
+    secrets: 
+      SERVER_KEY: /copilot/perseus-demo-fapi/dev/secrets/server_key
+      SERVER_CERT: /copilot/perseus-demo-fapi/dev/secrets/server_cert
+      OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/dev/secrets/client_secret
+    http:
+      # Requests to this path will be forwarded to your service.
+      # To match all requests you can use the "/" path.
+      alias: preprod.perseus-demo-authentication.ib1.org
+      hosted_zone: Z080590727V6ALTWMJ7N5
+    variables:
+      API_DOMAIN: preprod.perseus-demo-authentication.ib1.org
