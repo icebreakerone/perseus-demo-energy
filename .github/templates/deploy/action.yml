@@ -23,5 +23,6 @@ runs:
     - run: |
         cd ${{ inputs.folder }}
         copilot --version
+        copilot env deploy --name ${{ inputs.env }} --force
         copilot deploy  --env ${{ inputs.env }} --name ${{ inputs.service_name }}
       shell: bash
