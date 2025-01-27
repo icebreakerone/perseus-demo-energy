@@ -16,3 +16,8 @@ __pycache__
 certs
 requirements.txt
 .python-version
+
+.vscode
+
+*.pem
+!**/tests/fixtures/*.pem

@@ -3,3 +3,4 @@
 !Pipfile.lock
 !api/
 !data/
+!certs/

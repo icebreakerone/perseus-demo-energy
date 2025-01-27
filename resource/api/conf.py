@@ -3,8 +3,14 @@ import os
 ENV = os.environ.get("ENV", "dev")
 DIRNAME = os.path.dirname(os.path.realpath(__file__))
 ISSUER_URL = os.environ.get("ISSUER_URL", "")
-CLIENT_ID = os.environ.get("CLIENT_ID", "21653835348762")
-CLIENT_SECRET = os.environ.get(
-    "CLIENT_SECRET", "uE4NgqeIpuSV_XejQ7Ds3jsgA1yXhjR1MXJ1LbPuyls"
-)
+OAUTH_CLIENT_ID = os.environ.get("OAUTH_CLIENT_ID")
+OAUTH_CLIENT_SECRET = os.environ.get("OAUTH_CLIENT_SECRET")
 OPEN_API_ROOT = "/dev" if ENV == "prod" else ""
+CATALOG_ENTRY_URL = "https://perseus-demo-energy.ib1.org/data-service/consumption"
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SIGNING_KEY = os.environ.get("SIGNING_KEY", "")
+ROOT_CA_CERTIFICATE = f"{ROOT_DIR}/certs/signing-ca-cert.pem"
+SIGNING_BUNDLE = os.environ.get(
+    "SIGNING_BUNDLE", f"{ROOT_DIR}/certs/energy-data-provider-api-bundle.pem"
+)
+API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")
