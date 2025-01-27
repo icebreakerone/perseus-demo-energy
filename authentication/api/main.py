@@ -200,13 +200,10 @@ async def token(
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
-    # Decode the Ory Hydra issued token
-    decoded_token = jwt.decode(
-        result["access_token"], options={"verify_signature": False}
-    )
+
     # Add in our required client certificate thumbprint
     enhanced_token = auth.create_enhanced_access_token(
-        decoded_token, x_amzn_mtls_clientcert
+        result["access_token"], x_amzn_mtls_clientcert
     )
     return models.TokenResponse(
         access_token=enhanced_token,

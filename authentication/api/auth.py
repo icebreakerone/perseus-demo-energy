@@ -1,11 +1,12 @@
 import os
 import tempfile
 import base64
+import jwt
+import requests
 
 from cryptography.hazmat.primitives import hashes
 
-import jwt
-
+from .exceptions import AccessTokenDecodingError
 from . import conf
 from .logger import logger
 from ib1 import directory
@@ -25,8 +26,34 @@ def get_thumbprint(cert: str) -> str:
     return thumbprint
 
 
-def create_enhanced_access_token(claims: dict, client_certificate: str) -> str:
+def decode_with_jwks(token: str, url: str):
+
+    # Define the JWKS URL
+    JWKS_URL = f"{url}/.well-known/jwks.json"
+    jwks = requests.get(JWKS_URL).json()
+    header = jwt.get_unverified_header(token)
+    print(jwt.decode(token, options={"verify_signature": False}))
+    kid = header.get("kid")
+    key = next((k for k in jwks["keys"] if k["kid"] == kid), None)
+    if key is None:
+        raise AccessTokenDecodingError(f"Key ID {kid} not found in JWKS")
+    public_key = jwt.algorithms.RSAAlgorithm.from_jwk(key)
+
+    # Decode and verify the token
+    try:
+        decoded_token = jwt.decode(
+            token, key=public_key, algorithms=["RS256"], issuer=conf.OAUTH_URL
+        )
+    except jwt.ExpiredSignatureError:
+        raise AccessTokenDecodingError("Token has expired!")
+    except jwt.InvalidTokenError as e:
+        raise AccessTokenDecodingError(f"Invalid token: {e}")
+    return decoded_token
+
+
+def create_enhanced_access_token(external_token: str, client_certificate: str) -> str:
     logger.info("Creating enhanced access token")
+    claims = decode_with_jwks(external_token, str(conf.OAUTH_URL))
     logger.info(f"Claims: {claims}")
     claims["cnf"] = {"x5t#S256": get_thumbprint(client_certificate)}
     client_id = directory.extensions.decode_application(

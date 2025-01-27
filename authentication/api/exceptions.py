@@ -20,6 +20,12 @@ class CertificateRoleMissingError(CertificateRoleError):
     pass
 
 
+class AccessTokenDecodingError(FrameworkAuthError):
+    """
+    Base class for errors related to the issuing of the token
+    """
+
+
 class AccessTokenValidatorError(FrameworkAuthError):
     """
     Base class for errors related to the presented token
