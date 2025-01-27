@@ -161,8 +161,8 @@ async def token(
     Token issuing endpoint
 
     We use the Ory Hydra endpoint to issue the token and validate authorisation code flow
-    but due to missing features in Ory Hydra authorisation code flow we need to generate
-    our own id_token, and add client certificate details to the token
+    but due to missing features in Ory Hydra authorisation code flow we need to add
+    client certificate details to the token
     """
     if x_amzn_mtls_clientcert is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")

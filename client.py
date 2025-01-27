@@ -64,17 +64,6 @@ def pushed_authorization_request() -> tuple[str, dict]:
     return code_verifier, response.json()
 
 
-def introspect_token(fapi_token: str):
-    session = get_session()
-    # session = requests.Session()
-    introspection_response = session.post(
-        f"{AUTHENTICATION_API}/api/v1/authorize/introspect",
-        json={"token": fapi_token},
-        verify=False,
-    )
-    return introspection_response.json()
-
-
 def client_side_decoding(token: str):
     """
     Use the jwks to decode the token
@@ -107,18 +96,6 @@ def client_side_decoding(token: str):
 @click.group()
 def cli():
     pass
-
-
-@click.option("--token", help="introspect token returned from authorisation flow")
-@cli.command()
-def introspect(token):
-    print(introspect_token(token))
-
-
-@click.option("--token", help="Decode ID token returned from authorisation flow")
-@cli.command()
-def id_token(token):
-    print(client_side_decoding(token))
 
 
 @click.option("--token", help="Authorisation token")

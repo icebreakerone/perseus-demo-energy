@@ -71,39 +71,99 @@ pipenv run uvicorn api.main:app --reload
 
 **nb** the recommended way to run the apps is using the docker compose environment, as the apps require a redis instance and the resource app requires the authentication app to be running.
 
-## Creating self-signed certificates
+## Creating self signed certificates for testing
 
-The docker compose and client.py scripts require a set of self-signed certificates in a certs/ folder. `certmaker.sh` generates a set of certificates suitable for emulating the certificates issued by the Perseus Scheme, and are used by the development server and client testing scripts.
+The ib1-directory library includes a command line tool that can generate certificates in the correct formats. THe trust framework uses three types of certificates:
 
-```bash
-cd scripts
-./certmaker.sh
-```
+- Server certificates for securing APIs?
+- Client certificates for making mtls secured requests
+- Signing certificates for signing provenance records
 
-By default, the certmaker script will create a server certificate for the local host it is run on (ie. using the output of `hostname`). This value can be changed by setting the SERVER_HOSTNAME environment variable, eg.
-
-```bash
-SERVER_HOSTNAME="perseus-demo-authentication.ib1.org" ./certmaker.sh
-```
-
-You will need to create a "certs" directory in the root of the project, and move the generated certificates into it.
-
-**nb** The generated certificates include reasonable values suitable for testing, but in production certificates will be issued by the Perseus directory service.
-
-### Using client certificates
-
-Most of the endpoints require a client certificate to be presented. As the directory service is not yet available, the contents of the certificate will not be checked with an external CA, so any valid certificate will be acceptable. The certificate **is** used to confirm identity, so the same one must be presented in all requests.
-
-## Creating signing certificates
-
-A separate set of certificates are required for signing JWTs. These can be generated using the `signingcerts.sh` script in the `scripts` directory.
+Install ib1-directory:
 
 ```bash
-cd scripts
-./signingcerts.sh
+pip install ib1-directory
 ```
 
-The default configuration will expect these certificate to be in authentication/api/certs. The location can be changed by setting the DIRECTORY_CERTIFICATE and DIRECTORY_PRIVATE_KEY environment variables.
+Create a self signed CA:
+
+```bash
+Usage: ib1-directory create-ca [OPTIONS]
+
+  Generate a server signing CA key and certificate and an issuer key and
+  certificate pair signed by the CA then saves all files to disk
+
+Options:
+  -u, --usage [signing|client|server]  Choose signing, server or client CA
+  -c, --country TEXT           Country to use for certificate generation
+  -s, --state TEXT             State to use for certificate generation
+  -f, --framework TEXT         Framework this certificate is for
+  --help                       Show this message and exit.
+```
+
+eg. To create a server CA key and certificate for the Core Trust Framework:
+
+```bash
+ib1-directory create-ca -u server -f Core
+```
+
+Issuing a server certificate:
+
+```bash
+Usage: ib1-directory create-server-certificates [OPTIONS]
+
+  Create a private key and use it generate a CSR, then sign the CSR with a CA
+  key and certificate.
+
+  Saves the private key, CSR, certificate and bundle to disk.
+
+Options:
+  --issuer-key-file FILENAME   Issuer key file
+  --issuer-cert-file FILENAME  Issuer certificate file
+  --domain TEXT                Domain name
+  --trust_framework TEXT       Trust framework
+  --country TEXT               Country
+  --state TEXT                 State
+  --help                       Show this message and exit.
+```
+
+eg. To issue a server certificate with the server CA:
+
+```bash
+ib1-directory create-server-certificates --issuer-key-file server-key.pem --issuer-cert-file server-cert.pem --domain localhost --trust_framework Core --country UK --state London
+```
+
+Issuing client or signing certificates:
+
+````bash
+Client:
+
+```bash
+Usage: ib1-directory create-client-certificates [OPTIONS]
+
+  Create a private key and use it generate a CSR, then sign the CSR with a CA
+  key and certificate.
+
+  Saves the private key, CSR, certificate and bundle to disk.
+
+Options:
+  --issuer-key-file FILENAME   Issuer key file
+  --issuer-cert-file FILENAME  Issuer certificate file
+  --member_uri TEXT            Member uri
+  --organization_name TEXT     Organization name
+  --country TEXT               Country
+  --state TEXT                 State
+  -r, --role TEXT              Client roles
+  --application_uri TEXT       Application uri
+  --help                       Show this message and exit.
+```
+
+eg. To issue a signing certificate using the signing CA:
+
+```bash
+ib1-directory create-client-certificates --issuer-key-file signing-key.pem --issuer-cert-file signing-cert.pem --member_uri https://example.com --organization_name Example --country UK --state London -r client --application_uri https://example.com
+```
+
 
 ## Running the local docker environment
 
@@ -165,27 +225,7 @@ Granting consent will redirect to our demo client application, with the authoriz
 As an alternative to the command line client, the authorization flow can be completed in a browser at https://perseus-demo-accounting.ib1.org/start. Technical information such as the code verifier, token, and the contents of the introspected token are displayed
 at each step.
 
-### Introspection
-
-To show the response of the introspection endpoint, run:
-
-```bash
-python -W ignore  client.py introspect --token <token>
-```
-
-with token being the `token` value obtained from authorization code flow
-
-### Client side id_token decoding
-
-To show the response of client side id_token decoding, run:
-
-```bash
-python -W ignore  client.py id-token --token <token>
-```
-
-with token being the `id_token` value obtained from authorization code flow
-
-### Retrieve data from protected endpoint
+### Retrieve data from protected endpoints
 
 ```bash
 python -W ignore  client.py resource --token <token>
@@ -235,3 +275,4 @@ A full example is available at [https://www.ory.sh/docs/hydra/guides/custom-ui-o
 ## FAPI Flow
 
 ![FAPI Flow diagram](docs/fapi-authlete-flow.png)
+````
