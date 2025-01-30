@@ -1,9 +1,0 @@
-
-[roles1]
-1.3.6.1.4.1.62329.1.1=ASN1:SEQUENCE:role_values1
-1.3.6.1.4.1.62329.1.2=ASN1:UTF8:https://registry.core.ib1.org/scheme/perseus/application/38936455
-
-[role_values1]
-value.1=UTF8:https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting
-
-

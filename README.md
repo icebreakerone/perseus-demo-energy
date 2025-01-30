@@ -71,39 +71,42 @@ pipenv run uvicorn api.main:app --reload
 
 **nb** the recommended way to run the apps is using the docker compose environment, as the apps require a redis instance and the resource app requires the authentication app to be running.
 
-## Creating self-signed certificates
+## Creating self signed certificates for development
 
-The docker compose and client.py scripts require a set of self-signed certificates in a certs/ folder. `certmaker.sh` generates a set of certificates suitable for emulating the certificates issued by the Perseus Scheme, and are used by the development server and client testing scripts.
+The ib1 directory issues three kinds of certificates, client, server and signing. The client and server certificates are used for mTLS and the signing certificates are used to sign provenance records.
 
-```bash
-cd scripts
-./certmaker.sh
-```
-
-By default, the certmaker script will create a server certificate for the local host it is run on (ie. using the output of `hostname`). This value can be changed by setting the SERVER_HOSTNAME environment variable, eg.
-
-```bash
-SERVER_HOSTNAME="perseus-demo-authentication.ib1.org" ./certmaker.sh
-```
-
-You will need to create a "certs" directory in the root of the project, and move the generated certificates into it.
-
-**nb** The generated certificates include reasonable values suitable for testing, but in production certificates will be issued by the Perseus directory service.
-
-### Using client certificates
-
-Most of the endpoints require a client certificate to be presented. As the directory service is not yet available, the contents of the certificate will not be checked with an external CA, so any valid certificate will be acceptable. The certificate **is** used to confirm identity, so the same one must be presented in all requests.
-
-## Creating signing certificates
-
-A separate set of certificates are required for signing JWTs. These can be generated using the `signingcerts.sh` script in the `scripts` directory.
+To generate a complete set of self-signed certificates for testing, run the following command:
 
 ```bash
 cd scripts
-./signingcerts.sh
+./setup.sh
 ```
 
-The default configuration will expect these certificate to be in authentication/api/certs. The location can be changed by setting the DIRECTORY_CERTIFICATE and DIRECTORY_PRIVATE_KEY environment variables.
+The script will generate the required certificates, keys and bundles and move them to the correct file locations for the docker compose dev environment.
+
+### Outline of certificates used
+
+**nginx**
+
+- certs/client-verify-bundle.pem: A chain of intermediate and CA to verify incoming mTls requests
+- certs/localhost-key.pem: Key for the localhost tls certificate
+- certs/server-complete-bundle.pem: A chain of localhost certificate, intermediate and CA for tls
+
+**Authentication**
+
+- authentication/certs/jwt-signing-key.pem: Key for signing jwt tokens
+
+**Resource**
+
+- resource/server-verify-bundle.pem: verify connections to the authentication server
+- resource/signing-issued-intermediate-bundle.pem: A chain of issued certificate and intermediate used in creating provenance records
+- resource/edp-demo-signing-key.pem: Provenance record signing key
+- resource/edp-demo-signing-cert.pem: Provenance record signing certificate
+- resource/signing-ca-cert.pem: Root CA certificate for the signing CA used in provenance
+
+**Others**
+
+The remaining files in certs/generated directory will be the key and certificate for each of the three CAs with matching intermediates, as well as a key and certificate suitable for making test client requests named edp-demo-client-key.pem and edp-demo-client-cert.pem.
 
 ## Running the local docker environment
 
@@ -165,27 +168,7 @@ Granting consent will redirect to our demo client application, with the authoriz
 As an alternative to the command line client, the authorization flow can be completed in a browser at https://perseus-demo-accounting.ib1.org/start. Technical information such as the code verifier, token, and the contents of the introspected token are displayed
 at each step.
 
-### Introspection
-
-To show the response of the introspection endpoint, run:
-
-```bash
-python -W ignore  client.py introspect --token <token>
-```
-
-with token being the `token` value obtained from authorization code flow
-
-### Client side id_token decoding
-
-To show the response of client side id_token decoding, run:
-
-```bash
-python -W ignore  client.py id-token --token <token>
-```
-
-with token being the `id_token` value obtained from authorization code flow
-
-### Retrieve data from protected endpoint
+### Retrieve data from protected endpoints
 
 ```bash
 python -W ignore  client.py resource --token <token>
@@ -235,3 +218,7 @@ A full example is available at [https://www.ory.sh/docs/hydra/guides/custom-ui-o
 ## FAPI Flow
 
 ![FAPI Flow diagram](docs/fapi-authlete-flow.png)
+
+```
+
+```

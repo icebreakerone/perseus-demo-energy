@@ -6,14 +6,17 @@ import email.utils
 import time
 import base64
 from cryptography.hazmat.primitives import hashes
+import jwt.algorithms
 import requests
 import jwt
+
 from cryptography import x509
 from .exceptions import (
     AccessTokenCertificateError,
     AccessTokenAudienceError,
     AccessTokenTimeError,
 )
+from . import conf
 from ib1 import directory
 
 log = logging.getLogger(__name__)
@@ -54,16 +57,41 @@ def _check_certificate(cert: x509.Certificate, decoded_token: dict):
     return True
 
 
-def get_openid_configuration(issuer_url: str) -> dict:
-    """
-    Get the well-known configuration for a given issuer URL
-    """
+# Fetch the public key from JWKS
+def fetch_public_key(kid):
     response = requests.get(
-        url=urllib.parse.urljoin(issuer_url, "/.well-known/openid-configuration"),
-        verify=False,
+        conf.AUTHENTICATION_SERVER + "/.well-known/jwks.json",
+        verify=conf.AUTHENTICATON_SERVER_VERIFICATION_BUNDLE,
     )
-    response.raise_for_status()
-    return response.json()
+    jwks = response.json()
+    print(jwks)
+    # Find the key with the matching `kid`
+    for key in jwks["keys"]:
+        print(key)
+        if key["kid"] == kid:
+            return jwt.algorithms.ECAlgorithm.from_jwk(key)
+    raise ValueError("Key ID not found in JWKS")
+
+
+# Validate a JWT
+def decode_token(token):
+    # Decode the header to get the `kid`
+    header = jwt.get_unverified_header(token)
+    print("##################", header)
+    kid = header["kid"]
+
+    # Fetch the public key using `kid`
+    public_key = fetch_public_key(kid)
+
+    # Validate the token
+    try:
+        payload = jwt.decode(token, key=public_key, algorithms=["ES256"])
+        print("Token is valid!")
+        print("Payload:", payload)
+    except jwt.exceptions.InvalidTokenError as e:
+        print("Invalid token:", e)
+        raise e
+    return payload
 
 
 def check_token(
@@ -87,10 +115,7 @@ def check_token(
     cert = directory.parse_cert(client_certificate)
     client_id = directory.extensions.decode_application(cert)
 
-    decoded = jwt.decode(
-        token,
-        options={"verify_signature": False},
-    )
+    decoded = decode_token(token)
     # Examples of tests to apply
     if decoded["client_id"] != client_id:
         raise AccessTokenAudienceError("Invalid Client ID")

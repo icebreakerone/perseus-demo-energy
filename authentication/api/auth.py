@@ -1,10 +1,13 @@
-import os
-import tempfile
 import base64
 import jwt
 import requests
 
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
+import jwt
+
 
 from .exceptions import AccessTokenDecodingError
 from . import conf
@@ -32,13 +35,13 @@ def decode_with_jwks(token: str, url: str):
     JWKS_URL = f"{url}/.well-known/jwks.json"
     jwks = requests.get(JWKS_URL).json()
     header = jwt.get_unverified_header(token)
-    print(jwt.decode(token, options={"verify_signature": False}))
     kid = header.get("kid")
     key = next((k for k in jwks["keys"] if k["kid"] == kid), None)
     if key is None:
         raise AccessTokenDecodingError(f"Key ID {kid} not found in JWKS")
     public_key = jwt.algorithms.RSAAlgorithm.from_jwk(key)
-
+    if not isinstance(public_key, rsa.RSAPublicKey):
+        raise TypeError("The public key is not an RSAPublicKey")
     # Decode and verify the token
     try:
         decoded_token = jwt.decode(
@@ -60,58 +63,41 @@ def create_enhanced_access_token(external_token: str, client_certificate: str) -
         directory.parse_cert(client_certificate)
     )
     claims["client_id"] = client_id
-    private_key_path = get_pem("key")
-    with open(private_key_path, "rb") as f:
-        private_key = f.read()
-    return jwt.encode(claims, private_key, algorithm="ES256")
+    with open(conf.JWT_SIGNING_KEY, "rb") as key_file:
+        private_key = serialization.load_pem_private_key(key_file.read(), password=None)
+    if not isinstance(private_key, ec.EllipticCurvePrivateKey):
+        raise TypeError("The private key is not an EllipticCurvePrivateKey")
+    return jwt.encode(claims, private_key, algorithm="ES256", headers={"kid": "1"})
 
 
-def get_pem(type: str = "key") -> str:
-    """
-    Returns the local path to a certificate if it exists,
-    or the tmp path to the matching certificate stored as an env var
-    """
-    if conf.CERTS[type] and os.path.exists(conf.CERTS[type]):
-        return conf.CERTS[type]
-    secret = os.environ.get(f"SERVER_{type.upper()}")
-    fp = tempfile.NamedTemporaryFile(delete=False)
-    if secret is not None:
-        fp.write(secret.encode("utf-8"))
-    else:
-        raise FileNotFoundError(f"Could not find the {type} in the environment")
-    return fp.name
+# Convert integers to base64url format
+def base64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")
 
 
-def create_jwks(public_key_pem_path, kid=1):
-    # Read the public key from the PEM file
-    with open(public_key_pem_path, "r") as f:
-        public_key_pem = f.read()
-    public_key_lines = public_key_pem.strip().split("\n")[
-        1:-1
-    ]  # Remove header and footer lines
-    public_key_base64 = "".join(public_key_lines)
-    public_key_der = base64.b64decode(public_key_base64)
+def create_jwks():
+    # Load existing EC private key from file
+    with open(conf.JWT_SIGNING_KEY, "rb") as key_file:
+        private_key = serialization.load_pem_private_key(key_file.read(), password=None)
 
-    # Extract x and y coordinates from DER encoded public key
-    public_key_x = int.from_bytes(public_key_der[27 : 27 + 32], byteorder="big")
-    public_key_y = int.from_bytes(public_key_der[59 : 59 + 32], byteorder="big")
+    # Extract the public key
+    public_key = private_key.public_key()
+    if not isinstance(public_key, ec.EllipticCurvePublicKey):
+        raise TypeError("The public key is not an EllipticCurvePublicKey")
 
-    # Construct the JWK (JSON Web Key)
-    jwk = {
-        "kty": "EC",
-        "alg": "ES256",
-        "use": "sig",
-        "kid": f"{kid}",
-        "crv": "P-256",
-        "x": base64.urlsafe_b64encode(
-            public_key_x.to_bytes(32, byteorder="big")
-        ).decode("utf-8"),
-        "y": base64.urlsafe_b64encode(
-            public_key_y.to_bytes(32, byteorder="big")
-        ).decode("utf-8"),
+    numbers = public_key.public_numbers()
+
+    # Convert EC public key to JWKS format
+    return {
+        "keys": [
+            {
+                "kty": "EC",
+                "kid": "1",  # Change this when rotating keys
+                "use": "sig",
+                "alg": "ES256",  # Matches P-256 (secp256r1)
+                "crv": "P-256",
+                "x": base64url_encode(numbers.x.to_bytes(32, "big")),
+                "y": base64url_encode(numbers.y.to_bytes(32, "big")),
+            }
+        ]
     }
-
-    # Create the JWKS (JSON Web Key Set)
-    jwks = {"keys": [jwk]}
-
-    return jwks

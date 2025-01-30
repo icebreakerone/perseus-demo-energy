@@ -230,8 +230,7 @@ async def get_openid_configuration():
 
 @app.get("/.well-known/jwks.json")
 async def get_jwks():
-    jwks = auth.create_jwks(auth.get_pem("cert"))
-    # Return JWKS as JSON response
+    jwks = auth.create_jwks()
     return jwks
 
 

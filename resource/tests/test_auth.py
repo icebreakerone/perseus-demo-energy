@@ -17,7 +17,6 @@ def mock_check_token(mocker):
     return mocker.patch("api.auth.check_token")
 
 
-@patch("api.auth.get_openid_configuration")
 @patch("api.auth.jwt.PyJWKClient")
 def test_check_token_integration(mock_jwk_client, mock_get_openid_config):  # noqa
     aud = "https://perseus-demo-energy.ib1.org/data-service/consumption"

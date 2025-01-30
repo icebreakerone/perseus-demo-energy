@@ -19,6 +19,7 @@ boto3 = "*"
 pytest-coverage = "*"
 asn1crypto = "*"
 ib1-directory = "*"
+jwcrypto = "*"
 
 [dev-packages]
 black = "*"

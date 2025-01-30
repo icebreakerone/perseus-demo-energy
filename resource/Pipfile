@@ -20,6 +20,7 @@ pytest-mock = "*"
 httpx = "*"
 ruff = "*"
 mypy = "*"
+jupyter = {extras = ["lab"], version = "*"}
 
 [requires]
 python_version = "3.12"

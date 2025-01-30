@@ -1,4 +1,5 @@
 [ v3_ca ]
 subjectKeyIdentifier=hash
 authorityKeyIdentifier=keyid:always,issuer
+keyUsage = critical, cRLSign, digitalSignature, keyCertSign
 basicConstraints = critical,CA:true
