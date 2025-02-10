@@ -94,7 +94,7 @@ The script will generate the required certificates, keys and bundles and move th
 
 **Authentication**
 
-- authentication/certs/jwt-signing-key.pem: Key for signing jwt tokens
+- authentication/certs/jwt-signing-key.pem: Key for signing jwt tokens. This is not a directory certificate.
 
 **Resource**
 
