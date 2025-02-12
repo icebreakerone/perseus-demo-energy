@@ -99,8 +99,6 @@ def decode_token(token):
     # Validate the token
     try:
         payload = jwt.decode(token, key=public_key, algorithms=["ES256"])
-        print("Token is valid!")
-        print("Payload:", payload)
     except jwt.exceptions.InvalidTokenError as e:
         print("Invalid token:", e)
         raise e

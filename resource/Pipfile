@@ -21,6 +21,7 @@ pytest-mock = "*"
 httpx = "*"
 ruff = "*"
 mypy = "*"
+responses = "*"
 
 [requires]
 python_version = "3.12"

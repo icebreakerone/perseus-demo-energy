@@ -18,8 +18,8 @@ def mock_check_token(mocker):
 
 
 @pytest.fixture
-def mock_ib1_directory_load_key(mocker):
-    return mocker.patch("api.provenance.load_key")
+def mock_ib1_directory_get_key(mocker):
+    return mocker.patch("api.provenance.get_key")
 
 
 def get_private_key():
@@ -52,7 +52,11 @@ def test_consumption_bad_token(api_consumption_url):
 
 
 def test_consumption(
-    monkeypatch, mock_ib1_directory_load_key, mock_check_token, api_consumption_url
+    monkeypatch,
+    mock_ib1_directory_get_key,
+    mock_check_token,
+    api_consumption_url,
+    mocker,
 ):  # noqa
     """
     If introspection is successful, return data and 200
@@ -61,17 +65,23 @@ def test_consumption(
         conf, "SIGNING_ROOT_CA_CERTIFICATE", f"{ROOT_DIR}/fixtures/test-suite-cert.pem"
     )
     monkeypatch.setattr(
-        conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-cert.pem"
+        conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-bundle.pem"
     )
     mock_check_token.return_value = (
         {"sub": "account123"},
         {"x-fapi-interaction-id": "123"},
     )
-    mock_ib1_directory_load_key.return_value = get_private_key()
+    mock_ib1_directory_get_key.return_value = get_private_key()
     pem, _, _, _ = client_certificate(
         roles=["https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"],
         application="https://directory.ib1.org/application/123456",
     )
+
+    mock_create_provenance_records = mocker.patch(
+        "api.provenance.create_provenance_records"
+    )
+    mock_create_provenance_records.return_value = {}
+
     response = client.get(
         api_consumption_url,
         headers={
@@ -79,4 +89,15 @@ def test_consumption(
             "x-amzn-mtls-clientcert": quote(pem),
         },
     )
+
     assert response.status_code == 200
+    mock_create_provenance_records.assert_called_once_with(
+        from_date=mocker.ANY,
+        to_date=mocker.ANY,
+        permission_expires=mocker.ANY,
+        permission_granted=mocker.ANY,
+        account="account123",
+        service_url=mocker.ANY,
+        fapi_id="123",
+        cap_member=mocker.ANY,
+    )

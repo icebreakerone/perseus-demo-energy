@@ -2,7 +2,6 @@ from typing import Annotated
 import json
 
 import requests
-import jwt
 
 from fastapi import (
     FastAPI,
@@ -203,7 +202,7 @@ async def token(
 
     # Add in our required client certificate thumbprint
     enhanced_token = auth.create_enhanced_access_token(
-        result["access_token"], x_amzn_mtls_clientcert
+        result["access_token"], x_amzn_mtls_clientcert, str(conf.OAUTH_URL)
     )
     return models.TokenResponse(
         access_token=enhanced_token,
@@ -230,7 +229,7 @@ async def get_openid_configuration():
 
 @app.get("/.well-known/jwks.json")
 async def get_jwks():
-    jwks = auth.create_jwks()
+    jwks = auth.create_jwks(conf.JWT_SIGNING_KEY)
     return jwks
 
 

@@ -1,18 +1,12 @@
-"""
-Placeholder for provenance records
-"""
-
 import datetime
 
 from cryptography import x509
-from cryptography.hazmat.primitives import serialization
 
 from ib1.provenance import Record
 from ib1.provenance.signing import SignerInMemory
 from ib1.provenance.certificates import (
     CertificatesProviderSelfContainedRecord,
 )
-from ib1.directory.certificates import load_key
 from . import conf
 from .keystores import get_key, get_certificate
 

@@ -2,7 +2,7 @@ import logging
 from functools import lru_cache
 
 import boto3
-from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
 from .exceptions import (
@@ -44,16 +44,12 @@ def get_key(key_path: str) -> PrivateKeyTypes:
         ]["Value"]
         key_pem = param_value.encode("utf-8")
     except (ssm_client.exceptions.ParameterNotFound, ssm_client.exceptions.ClientError):
-        log.warning(
-            f"{issuer_type.title()} signing key not found in SSM. Trying local file."
-        )
+        log.warning("signing key not found in SSM. Trying local file.")
         try:
             with open(conf.SIGNING_KEY, "rb") as key_file:
                 key_pem = key_file.read()
         except FileNotFoundError:
-            raise KeyNotFoundError(
-                f"{issuer_type.title()} signing key not found in SSM or local file."
-            )
+            raise KeyNotFoundError("signing key not found in SSM or local file.")
     return serialization.load_pem_private_key(
         key_pem, password=None, backend=default_backend()
     )

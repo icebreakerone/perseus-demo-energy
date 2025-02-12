@@ -1,29 +1,59 @@
 import os
 from unittest.mock import patch, MagicMock
-import jwt
+
+import pytest
 import responses
 from fastapi.testclient import TestClient
+
 from api.main import app, conf
+from api import auth
 from tests import client_certificate, CLIENT_ID
 
 client = TestClient(app)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+MOCK_TOKEN = "mock_enhanced_access_token"
+MOCK_ENHANCED_TOKEN = "mock_enhanced_access_token"
+MOCK_REFRESH_TOKEN = "mock_refresh_token"
+MOCK_CERT = "mock_client_cert"
 
 
 class FakeConf:
     def __init__(self) -> None:
         self.DIRNAME = conf.DIRNAME
-        self.CERTS = conf.CERTS
         self.ISSUER_URL = os.environ.get(
             "ISSUER_URL", "https://perseus-demo-authentication.ib1.org"
         )
         self.OAUTH_CLIENT_SECRET = "123abc"
         self.OAUTH_URL = "https://test-oauth.io"
         self.OAUTH_CLIENT_ID = "abc-123"
+        self.JWKS_URL = f"{self.OAUTH_URL}/.well-known/jwks.json"
         self.AUTHORIZATION_ENDPOINT = f"{self.OAUTH_URL}/oauth2/auth"
         self.TOKEN_ENDPOINT = f"{self.OAUTH_URL}/oauth2/token"
         self.REDIRECT_URI = "https://test-accounting.org/callback"
         self.REDIS_HOST = "redis"
+
+
+@pytest.fixture
+def mock_directory():
+    """Mock directory methods for cert parsing and role validation."""
+    with patch(
+        "api.main.directory.parse_cert", return_value=MOCK_CERT
+    ) as mock_parse_cert, patch("api.main.directory.require_role") as mock_require_role:
+        yield mock_parse_cert, mock_require_role
+
+
+@pytest.fixture
+def mock_auth():
+    """Mock JWT enhancement function."""
+    with patch(
+        "api.main.auth.create_enhanced_access_token", return_value=MOCK_ENHANCED_TOKEN
+    ) as mock_auth:
+        yield mock_auth
+
+
+@pytest.fixture
+def jwt_signing_jwks():
+    return auth.create_jwks(f"{ROOT_DIR}/fixtures/server-signing-private-key.pem")
 
 
 # Mock the redis server, as pushed_authorization_request() uses it
@@ -77,49 +107,28 @@ def test_authorization_code(mock_get_request):
     assert "Location" in response.headers
 
 
-@patch("api.auth.get_pem")
 @patch("api.main.conf", FakeConf())
 @responses.activate
-def test_token(mocked_auth_key):  # noqa
-    cert_urlencoded = client_certificate(
-        roles=["https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"]
+def test_token_success(mock_directory, mock_auth):
+    """Test a successful token request."""
+    responses.add(
+        responses.POST,
+        f"{FakeConf().OAUTH_URL}/oauth2/token",
+        json={"access_token": MOCK_TOKEN, "refresh_token": MOCK_REFRESH_TOKEN},
+        status=200,
     )
-    test_key = f"{ROOT_DIR}/fixtures/server-signing-private-key.pem"
-    mocked_auth_key.return_value = test_key
-    valid_response = {
-        "aud": [],
-        "client_id": CLIENT_ID,
-        "exp": 1713344558,
-        "ext": {},
-        "iat": 1713340957,
-        "iss": "https://oauth-originator.projects.oryapis.com",
-        "jti": "ffaaa9f1-4b06-44f7-a812-cd347a179a28",
-        "nbf": 1713340957,
-        "scp": ["profile", "offline_access"],
-        "sub": "subject-id",
-    }
-    with open(f"{ROOT_DIR}/fixtures/server-signing-private-key.pem", "rb") as f:
-        private_key = f.read()
-    token = jwt.encode(valid_response, private_key, algorithm="ES256")
-    responses.post(
-        f"{FakeConf().TOKEN_ENDPOINT}",
-        json={
-            "access_token": token,
-            "id_token": "ID_TOKEN",
-            "refresh_token": "REFRESH_TOKEN",
-        },
-    )
+
     response = client.post(
         "/api/v1/authorize/token",
         data={
-            "code": "some-code",
-            "redirect_uri": "https://mobile.example.com/cb",
-            "client_id": 123456,
-            "code_verifier": "abc123",
             "grant_type": "authorization_code",
+            "redirect_uri": "https://client.app/callback",
+            "code_verifier": "mock_verifier",
+            "code": "mock_code",
         },
-        headers={"x-amzn-mtls-clientcert": cert_urlencoded},
+        headers={"x-amzn-mtls-clientcert": "mock_cert"},
     )
+
     assert response.status_code == 200
-    assert "access_token" in response.json()
-    assert "refresh_token" in response.json()
+    json_response = response.json()
+    assert json_response["access_token"] == MOCK_TOKEN

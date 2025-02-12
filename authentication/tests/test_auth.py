@@ -3,7 +3,6 @@ import jwt
 from jwt.algorithms import RSAAlgorithm
 from unittest.mock import patch, MagicMock
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives import serialization
 import json
 import api.conf
 from api.auth import decode_with_jwks  # Replace 'api.auth' with your actual module name

@@ -5,8 +5,6 @@ import requests
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
-import jwt
 
 
 from .exceptions import AccessTokenDecodingError
@@ -55,9 +53,11 @@ def decode_with_jwks(token: str, url: str):
     return decoded_token
 
 
-def create_enhanced_access_token(external_token: str, client_certificate: str) -> str:
+def create_enhanced_access_token(
+    external_token: str, client_certificate: str, external_oauth_url: str
+) -> str:
     logger.info("Creating enhanced access token")
-    claims = decode_with_jwks(external_token, str(conf.OAUTH_URL))
+    claims = decode_with_jwks(external_token, external_oauth_url)
     logger.info(f"Claims: {claims}")
     claims["cnf"] = {"x5t#S256": get_thumbprint(client_certificate)}
     client_id = directory.extensions.decode_application(
@@ -75,9 +75,9 @@ def base64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")
 
 
-def create_jwks():
+def create_jwks(key_path: str):
     # Load existing EC private key from file
-    private_key = keystores.get_key(conf.JWT_SIGNING_KEY)
+    private_key = keystores.get_key(key_path)
     # Extract the public key
     public_key = private_key.public_key()
     if not isinstance(public_key, ec.EllipticCurvePublicKey):

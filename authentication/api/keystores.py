@@ -9,7 +9,6 @@ from .exceptions import (
     KeyNotFoundError,
 )
 
-from . import conf
 
 log = logging.getLogger(__name__)
 
@@ -44,12 +43,15 @@ def get_key(key_path: str) -> PrivateKeyTypes:
         ]["Value"]
         key_pem = param_value.encode("utf-8")
     except (ssm_client.exceptions.ParameterNotFound, ssm_client.exceptions.ClientError):
-        log.warning(f"jwt signing key not found in SSM. Trying local file.")
+        log.warning("jwt signing key not found in SSM. Trying local file.")
         try:
-            with open(conf.JWT_SIGNING_KEY, "rb") as key_file:
+            with open(key_path, "rb") as key_file:
                 key_pem = key_file.read()
         except FileNotFoundError:
-            raise KeyNotFoundError(f"jwt signing key not found in SSM or local file.")
-    return serialization.load_pem_private_key(
+            raise KeyNotFoundError("jwt signing key not found in SSM or local file.")
+    print(key_pem)
+    loaded_key = serialization.load_pem_private_key(
         key_pem, password=None, backend=default_backend()
     )
+    print(loaded_key)
+    return loaded_key
