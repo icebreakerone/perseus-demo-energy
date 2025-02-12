@@ -58,7 +58,7 @@ def test_consumption(
     If introspection is successful, return data and 200
     """
     monkeypatch.setattr(
-        conf, "ROOT_CA_CERTIFICATE", f"{ROOT_DIR}/fixtures/test-suite-cert.pem"
+        conf, "SIGNING_ROOT_CA_CERTIFICATE", f"{ROOT_DIR}/fixtures/test-suite-cert.pem"
     )
     monkeypatch.setattr(
         conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-cert.pem"

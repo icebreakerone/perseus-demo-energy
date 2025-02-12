@@ -1,0 +1,49 @@
+Parameters:
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  App:
+    Type: String
+    Description: Your application's name.
+Resources:
+  directorySSMReadAccessPolicy:
+    Metadata:
+      'aws:copilot:description': 'Allow direct access to ssm parameters and s3 buckets with certificates'
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - Grants read access to ssm parameters for the directory ${Env} service. 
+        - Env: !Ref Env
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: SSMReadActions
+            Effect: Allow
+            Action:
+              - ssm:GetParameter
+              - ssm:GetParameters
+            Resource: 
+              - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/copilot/perseus-demo-authentication/${Env}/*'
+          - Sid: DecryptTaggedKMSKey
+            Effect: 'Allow'
+            Action:
+              - 'kms:Decrypt'
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+            Condition:
+              StringEquals:
+                'aws:ResourceTag/copilot-application': !Sub '${App}'
+                'aws:ResourceTag/copilot-environment': !Sub '${Env}'
+          - Sid: S3ReadAccess
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !Sub 'arn:aws:s3:::perseus-demo-energy-certificate-store'
+              - !Sub 'arn:aws:s3:::perseus-demo-energy-certificate-store/*'
+
+Outputs:
+  directorySSMReadAccessPolicy:
+    Description: "The IAM::ManagedPolicy to attach to the task role"
+    Value: !Ref directorySSMReadAccessPolicy

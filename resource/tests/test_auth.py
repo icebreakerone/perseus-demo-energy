@@ -3,6 +3,7 @@ import jwt
 import time
 
 from unittest.mock import patch
+
 from tests import CLIENT_ID, CATALOG_ENTRY_URL, client_certificate  # noqa
 import api.auth
 
@@ -44,3 +45,4 @@ def test_check_token_integration(mock_jwk_client, mock_get_openid_config):  # no
     assert result["aud"] == aud
     assert result["client_id"] == CLIENT_ID
     assert "x-fapi-interaction-id" in headers
+    import api.auth

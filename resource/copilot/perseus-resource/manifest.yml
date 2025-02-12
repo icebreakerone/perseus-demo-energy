@@ -35,6 +35,12 @@ variables:                    # Pass environment variables as key value pairs.
   ISSUER_URL: "https://perseus-demo-authentication.ib1.org"
   OAUTH_CLIENT_ID: f67916ce-de33-4e2f-a8e3-cbd5f6459c30
   API_DOMAIN: perseus-demo-energy.ib1.org
+  ENV: ${COPILOT_ENVIRONMENT_NAME}
+  OAUTH_CLIENT_SECRET: mUwYj6FtSrkyg95LAcxIiXLxW
+  SIGNING_KEY: "/certs/edp-demo-signing-key.pem"
+  SIGNING_ROOT_CA_CERTIFICATE: s3://perseus-demo-energy-certificate-store/signing-ca-cert.pem
+  SIGNING_BUNDLE: s3://perseus-demo-energy-certificate-store/signing-issued-intermediate-bundle.pem
+  AWS_DEFAULT_REGION: eu-west-2
 
 # You can override any of the values defined above by environment.
 secrets:

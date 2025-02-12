@@ -12,6 +12,7 @@ import jwt
 from .exceptions import AccessTokenDecodingError
 from . import conf
 from .logger import logger
+from . import keystores
 from ib1 import directory
 
 
@@ -63,8 +64,7 @@ def create_enhanced_access_token(external_token: str, client_certificate: str) -
         directory.parse_cert(client_certificate)
     )
     claims["client_id"] = client_id
-    with open(conf.JWT_SIGNING_KEY, "rb") as key_file:
-        private_key = serialization.load_pem_private_key(key_file.read(), password=None)
+    private_key = keystores.get_key(conf.JWT_SIGNING_KEY)
     if not isinstance(private_key, ec.EllipticCurvePrivateKey):
         raise TypeError("The private key is not an EllipticCurvePrivateKey")
     return jwt.encode(claims, private_key, algorithm="ES256", headers={"kid": "1"})
@@ -77,9 +77,7 @@ def base64url_encode(data: bytes) -> str:
 
 def create_jwks():
     # Load existing EC private key from file
-    with open(conf.JWT_SIGNING_KEY, "rb") as key_file:
-        private_key = serialization.load_pem_private_key(key_file.read(), password=None)
-
+    private_key = keystores.get_key(conf.JWT_SIGNING_KEY)
     # Extract the public key
     public_key = private_key.public_key()
     if not isinstance(public_key, ec.EllipticCurvePublicKey):

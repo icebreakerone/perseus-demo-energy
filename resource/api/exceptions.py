@@ -1,5 +1,19 @@
+class ConfigrationError(Exception):
+    """
+    Base class for configuration errors
+    """
+
+
+class KeyNotFoundError(ConfigrationError):
+    pass
+
+
+class CertificateNotFoundError(ConfigrationError):
+    pass
+
+
 class FrameworkAuthError(Exception):
-    """Base class for exceptions in this module."""
+    """Base class for certificate and token exceptions"""
 
 
 class CertificateError(FrameworkAuthError):

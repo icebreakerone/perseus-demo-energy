@@ -2,6 +2,10 @@ class FrameworkAuthError(Exception):
     """Base class for exceptions in this module."""
 
 
+class KeyNotFoundError(FrameworkAuthError):
+    pass
+
+
 class CertificateError(FrameworkAuthError):
     """
     Base class for errors related to the client certificate

@@ -1,10 +1,10 @@
 import logging
-import urllib.parse
 import uuid
 from typing import Optional, Tuple
 import email.utils
 import time
 import base64
+
 from cryptography.hazmat.primitives import hashes
 import jwt.algorithms
 import requests
@@ -22,7 +22,21 @@ from ib1 import directory
 log = logging.getLogger(__name__)
 
 
-def _check_certificate(cert: x509.Certificate, decoded_token: dict):
+def check_certificate(cert: x509.Certificate, decoded_token: dict) -> bool:
+    """
+    Validates the certificate against the thumbprint provided in the decoded token.
+
+    Args:
+        cert (x509.Certificate): The client certificate to be checked.
+        decoded_token (dict): The decoded JWT token containing the certificate thumbprint.
+
+    Raises:
+        AccessTokenCertificateError: If the token does not contain a certificate binding or if the
+                                     thumbprint in the token does not match the presented client certificate.
+
+    Returns:
+        bool: True if the certificate is valid and matches the thumbprint in the token.
+    """
 
     if "cnf" in decoded_token:
         # thumbprint from token
@@ -58,16 +72,16 @@ def _check_certificate(cert: x509.Certificate, decoded_token: dict):
 
 
 # Fetch the public key from JWKS
-def fetch_public_key(kid):
+def fetch_public_key(
+    kid,
+) -> jwt.algorithms.EllipticCurvePrivateKey | jwt.algorithms.EllipticCurvePublicKey:
     response = requests.get(
         conf.AUTHENTICATION_SERVER + "/.well-known/jwks.json",
         verify=conf.AUTHENTICATON_SERVER_VERIFICATION_BUNDLE,
     )
     jwks = response.json()
-    print(jwks)
     # Find the key with the matching `kid`
     for key in jwks["keys"]:
-        print(key)
         if key["kid"] == kid:
             return jwt.algorithms.ECAlgorithm.from_jwk(key)
     raise ValueError("Key ID not found in JWKS")
@@ -77,7 +91,6 @@ def fetch_public_key(kid):
 def decode_token(token):
     # Decode the header to get the `kid`
     header = jwt.get_unverified_header(token)
-    print("##################", header)
     kid = header["kid"]
 
     # Fetch the public key using `kid`
@@ -123,7 +136,7 @@ def check_token(
         raise AccessTokenTimeError("Token expired")
     if decoded["iat"] > int(time.time()):
         raise AccessTokenTimeError("Token issued in the future")
-    _check_certificate(cert, decoded)
+    check_certificate(cert, decoded)
     headers = {}
     # FAPI requires that the resource server set the date header in the response
     headers["Date"] = email.utils.formatdate()

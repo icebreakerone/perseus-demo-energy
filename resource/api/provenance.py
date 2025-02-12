@@ -14,6 +14,7 @@ from ib1.provenance.certificates import (
 )
 from ib1.directory.certificates import load_key
 from . import conf
+from .keystores import get_key, get_certificate
 
 
 TRUST_FRAMEWORK_URL = "https://registry.core.trust.ib1.org/trust-framework"
@@ -29,13 +30,13 @@ def create_provenance_records(
     fapi_id: str,
     cap_member: str,
 ) -> bytes:
-    """ """
+
     certificate_provider = CertificatesProviderSelfContainedRecord(
-        conf.SIGNING_ROOT_CA_CERTIFICATE
+        get_certificate(conf.SIGNING_ROOT_CA_CERTIFICATE)
     )
-    with open(conf.SIGNING_BUNDLE, "rb") as certs:
-        signer_edp_certs = x509.load_pem_x509_certificates(certs.read())
-    # Load key into memory from file here
+    signer_edp_certs = x509.load_pem_x509_certificates(
+        get_certificate(conf.SIGNING_BUNDLE)
+    )
     with open(conf.SIGNING_KEY, "rb") as key_file:
         private_key = serialization.load_pem_private_key(key_file.read(), password=None)
     signer_edp = SignerInMemory(
