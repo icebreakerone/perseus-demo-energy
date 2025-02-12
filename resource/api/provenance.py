@@ -37,8 +37,7 @@ def create_provenance_records(
     signer_edp_certs = x509.load_pem_x509_certificates(
         get_certificate(conf.SIGNING_BUNDLE)
     )
-    with open(conf.SIGNING_KEY, "rb") as key_file:
-        private_key = serialization.load_pem_private_key(key_file.read(), password=None)
+    private_key = get_key(conf.SIGNING_KEY)
     signer_edp = SignerInMemory(
         certificate_provider,
         signer_edp_certs,  # list containing certificate and issuer chain

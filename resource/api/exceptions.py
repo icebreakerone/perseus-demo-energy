@@ -1,14 +1,14 @@
-class ConfigrationError(Exception):
+class ConfigurationError(Exception):
     """
     Base class for configuration errors
     """
 
 
-class KeyNotFoundError(ConfigrationError):
+class KeyNotFoundError(ConfigurationError):
     pass
 
 
-class CertificateNotFoundError(ConfigrationError):
+class CertificateNotFoundError(ConfigurationError):
     pass
 
 
