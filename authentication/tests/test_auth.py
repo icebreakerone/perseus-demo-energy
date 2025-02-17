@@ -1,120 +1,125 @@
-import pytest
 import jwt
-from jwt.algorithms import RSAAlgorithm
-from unittest.mock import patch, MagicMock
-from cryptography.hazmat.primitives.asymmetric import rsa
+import pytest
 import json
-import api.conf
-from api.auth import decode_with_jwks  # Replace 'api.auth' with your actual module name
+from unittest.mock import patch
+import time
+import os
+
+from jwt.algorithms import ECAlgorithm
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+
+from api.auth import (
+    decode_with_jwks,
+    create_jwks,
+    create_enhanced_access_token,
+    get_thumbprint,
+)
+from tempfile import NamedTemporaryFile
+from api.exceptions import (
+    AccessTokenDecodingError,
+)
+
+TEST_PRIVATE_KEY = ec.generate_private_key(ec.SECP256R1(), default_backend())
+TEST_PUBLIC_KEY = TEST_PRIVATE_KEY.public_key()
+ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+
+
+# Create a JWKS response with the EC public key
+def create_mock_jwks(kid="test-key-id"):
+    jwk = json.loads(ECAlgorithm.to_jwk(TEST_PUBLIC_KEY))
+    jwk["kid"] = kid  # Add the Key ID to match the token header
+    jwk["use"] = "sig"
+    return {"keys": [jwk]}
 
 
 @pytest.fixture
-def rsa_key_pair():
-    """Generate an RSA key pair for testing."""
-    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    public_key = private_key.public_key()
+def mock_jwks():
+    jwks_url = "https://mocked-jwks.com/.well-known/jwks.json"
+    mock_response = json.dumps(create_mock_jwks()).encode()
 
-    # Export keys in JWK format as dictionaries
-    private_jwk = json.loads(RSAAlgorithm.to_jwk(private_key))
-    public_jwk = json.loads(RSAAlgorithm.to_jwk(public_key))
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_urlopen.return_value.__enter__.return_value.read.return_value = (
+            mock_response
+        )
+        yield jwks_url
 
-    return private_key, public_key, private_jwk, public_jwk
+
+def test_decode_valid_token(mock_jwks):
+    jwks_url = "https://mocked-jwks.com/.well-known/jwks.json"
+    token = jwt.encode(
+        {"sub": "123"},
+        TEST_PRIVATE_KEY,
+        algorithm="ES256",
+        headers={"kid": "test-key-id"},
+    )
+    payload = decode_with_jwks(token, jwks_url)
+    assert payload["sub"] == "123"
 
 
-@pytest.fixture
-def mock_jwks_response(rsa_key_pair):
-    """Fixture for mocking a JWKS response."""
-    _, public_key, _, public_jwk = rsa_key_pair
-    jwks_key = {
-        "kid": "test-key-id",
-        "kty": "RSA",
-        "alg": "RS256",
-        "use": "sig",
-        **public_jwk,
+def test_invalid_signature(mock_jwks):
+    wrong_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
+    token = jwt.encode(
+        {"sub": "123"}, wrong_key, algorithm="ES256", headers={"kid": "test-key-id"}
+    )
+
+    with pytest.raises(AccessTokenDecodingError):
+        decode_with_jwks(token, mock_jwks)
+
+
+def test_missing_kid(mock_jwks):
+    token = jwt.encode({"sub": "123"}, TEST_PRIVATE_KEY, algorithm="ES256")
+
+    with pytest.raises(KeyError):
+        decode_with_jwks(token, mock_jwks)
+
+
+def test_create_jwks():
+    # write TEST_PRIVATE_KEY to a temp file
+    with NamedTemporaryFile(delete=False) as temp_file:
+        temp_file.write(
+            TEST_PRIVATE_KEY.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+        )
+        temp_file_path = temp_file.name
+    result = create_jwks(temp_file_path)
+    assert "keys" in result
+    assert len(result["keys"]) == 1
+    assert result["keys"][0]["kty"] == "EC"
+    assert result["keys"][0]["crv"] == "P-256"
+    assert result["keys"][0]["use"] == "sig"
+
+    assert result["keys"][0]["kid"] == "1"
+
+
+@patch("api.auth.decode_with_jwks")
+@patch("api.auth.keystores.get_key")
+def test_create_enhanced_access_token(mock_get_key, mock_decode_with_jwks):
+    mock_decode_with_jwks.return_value = {
+        "sub": "123",
+        "exp": int(time.time()) + 3600,
+        "iat": int(time.time()) - 10,
     }
-    return {"keys": [jwks_key]}
-
-
-@patch("api.auth.requests.get")
-def test_decode_with_jwks_valid_token(mock_get, mock_jwks_response, rsa_key_pair):
-    """Test decoding a valid token."""
-    private_key, _, _, _ = rsa_key_pair
-
-    # Mock the JWKS endpoint response
-    mock_get.return_value = MagicMock(status_code=200, json=lambda: mock_jwks_response)
-
-    # Create a token signed with the private key
-    token = jwt.encode(
-        {
-            "sub": "1234567890",
-            "name": "John Doe",
-            "iat": 1516239022,
-            "iss": api.conf.OAUTH_URL,
-        },
-        key=private_key,
-        algorithm="RS256",
-        headers={"kid": "test-key-id"},
+    mock_private_key = TEST_PRIVATE_KEY
+    mock_private_key_pem = mock_private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    mock_get_key.return_value = mock_private_key
+    with open(f"{ROOT_DIR}/fixtures/test-client-cert.pem", "r") as f:
+        test_certificate = f.read()
+    enhanced_token = create_enhanced_access_token(
+        {}, test_certificate, "https://mocked-oauth.com/.well-known/jwks.json"
     )
 
-    # Call the function
-    url = api.conf.OAUTH_URL
-    decoded_token = decode_with_jwks(token, url)
-
-    # Assertions
-    assert decoded_token["sub"] == "1234567890"
-    assert decoded_token["name"] == "John Doe"
-
-
-@patch("api.auth.requests.get")
-def test_decode_with_jwks_invalid_kid(mock_get, rsa_key_pair):
-    """Test decoding a token with an invalid `kid`."""
-    private_key, public_key, _, _ = rsa_key_pair
-
-    # Mock the JWKS endpoint response with an unrelated key ID
-    mock_get.return_value = MagicMock(
-        status_code=200,
-        json=lambda: {
-            "keys": [
-                {"kid": "another-key-id", **json.loads(RSAAlgorithm.to_jwk(public_key))}
-            ]
-        },
+    decoded_enhanced_token = jwt.decode(
+        enhanced_token, TEST_PUBLIC_KEY, algorithms=["ES256"]
     )
-
-    # Create a token
-    token = jwt.encode(
-        {"sub": "1234567890"},
-        key=private_key,
-        algorithm="RS256",
-        headers={"kid": "test-key-id"},
-    )
-
-    # Call the function and assert it raises a ValueError
-    url = api.conf.OAUTH_URL
-    with pytest.raises(
-        api.exceptions.AccessTokenDecodingError,
-    ):
-        decode_with_jwks(token, url)
-
-
-@patch("api.auth.requests.get")
-def test_decode_with_jwks_expired_token(mock_get, mock_jwks_response, rsa_key_pair):
-    """Test decoding an expired token."""
-    private_key, _, _, _ = rsa_key_pair
-
-    # Mock the JWKS endpoint response
-    mock_get.return_value = MagicMock(status_code=200, json=lambda: mock_jwks_response)
-
-    # Create an expired token
-    expired_token = jwt.encode(
-        {"sub": "1234567890", "exp": 0},  # Token is already expired
-        key=private_key,
-        algorithm="RS256",
-        headers={"kid": "test-key-id"},
-    )
-
-    # Call the function and assert it raises an AccessTokenDecodingError
-    url = api.conf.OAUTH_URL
-    with pytest.raises(
-        Exception, match="Token has expired!"
-    ):  # Replace Exception with your custom exception
-        decode_with_jwks(expired_token, url)
+    assert "cnf" in decoded_enhanced_token
+    assert "x5t#S256" in decoded_enhanced_token["cnf"]
+    assert decoded_enhanced_token["cnf"]["x5t#S256"] == get_thumbprint(test_certificate)

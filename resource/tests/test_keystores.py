@@ -42,11 +42,9 @@ def test_get_key_ssm(mock_get_boto3_client):
     mock_ssm_client = mock_get_boto3_client.return_value
     mock_ssm_client.exceptions.ParameterNotFound = ClientError
     mock_ssm_client.exceptions.ClientError = ClientError
-    with open(
-        f"{ROOT_DIR}/fixtures/test-suite-key.pem", "r"
-    ) as f:  # SSM keys are stored as secure strings, not bytes
-        return f.read()
-    mock_ssm_client.get_parameter.return_value = {"Parameter": {"Value": valid_key()}}
+    mock_ssm_client.get_parameter.return_value = {
+        "Parameter": {"Value": valid_key().decode()}
+    }
     key = get_key("test_key_path")
     mock_ssm_client.get_parameter.assert_called_once_with(
         Name="test_key_path", WithDecryption=True

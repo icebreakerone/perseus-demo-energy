@@ -53,5 +53,4 @@ def get_key(key_path: str) -> PrivateKeyTypes:
     loaded_key = serialization.load_pem_private_key(
         key_pem, password=None, backend=default_backend()
     )
-    print(loaded_key)
     return loaded_key

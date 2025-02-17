@@ -1,7 +1,8 @@
 import base64
-import jwt
-import requests
+import json
 
+import jwt
+from jwt import algorithms
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
@@ -28,29 +29,21 @@ def get_thumbprint(cert: str) -> str:
     return thumbprint
 
 
-def decode_with_jwks(token: str, url: str):
-
-    # Define the JWKS URL
-    JWKS_URL = f"{url}/.well-known/jwks.json"
-    jwks = requests.get(JWKS_URL).json()
+def decode_with_jwks(token: str, jwks_url: str) -> dict:
+    """
+    Validate a token using jwks_url
+    """
+    jwks_client = jwt.PyJWKClient(jwks_url)
     header = jwt.get_unverified_header(token)
-    kid = header.get("kid")
-    key = next((k for k in jwks["keys"] if k["kid"] == kid), None)
-    if key is None:
-        raise AccessTokenDecodingError(f"Key ID {kid} not found in JWKS")
-    public_key = jwt.algorithms.RSAAlgorithm.from_jwk(key)
-    if not isinstance(public_key, rsa.RSAPublicKey):
-        raise TypeError("The public key is not an RSAPublicKey")
-    # Decode and verify the token
+    key = jwks_client.get_signing_key(header["kid"]).key
     try:
-        decoded_token = jwt.decode(
-            token, key=public_key, algorithms=["RS256"], issuer=conf.OAUTH_URL
-        )
+        payload = jwt.decode(token, key, [header["alg"]])
     except jwt.ExpiredSignatureError:
         raise AccessTokenDecodingError("Token has expired!")
     except jwt.InvalidTokenError as e:
         raise AccessTokenDecodingError(f"Invalid token: {e}")
-    return decoded_token
+
+    return payload
 
 
 def create_enhanced_access_token(
@@ -65,6 +58,7 @@ def create_enhanced_access_token(
     )
     claims["client_id"] = client_id
     private_key = keystores.get_key(conf.JWT_SIGNING_KEY)
+    print(private_key)
     if not isinstance(private_key, ec.EllipticCurvePrivateKey):
         raise TypeError("The private key is not an EllipticCurvePrivateKey")
     return jwt.encode(claims, private_key, algorithm="ES256", headers={"kid": "1"})
@@ -83,19 +77,8 @@ def create_jwks(key_path: str):
     if not isinstance(public_key, ec.EllipticCurvePublicKey):
         raise TypeError("The public key is not an EllipticCurvePublicKey")
 
-    numbers = public_key.public_numbers()
-
-    # Convert EC public key to JWKS format
-    return {
-        "keys": [
-            {
-                "kty": "EC",
-                "kid": "1",  # Change this when rotating keys
-                "use": "sig",
-                "alg": "ES256",  # Matches P-256 (secp256r1)
-                "crv": "P-256",
-                "x": base64url_encode(numbers.x.to_bytes(32, "big")),
-                "y": base64url_encode(numbers.y.to_bytes(32, "big")),
-            }
-        ]
-    }
+    jwks = json.loads(algorithms.ECAlgorithm.to_jwk(public_key))
+    jwks["kid"] = "1"  # Change this when rotating keys
+    jwks["use"] = "sig"
+    jwks["alg"] = "ES256"
+    return {"keys": [jwks]}

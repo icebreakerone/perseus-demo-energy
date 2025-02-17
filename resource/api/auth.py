@@ -7,7 +7,6 @@ import base64
 
 from cryptography.hazmat.primitives import hashes
 import jwt.algorithms
-import requests
 import jwt
 
 from cryptography import x509
@@ -15,6 +14,7 @@ from .exceptions import (
     AccessTokenCertificateError,
     AccessTokenAudienceError,
     AccessTokenTimeError,
+    AccessTokenDecodingError,
 )
 from . import conf
 from ib1 import directory
@@ -71,37 +71,19 @@ def check_certificate(cert: x509.Certificate, decoded_token: dict) -> bool:
     return True
 
 
-# Fetch the public key from JWKS
-def fetch_public_key(
-    kid,
-) -> jwt.algorithms.EllipticCurvePrivateKey | jwt.algorithms.EllipticCurvePublicKey:
-    response = requests.get(
-        conf.AUTHENTICATION_SERVER + "/.well-known/jwks.json",
-        verify=conf.AUTHENTICATON_SERVER_VERIFICATION_BUNDLE,
-    )
-    jwks = response.json()
-    # Find the key with the matching `kid`
-    for key in jwks["keys"]:
-        if key["kid"] == kid:
-            return jwt.algorithms.ECAlgorithm.from_jwk(key)
-    raise ValueError("Key ID not found in JWKS")
-
-
-# Validate a JWT
-def decode_token(token):
-    # Decode the header to get the `kid`
+def decode_with_jwks(token: str, jwks_url: str) -> dict:
+    """
+    Validate a token using jwks_url
+    """
+    jwks_client = jwt.PyJWKClient(jwks_url)
     header = jwt.get_unverified_header(token)
-    kid = header["kid"]
-
-    # Fetch the public key using `kid`
-    public_key = fetch_public_key(kid)
-
-    # Validate the token
+    key = jwks_client.get_signing_key(header["kid"]).key
     try:
-        payload = jwt.decode(token, key=public_key, algorithms=["ES256"])
-    except jwt.exceptions.InvalidTokenError as e:
-        print("Invalid token:", e)
-        raise e
+        payload = jwt.decode(token, key, [header["alg"]])
+    except jwt.ExpiredSignatureError:
+        raise AccessTokenTimeError("Token has expired!")
+    except jwt.InvalidTokenError as e:
+        raise AccessTokenDecodingError(f"Invalid token: {e}")
     return payload
 
 
@@ -126,7 +108,9 @@ def check_token(
     cert = directory.parse_cert(client_certificate)
     client_id = directory.extensions.decode_application(cert)
 
-    decoded = decode_token(token)
+    decoded = decode_with_jwks(
+        token, conf.AUTHENTICATION_SERVER + "/.well-known/jwks.json"
+    )
     # Examples of tests to apply
     if decoded["client_id"] != client_id:
         raise AccessTokenAudienceError("Invalid Client ID")
