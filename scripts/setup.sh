@@ -47,12 +47,11 @@ ib1-directory create-application-certificates --issuer-key-file signing-issuer-k
 # Create various chains and bundles required
 # server-complete-bundle
 cat localhost-cert.pem server-issuer-cert.pem server-ca-cert.pem > server-complete-bundle.pem
-# server-verify-bundle
-cat server-issuer-cert.pem server-ca-cert.pem > server-verify-bundle.pem
+
 # signing-issued-intermediate-bundle
 cat edp-demo-signing-cert.pem signing-issuer-cert.pem > signing-issued-intermediate-bundle.pem
 
-# Move them to a nest folder
+# Move them to a nested folder
 mkdir -p generated
 mv *.pem generated
 # nginx requires server-complete-bundle and server-key, as well as client-verify-bundle for mtls 
@@ -63,9 +62,9 @@ mv generated/server-complete-bundle.pem generated/localhost-key.pem generated/cl
 mkdir -p ../authentication/certs
 mv generated/jwt-signing-key.pem  ../authentication/certs
 
-# resource api requires server-verify-bundle.pem, provence key and cert bundle, provenance CA root 
+# resource api requires server-ca-cert.pem, provence key and cert bundle, provenance CA root 
 mkdir -p ../resource/certs
-mv generated/server-verify-bundle.pem \
+mv generated/server-ca-cert.pem \
     generated/signing-issued-intermediate-bundle.pem \
     generated/edp-demo-signing-key.pem \
     generated/edp-demo-signing-cert.pem \

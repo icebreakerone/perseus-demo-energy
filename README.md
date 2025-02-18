@@ -88,7 +88,7 @@ The script will generate the required certificates, keys and bundles and move th
 
 **nginx**
 
-- certs/client-ca-cert.pem: The client CA root certificate to verify incoming mtls requests
+- certs/client-verify-budnle.pem: The client CA root certificate and intermediate to verify incoming mtls requests
 - certs/localhost-key.pem: Key for the localhost tls certificate
 - certs/server-complete-bundle.pem: A chain of localhost certificate, intermediate and CA for tls
 
@@ -98,7 +98,7 @@ The script will generate the required certificates, keys and bundles and move th
 
 **Resource**
 
-- resource/server-verify-bundle.pem: verify connections to the authentication server
+- resource/server-ca-cert.pem: verify connections to the authentication server
 - resource/signing-issued-intermediate-bundle.pem: A chain of issued certificate and intermediate used in creating provenance records
 - resource/edp-demo-signing-key.pem: Provenance record signing key
 - resource/edp-demo-signing-cert.pem: Provenance record signing certificate
