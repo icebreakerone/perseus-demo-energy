@@ -1,5 +1,19 @@
+class ConfigurationError(Exception):
+    """
+    Base class for configuration errors
+    """
+
+
+class KeyNotFoundError(ConfigurationError):
+    pass
+
+
+class CertificateNotFoundError(ConfigurationError):
+    pass
+
+
 class FrameworkAuthError(Exception):
-    """Base class for exceptions in this module."""
+    """Base class for certificate and token exceptions"""
 
 
 class CertificateError(FrameworkAuthError):
@@ -39,4 +53,8 @@ class AccessTokenAudienceError(AccessTokenValidatorError):
 
 
 class AccessTokenCertificateError(AccessTokenValidatorError):
+    pass
+
+
+class AccessTokenDecodingError(AccessTokenValidatorError):
     pass

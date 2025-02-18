@@ -1,17 +1,14 @@
-"""
-Placeholder for provenance records
-"""
+import datetime
 
 from cryptography import x509
-import datetime
 
 from ib1.provenance import Record
 from ib1.provenance.signing import SignerInMemory
 from ib1.provenance.certificates import (
     CertificatesProviderSelfContainedRecord,
 )
-from ib1.directory.certificates import load_key
 from . import conf
+from .keystores import get_key, get_certificate
 
 
 TRUST_FRAMEWORK_URL = "https://registry.core.trust.ib1.org/trust-framework"
@@ -27,16 +24,18 @@ def create_provenance_records(
     fapi_id: str,
     cap_member: str,
 ) -> bytes:
-    """ """
+
     certificate_provider = CertificatesProviderSelfContainedRecord(
-        conf.ROOT_CA_CERTIFICATE
+        get_certificate(conf.SIGNING_ROOT_CA_CERTIFICATE)
     )
-    with open(conf.SIGNING_BUNDLE, "rb") as certs:
-        signer_edp_certs = x509.load_pem_x509_certificates(certs.read())
+    signer_edp_certs = x509.load_pem_x509_certificates(
+        get_certificate(conf.SIGNING_BUNDLE)
+    )
+    private_key = get_key(conf.SIGNING_KEY)
     signer_edp = SignerInMemory(
         certificate_provider,
         signer_edp_certs,  # list containing certificate and issuer chain
-        load_key(conf.SIGNING_KEY.encode("utf-8")),  # private key
+        private_key,  # private key
     )
 
     edp_record = Record(TRUST_FRAMEWORK_URL)

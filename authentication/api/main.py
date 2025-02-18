@@ -1,8 +1,8 @@
 from typing import Annotated
 import json
+import logging
 
 import requests
-import jwt
 
 from fastapi import (
     FastAPI,
@@ -22,6 +22,7 @@ from . import par
 from . import auth
 
 
+logger = logging.getLogger(__name__)
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Demo Authentication Server",
@@ -200,13 +201,12 @@ async def token(
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
-    # Decode the Ory Hydra issued token
-    decoded_token = jwt.decode(
-        result["access_token"], options={"verify_signature": False}
-    )
+
     # Add in our required client certificate thumbprint
     enhanced_token = auth.create_enhanced_access_token(
-        decoded_token, x_amzn_mtls_clientcert
+        result["access_token"],
+        x_amzn_mtls_clientcert,
+        f"{conf.OAUTH_URL}/.well-known/jwks.json",
     )
     return models.TokenResponse(
         access_token=enhanced_token,
@@ -216,6 +216,7 @@ async def token(
 
 @app.get("/.well-known/openid-configuration")
 async def get_openid_configuration():
+    logger.info("Getting OpenID configuration")
     return {
         "issuer": f"{conf.ISSUER_URL}",
         "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
@@ -233,8 +234,7 @@ async def get_openid_configuration():
 
 @app.get("/.well-known/jwks.json")
 async def get_jwks():
-    jwks = auth.create_jwks(auth.get_pem("cert"))
-    # Return JWKS as JSON response
+    jwks = auth.create_jwks(conf.JWT_SIGNING_KEY)
     return jwks
 
 

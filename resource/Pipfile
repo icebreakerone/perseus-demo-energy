@@ -12,7 +12,8 @@ typing-extensions = "*"
 pyjwt = "*"
 asn1crypto = "*"
 ib1-directory = "*"
-ib1-provenance = "*"
+ib1-provenance = "==0.2b"
+boto3 = "*"
 
 [dev-packages]
 pytest = "*"
@@ -20,6 +21,7 @@ pytest-mock = "*"
 httpx = "*"
 ruff = "*"
 mypy = "*"
+responses = "*"
 
 [requires]
 python_version = "3.12"

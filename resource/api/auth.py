@@ -1,25 +1,45 @@
 import logging
-import urllib.parse
 import uuid
 from typing import Optional, Tuple
 import email.utils
 import time
 import base64
+import ssl
+
 from cryptography.hazmat.primitives import hashes
-import requests
+import jwt.algorithms
 import jwt
+
 from cryptography import x509
 from .exceptions import (
     AccessTokenCertificateError,
     AccessTokenAudienceError,
     AccessTokenTimeError,
+    AccessTokenDecodingError,
 )
+from .keystores import get_certificate
+from . import conf
 from ib1 import directory
+
 
 log = logging.getLogger(__name__)
 
 
-def _check_certificate(cert: x509.Certificate, decoded_token: dict):
+def check_certificate(cert: x509.Certificate, decoded_token: dict) -> bool:
+    """
+    Validates the certificate against the thumbprint provided in the decoded token.
+
+    Args:
+        cert (x509.Certificate): The client certificate to be checked.
+        decoded_token (dict): The decoded JWT token containing the certificate thumbprint.
+
+    Raises:
+        AccessTokenCertificateError: If the token does not contain a certificate binding or if the
+                                     thumbprint in the token does not match the presented client certificate.
+
+    Returns:
+        bool: True if the certificate is valid and matches the thumbprint in the token.
+    """
 
     if "cnf" in decoded_token:
         # thumbprint from token
@@ -54,22 +74,33 @@ def _check_certificate(cert: x509.Certificate, decoded_token: dict):
     return True
 
 
-def get_openid_configuration(issuer_url: str) -> dict:
+def decode_with_jwks(token: str, jwks_url: str, verify: bytes | None = None) -> dict:
     """
-    Get the well-known configuration for a given issuer URL
+    Validate a token using jwks_url
     """
-    response = requests.get(
-        url=urllib.parse.urljoin(issuer_url, "/.well-known/openid-configuration"),
-        verify=False,
+
+    # Work out how to integrate this with s3 / local
+    context = None
+    if verify:
+        context = ssl.create_default_context(cadata=verify.decode())
+
+    jwks_client = jwt.PyJWKClient(
+        jwks_url, headers={"User-Agent": "ib1/1.0"}, ssl_context=context
     )
-    response.raise_for_status()
-    return response.json()
+    header = jwt.get_unverified_header(token)
+    key = jwks_client.get_signing_key(header["kid"]).key
+    try:
+        payload = jwt.decode(token, key, [header["alg"]])
+    except jwt.ExpiredSignatureError:
+        raise AccessTokenTimeError("Token has expired!")
+    except jwt.InvalidTokenError as e:
+        raise AccessTokenDecodingError(f"Invalid token: {e}")
+    return payload
 
 
 def check_token(
     client_certificate: str,
     token: str,
-    aud: str,
     x_fapi_interaction_id: Optional[str] = None,
 ) -> Tuple[dict, dict]:
     """
@@ -87,9 +118,10 @@ def check_token(
     cert = directory.parse_cert(client_certificate)
     client_id = directory.extensions.decode_application(cert)
 
-    decoded = jwt.decode(
+    decoded = decode_with_jwks(
         token,
-        options={"verify_signature": False},
+        conf.AUTHENTICATION_SERVER + "/.well-known/jwks.json",
+        get_certificate(conf.AUTHENTICATION_SERVER_CA),
     )
     # Examples of tests to apply
     if decoded["client_id"] != client_id:
@@ -98,7 +130,7 @@ def check_token(
         raise AccessTokenTimeError("Token expired")
     if decoded["iat"] > int(time.time()):
         raise AccessTokenTimeError("Token issued in the future")
-    _check_certificate(cert, decoded)
+    check_certificate(cert, decoded)
     headers = {}
     # FAPI requires that the resource server set the date header in the response
     headers["Date"] = email.utils.formatdate()

@@ -2,6 +2,10 @@ class FrameworkAuthError(Exception):
     """Base class for exceptions in this module."""
 
 
+class KeyNotFoundError(FrameworkAuthError):
+    pass
+
+
 class CertificateError(FrameworkAuthError):
     """
     Base class for errors related to the client certificate
@@ -18,6 +22,12 @@ class CertificateRoleError(CertificateError):
 
 class CertificateRoleMissingError(CertificateRoleError):
     pass
+
+
+class AccessTokenDecodingError(FrameworkAuthError):
+    """
+    Base class for errors related to the issuing of the token
+    """
 
 
 class AccessTokenValidatorError(FrameworkAuthError):

@@ -32,12 +32,14 @@ services:
       ]
     volumes:
       - ./authentication/api:/code/api
+      - ./authentication/certs/:/certs
 
   resource_web:
     image: nginx
     volumes:
       - ./nginx:/etc/nginx/templates
       - ./certs/:/etc/nginx/certs/
+    command: [nginx-debug, "-g", "daemon off;"]
     environment:
       - UPSTREAM=resource_backend
     ports:
@@ -53,8 +55,8 @@ services:
     stop_signal: SIGINT
     env_file: resource/.env
     environment:
-      - ISSUER_URL=https://host.docker.internal:8000 # As accounting app is outside docker we'll need to use this address
-
+      - ISSUER_URL=https://localhost:8000
+      - AUTHENTICATION_SERVER=http://authentication_web
     command:
       [
         "uvicorn",
@@ -67,6 +69,7 @@ services:
       ]
     volumes:
       - ./resource/api:/code/api
+      - ./resource/certs/:/certs
 
   redis:
     image: "redis:alpine"
