@@ -1,6 +1,5 @@
 import logging
 import uuid
-import urllib
 from typing import Optional, Tuple
 import email.utils
 import time

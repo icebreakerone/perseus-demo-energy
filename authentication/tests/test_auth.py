@@ -105,11 +105,6 @@ def test_create_enhanced_access_token(mock_get_key, mock_decode_with_jwks):
         "iat": int(time.time()) - 10,
     }
     mock_private_key = TEST_PRIVATE_KEY
-    mock_private_key_pem = mock_private_key.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.TraditionalOpenSSL,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
     mock_get_key.return_value = mock_private_key
     with open(f"{ROOT_DIR}/fixtures/test-client-cert.pem", "r") as f:
         test_certificate = f.read()

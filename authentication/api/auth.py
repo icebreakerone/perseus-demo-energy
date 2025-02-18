@@ -4,7 +4,6 @@ import json
 import jwt
 from jwt import algorithms
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 
 
