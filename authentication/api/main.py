@@ -1,5 +1,6 @@
 from typing import Annotated
 import json
+import logging
 
 import requests
 
@@ -21,6 +22,7 @@ from . import par
 from . import auth
 
 
+logger = logging.getLogger(__name__)
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Demo Authentication Server",
@@ -202,7 +204,9 @@ async def token(
 
     # Add in our required client certificate thumbprint
     enhanced_token = auth.create_enhanced_access_token(
-        result["access_token"], x_amzn_mtls_clientcert, str(conf.OAUTH_URL)
+        result["access_token"],
+        x_amzn_mtls_clientcert,
+        f"{conf.OAUTH_URL}/.well-known/jwks.json",
     )
     return models.TokenResponse(
         access_token=enhanced_token,
@@ -212,6 +216,7 @@ async def token(
 
 @app.get("/.well-known/openid-configuration")
 async def get_openid_configuration():
+    logger.info("Getting OpenID configuration")
     return {
         "issuer": f"{conf.ISSUER_URL}",
         "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",

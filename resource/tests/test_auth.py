@@ -97,7 +97,7 @@ def test_check_token_valid(
     mock_parse_cert.return_value = "mocked-parsed-cert"
     mock_decode_application.return_value = "test-client-id"
     mock_decode_with_jwks.return_value = mock_decoded_token
-    mock_auth_conf.AUTHENTICATON_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
+    mock_auth_conf.AUTHENTICATION_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
     decoded, headers = check_token(MOCK_CERTIFICATE, MOCK_TOKEN)
 
     assert decoded == mock_decoded_token
@@ -120,7 +120,7 @@ def test_check_token_invalid_client_id(
     mock_decode_with_jwks,
     mock_decoded_token,
 ):
-    mock_auth_conf.AUTHENTICATON_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
+    mock_auth_conf.AUTHENTICATION_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
     mock_parse_cert.return_value = "mocked-parsed-cert"
     mock_decode_application.return_value = "wrong-client-id"  # Different from token
     mock_decode_with_jwks.return_value = mock_decoded_token
@@ -140,7 +140,7 @@ def test_check_token_expired_token(
     mock_decode_with_jwks,
     mock_decoded_token,
 ):
-    mock_auth_conf.AUTHENTICATON_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
+    mock_auth_conf.AUTHENTICATION_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
     mock_parse_cert.return_value = "mocked-parsed-cert"
     mock_decode_application.return_value = "test-client-id"
 
@@ -162,7 +162,7 @@ def test_check_token_issued_in_future(
     mock_decode_with_jwks,
     mock_decoded_token,
 ):
-    mock_auth_conf.AUTHENTICATON_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
+    mock_auth_conf.AUTHENTICATION_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
     mock_parse_cert.return_value = "mocked-parsed-cert"
     mock_decode_application.return_value = "test-client-id"
 

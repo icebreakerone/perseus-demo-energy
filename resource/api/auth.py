@@ -75,9 +75,7 @@ def check_certificate(cert: x509.Certificate, decoded_token: dict) -> bool:
     return True
 
 
-def decode_with_jwks(
-    token: str, jwks_url: str, verify: bytes | str | None = None
-) -> dict:
+def decode_with_jwks(token: str, jwks_url: str, verify: bytes | None = None) -> dict:
     """
     Validate a token using jwks_url
     """
@@ -85,13 +83,11 @@ def decode_with_jwks(
     # Work out how to integrate this with s3 / local
     context = None
     if verify:
-        context = ssl.create_default_context(cafile=verify)
+        context = ssl.create_default_context(cadata=verify.decode())
 
-    # Use the SSL context with urllib to fetch the JWKS
-    with urllib.request.urlopen(jwks_url, context=context) as response:
-        jwks_data = response.read()
-
-    jwks_client = jwt.PyJWKClient(jwks_data)
+    jwks_client = jwt.PyJWKClient(
+        jwks_url, headers={"User-Agent": "ib1/1.0"}, ssl_context=context
+    )
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
     try:
@@ -126,7 +122,7 @@ def check_token(
     decoded = decode_with_jwks(
         token,
         conf.AUTHENTICATION_SERVER + "/.well-known/jwks.json",
-        get_certificate(conf.AUTHENTICATON_SERVER_CA),
+        get_certificate(conf.AUTHENTICATION_SERVER_CA),
     )
     # Examples of tests to apply
     if decoded["client_id"] != client_id:

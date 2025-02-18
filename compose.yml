@@ -39,7 +39,7 @@ services:
     volumes:
       - ./nginx:/etc/nginx/templates
       - ./certs/:/etc/nginx/certs/
-
+    command: [nginx-debug, "-g", "daemon off;"]
     environment:
       - UPSTREAM=resource_backend
     ports:

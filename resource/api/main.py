@@ -78,7 +78,6 @@ def consumption(
             decoded, headers = auth.check_token(
                 x_amzn_mtls_clientcert,
                 token.credentials,
-                conf.CATALOG_ENTRY_URL,
                 x_fapi_interaction_id,
             )
         except AccessTokenValidatorError as e:

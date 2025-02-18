@@ -20,8 +20,8 @@ SIGNING_ROOT_CA_CERTIFICATE = os.environ.get(
 SIGNING_BUNDLE = os.environ.get(
     "SIGNING_BUNDLE", "/certs/signing-issued-intermediate-bundle.pem"
 )
-AUTHENTICATON_SERVER_CA = os.environ.get(
-    "AUTHENTICATON_SERVER_CA", "/certs/server-ca-cert.pem "
+AUTHENTICATION_SERVER_CA = os.environ.get(
+    "AUTHENTICATION_SERVER_CA", "/certs/server-ca-cert.pem"
 )
 
 API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")

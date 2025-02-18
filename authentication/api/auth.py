@@ -33,7 +33,10 @@ def decode_with_jwks(token: str, jwks_url: str) -> dict:
     """
     Validate a token using jwks_url
     """
-    jwks_client = jwt.PyJWKClient(jwks_url)
+    logger.info(f"Decoding token with jwks_url: {jwks_url}")
+    jwks_client = jwt.PyJWKClient(jwks_url, headers={"User-Agent": "ib1/1.0"})
+    logger.error(f"Could not connect to JWKS URL: {jwks_url}")
+
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
     try:
