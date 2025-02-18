@@ -45,6 +45,7 @@ variables:                    # Pass environment variables as key value pairs.
   OAUTH_URL: https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com
   API_DOMAIN: perseus-demo-authentication.ib1.org
   AWS_DEFAULT_REGION: eu-west-2
+  JWT_SIGNING_KEY: /copilot/perseus-demo-authentication/dev/secrets/jwt-signing-key
 
 environments:
   prod:
@@ -55,6 +56,8 @@ environments:
       hosted_zone: Z080590727V6ALTWMJ7N5
     secrets: 
       OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/prod/secrets/client_secret
+    variables:
+      JWT_SIGNING_KEY:  /copilot/perseus-demo-authentication/prod/secrets/jwt-signing-key
   dev:
     secrets: 
       OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/dev/secrets/client_secret

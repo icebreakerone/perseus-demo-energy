@@ -39,7 +39,9 @@ variables:                    # Pass environment variables as key value pairs.
   OAUTH_CLIENT_SECRET: mUwYj6FtSrkyg95LAcxIiXLxW
   SIGNING_KEY: "/certs/edp-demo-signing-key.pem"
   SIGNING_ROOT_CA_CERTIFICATE: s3://perseus-demo-energy-certificate-store/signing-ca-cert.pem
-  SIGNING_BUNDLE: s3://perseus-demo-energy-certificate-store/signing-issued-intermediate-bundle.pem
+  SIGNING_BUNDLE: s3://perseus-demo-energy-certificate-store/edp-demo-signing-bundle.pem
+  AUTHENTICATION_SERVER_CA: s3://perseus-demo-energy-certificate-store/server-ca-cert.pem
+
   AWS_DEFAULT_REGION: eu-west-2
 
 # You can override any of the values defined above by environment.
@@ -51,9 +53,12 @@ environments:
   http:
     alias: perseus-demo-energy.ib1.org
     hosted_zone: Z06253313MKVN98JLAQRK
+  variables:
+    SIGNING_KEY: /copilot/perseus-directory/prod/secrets/signing-key
   dev:
     http:
       alias: preprod.perseus-demo-energy.ib1.org
       hosted_zone: Z06253313MKVN98JLAQRK
     variables:
       API_DOMAIN: preprod.perseus-demo-energy.ib1.org
+      SIGNING_KEY: /copilot/perseus-directory/dev/secrets/signing-key
