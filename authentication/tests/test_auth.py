@@ -5,6 +5,7 @@ from unittest.mock import patch
 import time
 import os
 
+from botocore.exceptions import ClientError
 from jwt.algorithms import ECAlgorithm
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
@@ -75,8 +76,21 @@ def test_missing_kid(mock_jwks):
         decode_with_jwks(token, mock_jwks)
 
 
-def test_create_jwks():
+@patch("api.keystores.get_boto3_client")
+def test_create_jwks(mock_get_boto3_client):
     # write TEST_PRIVATE_KEY to a temp file
+    mock_ssm_client = mock_get_boto3_client.return_value
+    mock_ssm_client.exceptions.ParameterNotFound = ClientError
+    mock_ssm_client.exceptions.ClientError = ClientError
+    mock_ssm_client.get_parameter.side_effect = ClientError(
+        {
+            "Error": {
+                "Code": "ParameterNotFound",
+                "Message": "Parameter not found",
+            }
+        },
+        "get_parameter",
+    )
     with NamedTemporaryFile(delete=False) as temp_file:
         temp_file.write(
             TEST_PRIVATE_KEY.private_bytes(
