@@ -1,9 +1,11 @@
 import logging
 import uuid
+import urllib
 from typing import Optional, Tuple
 import email.utils
 import time
 import base64
+import ssl
 
 from cryptography.hazmat.primitives import hashes
 import jwt.algorithms
@@ -16,8 +18,10 @@ from .exceptions import (
     AccessTokenTimeError,
     AccessTokenDecodingError,
 )
+from .keystores import get_certificate
 from . import conf
 from ib1 import directory
+
 
 log = logging.getLogger(__name__)
 
@@ -71,11 +75,23 @@ def check_certificate(cert: x509.Certificate, decoded_token: dict) -> bool:
     return True
 
 
-def decode_with_jwks(token: str, jwks_url: str) -> dict:
+def decode_with_jwks(
+    token: str, jwks_url: str, verify: bytes | str | None = None
+) -> dict:
     """
     Validate a token using jwks_url
     """
-    jwks_client = jwt.PyJWKClient(jwks_url)
+
+    # Work out how to integrate this with s3 / local
+    context = None
+    if verify:
+        context = ssl.create_default_context(cafile=verify)
+
+    # Use the SSL context with urllib to fetch the JWKS
+    with urllib.request.urlopen(jwks_url, context=context) as response:
+        jwks_data = response.read()
+
+    jwks_client = jwt.PyJWKClient(jwks_data)
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
     try:
@@ -90,7 +106,6 @@ def decode_with_jwks(token: str, jwks_url: str) -> dict:
 def check_token(
     client_certificate: str,
     token: str,
-    aud: str,
     x_fapi_interaction_id: Optional[str] = None,
 ) -> Tuple[dict, dict]:
     """
@@ -109,7 +124,9 @@ def check_token(
     client_id = directory.extensions.decode_application(cert)
 
     decoded = decode_with_jwks(
-        token, conf.AUTHENTICATION_SERVER + "/.well-known/jwks.json"
+        token,
+        conf.AUTHENTICATION_SERVER + "/.well-known/jwks.json",
+        get_certificate(conf.AUTHENTICATON_SERVER_CA),
     )
     # Examples of tests to apply
     if decoded["client_id"] != client_id:

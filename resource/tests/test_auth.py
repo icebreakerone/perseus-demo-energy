@@ -3,6 +3,7 @@ import pytest
 import json
 from unittest.mock import patch
 import time
+import os
 
 from jwt.algorithms import ECAlgorithm
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -17,6 +18,9 @@ from api.exceptions import (
 
 TEST_PRIVATE_KEY = ec.generate_private_key(ec.SECP256R1(), default_backend())
 TEST_PUBLIC_KEY = TEST_PRIVATE_KEY.public_key()
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+MOCK_CERTIFICATE = "mocked-certificate"
+MOCK_TOKEN = "mocked-token"
 
 
 # Create a JWKS response with the EC public key
@@ -37,16 +41,6 @@ def mock_jwks():
             mock_response
         )
         yield jwks_url
-
-
-@pytest.fixture
-def mock_certificate():
-    return "mocked-cert"
-
-
-@pytest.fixture
-def mock_token():
-    return "mocked-token"
 
 
 @pytest.fixture
@@ -91,21 +85,20 @@ def test_missing_kid(mock_jwks):
 @patch("api.auth.directory.parse_cert")
 @patch("api.auth.directory.extensions.decode_application")
 @patch("api.auth.check_certificate")
+@patch("api.auth.conf")
 def test_check_token_valid(
+    mock_auth_conf,
     mock_check_certificate,
     mock_decode_application,
     mock_parse_cert,
     mock_decode_with_jwks,
-    mock_certificate,
-    mock_token,
     mock_decoded_token,
 ):
-    aud = "test-audience"
     mock_parse_cert.return_value = "mocked-parsed-cert"
     mock_decode_application.return_value = "test-client-id"
     mock_decode_with_jwks.return_value = mock_decoded_token
-
-    decoded, headers = check_token(mock_certificate, mock_token, aud)
+    mock_auth_conf.AUTHENTICATON_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
+    decoded, headers = check_token(MOCK_CERTIFICATE, MOCK_TOKEN)
 
     assert decoded == mock_decoded_token
     assert "Date" in headers
@@ -119,35 +112,35 @@ def test_check_token_valid(
 @patch("api.auth.decode_with_jwks")
 @patch("api.auth.directory.parse_cert")
 @patch("api.auth.directory.extensions.decode_application")
+@patch("api.auth.conf")
 def test_check_token_invalid_client_id(
+    mock_auth_conf,
     mock_decode_application,
     mock_parse_cert,
     mock_decode_with_jwks,
-    mock_certificate,
-    mock_token,
     mock_decoded_token,
 ):
-    aud = "test-audience"
+    mock_auth_conf.AUTHENTICATON_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
     mock_parse_cert.return_value = "mocked-parsed-cert"
     mock_decode_application.return_value = "wrong-client-id"  # Different from token
     mock_decode_with_jwks.return_value = mock_decoded_token
 
     with pytest.raises(AccessTokenAudienceError, match="Invalid Client ID"):
-        check_token(mock_certificate, mock_token, aud)
+        check_token(MOCK_CERTIFICATE, MOCK_TOKEN)
 
 
 @patch("api.auth.decode_with_jwks")
 @patch("api.auth.directory.parse_cert")
 @patch("api.auth.directory.extensions.decode_application")
+@patch("api.auth.conf")
 def test_check_token_expired_token(
+    mock_auth_conf,
     mock_decode_application,
     mock_parse_cert,
     mock_decode_with_jwks,
-    mock_certificate,
-    mock_token,
     mock_decoded_token,
 ):
-    aud = "test-audience"
+    mock_auth_conf.AUTHENTICATON_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
     mock_parse_cert.return_value = "mocked-parsed-cert"
     mock_decode_application.return_value = "test-client-id"
 
@@ -155,21 +148,21 @@ def test_check_token_expired_token(
     mock_decode_with_jwks.return_value = mock_decoded_token
 
     with pytest.raises(AccessTokenTimeError, match="Token expired"):
-        check_token(mock_certificate, mock_token, aud)
+        check_token(MOCK_CERTIFICATE, MOCK_TOKEN)
 
 
 @patch("api.auth.decode_with_jwks")
 @patch("api.auth.directory.parse_cert")
 @patch("api.auth.directory.extensions.decode_application")
+@patch("api.auth.conf")
 def test_check_token_issued_in_future(
+    mock_auth_conf,
     mock_decode_application,
     mock_parse_cert,
     mock_decode_with_jwks,
-    mock_certificate,
-    mock_token,
     mock_decoded_token,
 ):
-    aud = "test-audience"
+    mock_auth_conf.AUTHENTICATON_SERVER_CA = f"{ROOT_DIR}/fixtures/test-server-ca.pem"
     mock_parse_cert.return_value = "mocked-parsed-cert"
     mock_decode_application.return_value = "test-client-id"
 
@@ -177,4 +170,4 @@ def test_check_token_issued_in_future(
     mock_decode_with_jwks.return_value = mock_decoded_token
 
     with pytest.raises(AccessTokenTimeError, match="Token issued in the future"):
-        check_token(mock_certificate, mock_token, aud)
+        check_token(MOCK_CERTIFICATE, MOCK_TOKEN)

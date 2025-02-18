@@ -49,8 +49,6 @@ ib1-directory create-application-certificates --issuer-key-file signing-issuer-k
 cat localhost-cert.pem server-issuer-cert.pem server-ca-cert.pem > server-complete-bundle.pem
 # server-verify-bundle
 cat server-issuer-cert.pem server-ca-cert.pem > server-verify-bundle.pem
-# client-verify-bundle
-cat client-issuer-cert.pem client-ca-cert.pem > client-verify-bundle.pem
 # signing-issued-intermediate-bundle
 cat edp-demo-signing-cert.pem signing-issuer-cert.pem > signing-issued-intermediate-bundle.pem
 
@@ -60,7 +58,7 @@ mv *.pem generated
 # nginx requires server-complete-bundle and server-key, as well as client-verify-bundle for mtls 
 #mv those keys to ../certs
 mkdir -p ../certs
-mv generated/server-complete-bundle.pem generated/localhost-key.pem generated/client-verify-bundle.pem ../certs
+mv generated/server-complete-bundle.pem generated/localhost-key.pem generated/client-ca-cert.pem ../certs
 # authentication api requires jwt-signing-key.pem
 mkdir -p ../authentication/certs
 mv generated/jwt-signing-key.pem  ../authentication/certs
