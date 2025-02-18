@@ -13,18 +13,16 @@ runs:
       run: |
         cd ${{ inputs.folder }}
         pip install pipenv
-        pipenv install --dev
+        pipenv install --dev --system --deploy
     - name: Lint with ruff
       shell: bash
       run: |
         # stop the build if there are Python syntax errors or undefined names
         cd ${{ inputs.folder }}
-        pipenv run ruff check .
+        ruff check .
     - name: Run ${{ inputs.folder }} tests
       shell: bash
-      environment:
-        AWS_DEFAULT_REGION: eu-west-2
       run: |
         # stop the build if there are Python syntax errors or undefined names
         cd ${{ inputs.folder }}
-        pipenv run pytest .
+        pytest .
