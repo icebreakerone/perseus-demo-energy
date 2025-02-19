@@ -62,7 +62,6 @@ jobs:
       - name: Deploy authentication docs
         uses: ./.github/templates/deploy_docs/
         with:
-          folder: authentication
           deployment_context: authentication-${{ env.ENVIRONMENT }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -91,7 +90,6 @@ jobs:
       - name: Deploy resource docs
         uses: ./.github/templates/deploy_docs/
         with:
-          folder: resource
           deployment_context: resource-${{ env.ENVIRONMENT }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
