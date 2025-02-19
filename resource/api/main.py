@@ -1,16 +1,20 @@
 import json
-import os
+import datetime
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Response, Depends, Header
+
+from fastapi import FastAPI, HTTPException, Response, Depends, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi import Request
+from fastapi.openapi.utils import get_openapi
 
 from . import models
 from . import auth
 from . import conf
+from . import provenance
+from .exceptions import CertificateError, AccessTokenValidatorError
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from ib1 import directory
+
 
 security = HTTPBearer(auto_error=False)
 
@@ -24,52 +28,99 @@ app = FastAPI(
 
 @app.get("/", response_model=dict)
 def root():
-    return {"urls": ["/api/v1/"]}
+    return {"urls": ["/datasources", "/datasources/{id}/{measure}"]}
 
 
-@app.get("/api/v1", response_model=dict)
-def api_urls():
-    return {"urls": ["/api/v1/consumption"]}
-
-
-# @app.get("/api/v1/info")
-@app.get("/api/v1/info")
-def request_info(request: Request):
-    """Return full details about the received request, including http and https headers
-    Useful for testing and debugging
-    """
+@app.get("/datasources", response_model=models.Datasources)
+def datasources() -> dict:
     return {
-        "request": {
-            "headers": dict(request.headers),
-            "method": request.method,
-            "url": request.url,
-            # "body": request.body().decode("utf-8"),
-        },
-        # "environ": str(request.environ),
+        "data": [
+            {
+                "id": "abcd1234",
+                "type": "Electricity",
+                "availableMeasures": ["Import"],
+            },
+        ]
     }
 
 
-@app.get("/api/v1/consumption", response_model=models.MeterData)
+@app.get("/datasources/{id}/{measure}", response_model=models.MeterData)
 def consumption(
+    id: str,
+    measure: str,
     response: Response,
+    from_date: datetime.date = Query(alias="from"),
+    to_date: datetime.date = Query(alias="to"),
     token: HTTPAuthorizationCredentials = Depends(security),
     x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
 ):
-    if x_amzn_mtls_clientcert is None:
-        raise HTTPException(status_code=401, detail="No client certificate provided")
+    if not x_amzn_mtls_clientcert:
+        raise HTTPException(
+            status_code=401,
+            detail="Client certificate required",
+        )
+    cert = directory.parse_cert(x_amzn_mtls_clientcert)
+    try:
+        directory.require_role(
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            cert,
+        )
+    except CertificateError as e:
+        raise HTTPException(
+            status_code=401,
+            detail=str(e),
+        )
     if token and token.credentials:
+        # TODO don't use instrospection, check the token signature
+        # And check the certificate binding
         try:
-            _, headers = auth.introspect(
-                x_amzn_mtls_clientcert, token.credentials, x_fapi_interaction_id
+            decoded, headers = auth.check_token(
+                x_amzn_mtls_clientcert,
+                token.credentials,
+                x_fapi_interaction_id,
             )
-        except auth.AccessTokenValidatorError as e:
+        except AccessTokenValidatorError as e:
             raise HTTPException(status_code=401, detail=str(e))
         else:
             for key, value in headers.items():
                 response.headers[key] = value
     else:
         raise HTTPException(status_code=401, detail="No token provided")
-    with open(f"{ROOT_DIR}/data/7_day_consumption.json") as f:
+    # Create a new provenance record
+    permission_granted = datetime.datetime.now(datetime.timezone.utc)
+    permission_expires = datetime.datetime.now(
+        datetime.timezone.utc
+    ) + datetime.timedelta(days=365)
+    record = provenance.create_provenance_records(
+        from_date=from_date,
+        to_date=to_date,
+        permission_expires=permission_expires,
+        permission_granted=permission_granted,
+        account=decoded["sub"],
+        service_url=f"https://perseus-demo-energy.ib1.org/consumption/datasources/{id}/{measure}",
+        fapi_id=headers["x-fapi-interaction-id"],
+        cap_member=directory.extensions.decode_application(cert),
+    )
+    with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:
         data = json.load(f)
-    return {"data": data}
+    return {"data": data, "provenance": record}
+
+
+# Custom OpenAPI schema configuration
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="Perseus Demo EDP",
+        version="1.0.0",
+        description="Perseus Demo EDP",
+        routes=app.routes,
+    )
+    # Set the OpenAPI URL to the root domain
+    openapi_schema["servers"] = [{"url": conf.API_DOMAIN}]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi  # type: ignore

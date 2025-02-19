@@ -30,7 +30,7 @@ It may also be a useful reference for developers who are creating secure data en
 
 ## Authentication API
 
-The authentication app is in the [authentication](authentication) directory. It provides endpoints for authenticating and identifying users, and for handling and passing on requests from the client API to the FAPI API. It uses a
+The authentication app is in the [authentication](authentication) directory. It provides endpoints for authenticating and identifying users, and for handling and passing on requests from the client API to the FAPI API. It uses the Ory Hydra service to handle most of the OAuth2 flow, with additional endpoints added to handle the FAPI specific requirements.
 
 Authentication API documentation is available at https://perseus-demo-authentication.ib1.org/api-docs.
 
@@ -42,9 +42,26 @@ Resource API documentation is available at https://perseus-demo-energy.ib1.org/a
 
 ## Environment variables
 
-Both apps have example `.env.template` files in their root directories. These should be copied to `.env` and edited as required, filling CLIENT_ID and CLIENT_SECRET with the values provided by Ory Hydra, or on request from ib1 for the demo apps.
+Both apps have example `.env.template` files in their root directories. These should be copied to `.env` and edited as required. The following environment variables are used in the authentication app:
+
+- `REDIS_HOST`: a local redis instance is used to store PAR requests
+- `OAUTH_CLIENT_ID`: Client ID for the Ory Hydra client
+- `OAUTH_URL`: URL for the Ory Hydra client
+- `OAUTH_CLIENT_SECRET`: Client secret for the Ory Hydra client
+- `REDIRECT_URI`: The page to return to after authentication and authorisation eg. for local development http://127.0.0.1:3000/callback
+- `ISSUER_URL`: URL of the Oauth issuer eg. for docker compose https://authentication_web
+
+The following environment variables are used in the resource app:
+
+- `OAUTH_CLIENT_ID`: Client ID for the Ory Hydra client (same as for authentication)
+- `OAUTH_CLIENT_SECRET`: Client secret for the Ory Hydra client (same as for authentication)
+- `ISSUER_URL`: URL of the Oauth issuer eg. for docker compose https://authentication_web
+
+For more information on generating the client ID and secret, see the [Ory Hydra](#ory-hydra) section.
 
 ## Running a dev server
+
+The fastapi servers for each app can be run using:
 
 ```bash
 cd authentication|resource
@@ -52,31 +69,44 @@ pipenv install --dev
 pipenv run uvicorn api.main:app --reload
 ```
 
-## Creating self-signed certificates
+**nb** the recommended way to run the apps is using the docker compose environment, as the apps require a redis instance and the resource app requires the authentication app to be running.
 
-The docker compose and client.py scripts require a set of self-signed certificates in a certs/ folder. These can be generated using the `certmaker.sh` script in the `scripts` directory.
+## Creating self signed certificates for development
 
-```bash
-cd scripts
-./certmaker.sh
-```
+The ib1 directory issues three kinds of certificates, client, server and signing. The client and server certificates are used for mTLS and the signing certificates are used to sign provenance records.
 
-You will need to create a "certs" directory in the root of the project, and move the generated certificates into it.
-
-### Using client certificates
-
-Most of the endpoints require a client certificate to be presented. As the directory service is not yet available, the contents of the certificate will not be checked with an external CA, so any valid certificate will be acceptable. The certificate **is** used to confirm identity, so the same one must be presented in all requests.
-
-## Creating signing certificates
-
-A separate set of certificates are required for signing JWTs. These can be generated using the `signingcerts.sh` script in the `scripts` directory.
+To generate a complete set of self-signed certificates for testing, run the following command:
 
 ```bash
 cd scripts
-./signingcerts.sh
+./setup.sh
 ```
 
-The default configuration will expect these certificate to be in authentication/api/certs. The location can be changed by setting the DIRECTORY_CERTIFICATE and DIRECTORY_PRIVATE_KEY environment variables.
+The script will generate the required certificates, keys and bundles and move them to the correct file locations for the docker compose dev environment.
+
+### Outline of certificates used
+
+**nginx**
+
+- certs/client-verify-bundle.pem: The client CA root certificate and intermediate to verify incoming mtls requests
+- certs/localhost-key.pem: Key for the localhost tls certificate
+- certs/server-complete-bundle.pem: A chain of localhost certificate, intermediate and CA for tls
+
+**Authentication**
+
+- authentication/certs/jwt-signing-key.pem: Key for signing jwt tokens. This is not a directory certificate.
+
+**Resource**
+
+- resource/server-ca-cert.pem: verify connections to the authentication server
+- resource/signing-issued-intermediate-bundle.pem: A chain of issued certificate and intermediate used in creating provenance records
+- resource/edp-demo-signing-key.pem: Provenance record signing key
+- resource/edp-demo-signing-cert.pem: Provenance record signing certificate
+- resource/signing-ca-cert.pem: Root CA certificate for the signing CA used in provenance
+
+**Others**
+
+The remaining files in certs/generated directory will be the key and certificate for each of the three CAs with matching intermediates, as well as a key and certificate suitable for making test client requests named edp-demo-client-key.pem and edp-demo-client-cert.pem.
 
 ## Running the local docker environment
 
@@ -138,27 +168,7 @@ Granting consent will redirect to our demo client application, with the authoriz
 As an alternative to the command line client, the authorization flow can be completed in a browser at https://perseus-demo-accounting.ib1.org/start. Technical information such as the code verifier, token, and the contents of the introspected token are displayed
 at each step.
 
-### Introspection
-
-To show the response of the introspection endpoint, run:
-
-```bash
-python -W ignore  client.py introspect --token <token>
-```
-
-with token being the `token` value obtained from authorization code flow
-
-### Client side id_token decoding
-
-To show the response of client side id_token decoding, run:
-
-```bash
-python -W ignore  client.py id-token --token <token>
-```
-
-with token being the `id_token` value obtained from authorization code flow
-
-### Retrieve data from protected endpoint
+### Retrieve data from protected endpoints
 
 ```bash
 python -W ignore  client.py resource --token <token>
@@ -208,3 +218,7 @@ A full example is available at [https://www.ory.sh/docs/hydra/guides/custom-ui-o
 ## FAPI Flow
 
 ![FAPI Flow diagram](docs/fapi-authlete-flow.png)
+
+```
+
+```

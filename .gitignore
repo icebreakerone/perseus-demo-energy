@@ -13,6 +13,11 @@ __pycache__
 .ruff_cache
 .mypy_cache
 
-certs
+certs/
 requirements.txt
 .python-version
+
+.vscode
+
+*.pem
+!**/tests/fixtures/*.pem

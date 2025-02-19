@@ -19,9 +19,7 @@ services:
     stop_signal: SIGINT
     env_file: authentication/.env
     environment:
-      - FAPI_API=http://host.docker.internal:8020
       - REDIS_HOST=redis
-      # - FAPI_API=https://perseus-demo-fapi.ib1.org
     command:
       [
         "uvicorn",
@@ -34,12 +32,14 @@ services:
       ]
     volumes:
       - ./authentication/api:/code/api
+      - ./authentication/certs/:/certs
 
   resource_web:
     image: nginx
     volumes:
       - ./nginx:/etc/nginx/templates
       - ./certs/:/etc/nginx/certs/
+    command: [nginx-debug, "-g", "daemon off;"]
     environment:
       - UPSTREAM=resource_backend
     ports:
@@ -50,10 +50,13 @@ services:
   resource_backend:
     build:
       context: resource
+      args:
+        PROVENANCE_INSTALL_TOKEN: ${PROVENANCE_INSTALL_TOKEN}
     stop_signal: SIGINT
     env_file: resource/.env
     environment:
-      - ISSUER_URL=https://host.docker.internal:8000 # As accounting app is outside docker we'll need to use this address
+      - ISSUER_URL=https://localhost:8000
+      - AUTHENTICATION_SERVER=http://authentication_web
     command:
       [
         "uvicorn",
@@ -66,6 +69,7 @@ services:
       ]
     volumes:
       - ./resource/api:/code/api
+      - ./resource/certs/:/certs
 
   redis:
     image: "redis:alpine"
