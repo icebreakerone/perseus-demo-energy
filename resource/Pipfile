@@ -14,11 +14,11 @@ asn1crypto = "*"
 ib1-directory = "*"
 ib1-provenance = "==0.2b"
 boto3 = "*"
+httpx = "*"
 
 [dev-packages]
 pytest = "*"
 pytest-mock = "*"
-httpx = "*"
 ruff = "*"
 mypy = "*"
 responses = "*"
