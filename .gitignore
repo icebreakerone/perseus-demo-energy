@@ -14,7 +14,6 @@ __pycache__
 .mypy_cache
 
 certs/
-requirements.txt
 .python-version
 
 .vscode
