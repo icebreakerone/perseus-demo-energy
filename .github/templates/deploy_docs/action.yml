@@ -4,6 +4,9 @@ inputs:
   deployment_context:
     description: "The environment to deploy to"
     required: true
+  folder:
+    description: "The folder to run deploy from"
+    required: true
   aws-access-key-id:
     required: true
     type: string
