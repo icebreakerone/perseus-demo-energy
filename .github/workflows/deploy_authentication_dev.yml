@@ -17,7 +17,14 @@ jobs:
   deploy-authentication-dev:
     runs-on: ubuntu-latest
     steps:
+      - name: Check inputs
+        run: |
+          echo github.ref is: ${{ github.ref }}
+          echo github.event_name is: ${{ github.event_name }}
+          echo github.event.workflow_run.head_branch is: ${{ github.event.workflow_run.head_branch }}
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -34,5 +41,5 @@ jobs:
         uses: ./.github/templates/deploy/
         with:
           folder: authentication
-          env: dev
+          environment: dev
           service_name: redis

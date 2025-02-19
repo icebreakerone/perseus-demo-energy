@@ -28,5 +28,5 @@ jobs:
         uses: ./.github/templates/deploy/
         with:
           folder: resource
-          env: prod
+          environment: prod
           service_name: perseus-resource

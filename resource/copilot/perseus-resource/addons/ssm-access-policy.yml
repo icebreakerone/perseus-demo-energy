@@ -5,6 +5,9 @@ Parameters:
   App:
     Type: String
     Description: Your application's name.
+  Name:
+    Type: String
+    Description: The name of the service, job, or workflow that needs access to the SSM parameters.
 Resources:
   directorySSMReadAccessPolicy:
     Metadata:
