@@ -69,7 +69,7 @@ jobs:
   deploy-resource:
     runs-on: ubuntu-latest
     needs: test-resource
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/preprod'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/preprod'
     steps:
       - uses: actions/checkout@v4
       - name: Deploy resource
@@ -84,7 +84,7 @@ jobs:
   deploy-resource-docs:
     runs-on: ubuntu-latest
     needs: test-resource
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/preprod'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/preprod'
     steps:
       - uses: actions/checkout@v4
       - name: Deploy resource docs
