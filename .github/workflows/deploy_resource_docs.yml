@@ -1,4 +1,4 @@
-name: Deploy Resource Dev
+name: Deploy Resource Docs
 
 on:
   workflow_run:
