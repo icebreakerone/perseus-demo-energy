@@ -4,9 +4,6 @@ inputs:
   deployment_context:
     description: "The environment to deploy to"
     required: true
-  domain_name:
-    description: "The domain name to deploy to"
-    required: true
   aws-access-key-id:
     required: true
     type: string
