@@ -44,7 +44,7 @@ runs:
       shell: bash
       run: |
         cd docs-api
-        pip install requirements.txt --system
+        pip install -r requirements.txt
         cdk context --clear
         cdk --context deployment_context=${{inputs.deployment_context}} synthesize
         cdk --context deployment_context=${{inputs.deployment_context}} deploy --require-approval never

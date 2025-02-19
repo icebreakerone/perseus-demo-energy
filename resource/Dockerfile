@@ -8,6 +8,5 @@ WORKDIR /code
 RUN pipenv install --system --deploy --ignore-pipfile
 COPY ./api /code/api
 COPY ./data /code/data
-COPY ./certs /code/certs
 EXPOSE 8080
 CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8080"]
