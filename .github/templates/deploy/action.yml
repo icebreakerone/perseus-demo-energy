@@ -10,12 +10,27 @@ inputs:
   service_name: 
     description: 'Application to deploy'
     required: true
+  aws-access-key-id:
+    required: true
+    type: string
+  aws-secret-access-key:
+    required: true
+    type: string
+  aws-region:
+    required: true
+    type: string
 
 
 
 runs:
   using: "composite"
   steps:
+  - name: Configure AWS credentials
+    uses: aws-actions/configure-aws-credentials@v4
+    with:
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      aws-region: ${{ secrets.AWS_REGION }}
     - name: Install Copilot CLI
       uses: ksivamuthu/aws-copilot-github-action@v0.0.1
       with:
