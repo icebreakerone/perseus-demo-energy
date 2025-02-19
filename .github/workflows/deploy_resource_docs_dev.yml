@@ -1,4 +1,4 @@
-name: Deploy Authentication Dev
+name: Deploy Resource Docs Dev
 
 on:
   workflow_run:

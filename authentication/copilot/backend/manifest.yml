@@ -59,7 +59,7 @@ environments:
     variables:
       JWT_SIGNING_KEY:  /copilot/perseus-demo-authentication/prod/secrets/jwt-signing-key
   dev:
-    secrets: 
+    secrets:
       OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/dev/secrets/client_secret
     http:
       # Requests to this path will be forwarded to your service.

@@ -4,7 +4,7 @@ inputs:
   folder: 
     description: 'The folder to run deploy from'
     required: true
-  env: 
+  environment: 
     description: 'The environment to deploy to'
     required: true
   service_name: 
@@ -23,6 +23,6 @@ runs:
     - run: |
         cd ${{ inputs.folder }}
         copilot --version
-        copilot env deploy --name ${{ inputs.env }} --force
-        copilot deploy  --env ${{ inputs.env }} --name ${{ inputs.service_name }}
+        copilot env deploy --name ${{ inputs.environment }} --force
+        copilot deploy  --env ${{ inputs.environment }} --name ${{ inputs.service_name }}
       shell: bash
