@@ -14,7 +14,7 @@ env:
   AWS_REGION: eu-west-2 # set this to your preferred AWS region, e.g. us-west-1
 
 jobs:
-  deploy-authentication-dev:
+  deploy-resource-docs-dev:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

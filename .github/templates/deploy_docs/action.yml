@@ -29,7 +29,6 @@ runs:
         aws-access-key-id: ${{ inputs.aws-access-key-id }}
         aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
         aws-region: ${{ inputs.aws-region }}
-    - name: Build API docs
     - name: Install ${{ inputs.folder }} dependencies
       shell: bash
       run: |
@@ -40,7 +39,7 @@ runs:
       shell: bash
       run: |
         cd ${{ inputs.folder }}
-        pipenv run python -m api.export # Exports to inputs.folder/output
+        pipenv run python -m api.export 
     - name: Deploy CDK Stack
       shell: bash
       run: |
