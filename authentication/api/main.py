@@ -301,9 +301,6 @@ async def get_openid_configuration():
             "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
             "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
         },
-        "fapi_profiles_supported": [
-            "https://openid.net/specs/fapi-2_0-security-profile.html"
-        ],
         "tls_client_certificate_bound_access_tokens": True,
         "authorization_response_iss_parameter_supported": True,
         "require_signed_request_object": True,
