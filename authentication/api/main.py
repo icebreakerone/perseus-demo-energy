@@ -277,9 +277,9 @@ async def revoke_token(
     return {"status": "success", "message": "Token revoked"}
 
 
-@app.get("/.well-known/openid-configuration")
+@app.get("/.well-known/oauth-authorization-server")
 async def get_openid_configuration():
-    logger.info("Getting OpenID configuration")
+    logger.info("Getting Oauth configuration")
     return {
         "issuer": conf.ISSUER_URL,
         "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
