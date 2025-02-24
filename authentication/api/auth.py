@@ -60,7 +60,6 @@ def create_enhanced_access_token(
     )
     claims["client_id"] = client_id
     private_key = keystores.get_key(conf.JWT_SIGNING_KEY)
-    print(private_key)
     if not isinstance(private_key, ec.EllipticCurvePrivateKey):
         raise TypeError("The private key is not an EllipticCurvePrivateKey")
     return jwt.encode(claims, private_key, algorithm="ES256", headers={"kid": "1"})

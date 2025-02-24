@@ -40,9 +40,9 @@ network:
 # Optional fields for more advanced use-cases.
 #
 variables:                    # Pass environment variables as key value pairs.
-  OAUTH_CLIENT_ID: f67916ce-de33-4e2f-a8e3-cbd5f6459c30
+  ORY_CLIENT_ID: f67916ce-de33-4e2f-a8e3-cbd5f6459c30
+  ORY_URL: https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com
   REDIS_HOST: redis.${COPILOT_ENVIRONMENT_NAME}.${COPILOT_APPLICATION_NAME}.local
-  OAUTH_URL: https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com
   API_DOMAIN: perseus-demo-authentication.ib1.org
   AWS_DEFAULT_REGION: eu-west-2
   JWT_SIGNING_KEY: /copilot/perseus-demo-authentication/dev/secrets/jwt-signing-key
@@ -55,12 +55,12 @@ environments:
       alias: perseus-demo-authentication.ib1.org
       hosted_zone: Z080590727V6ALTWMJ7N5
     secrets: 
-      OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/prod/secrets/client_secret
+      ORY_CLIENT_SECRET: /copilot/perseus-demo-authentication/prod/secrets/client_secret
     variables:
       JWT_SIGNING_KEY:  /copilot/perseus-demo-authentication/prod/secrets/jwt-signing-key
   dev:
     secrets:
-      OAUTH_CLIENT_SECRET: /copilot/perseus-demo-authentication/dev/secrets/client_secret
+      ORY_CLIENT_SECRET: /copilot/perseus-demo-authentication/dev/secrets/client_secret
     http:
       # Requests to this path will be forwarded to your service.
       # To match all requests you can use the "/" path.

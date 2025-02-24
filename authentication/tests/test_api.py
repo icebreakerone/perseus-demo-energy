@@ -23,12 +23,11 @@ class FakeConf:
         self.ISSUER_URL = os.environ.get(
             "ISSUER_URL", "https://perseus-demo-authentication.ib1.org"
         )
-        self.OAUTH_CLIENT_SECRET = "123abc"
-        self.OAUTH_URL = "https://test-oauth.io"
-        self.OAUTH_CLIENT_ID = "abc-123"
-        self.JWKS_URL = f"{self.OAUTH_URL}/.well-known/jwks.json"
-        self.AUTHORIZATION_ENDPOINT = f"{self.OAUTH_URL}/oauth2/auth"
-        self.TOKEN_ENDPOINT = f"{self.OAUTH_URL}/oauth2/token"
+        self.ORY_CLIENT_SECRET = "123abc"
+        self.ORY_URL = "https://test-oauth.io"
+        self.ORY_CLIENT_ID = "abc-123"
+        self.JWKS_URL = f"{self.ORY_URL}/.well-known/jwks.json"
+        self.ORY_TOKEN_ENDPOINT = f"{self.ORY_URL}/oauth2/token"
         self.REDIRECT_URI = "https://test-accounting.org/callback"
         self.REDIS_HOST = "redis"
 
@@ -113,7 +112,7 @@ def test_token_success(mock_directory, mock_auth):
     """Test a successful token request."""
     responses.add(
         responses.POST,
-        f"{FakeConf().OAUTH_URL}/oauth2/token",
+        f"{FakeConf().ORY_URL}/oauth2/token",
         json={"access_token": MOCK_TOKEN, "refresh_token": MOCK_REFRESH_TOKEN},
         status=200,
     )

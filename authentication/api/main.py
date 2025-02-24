@@ -133,10 +133,9 @@ async def authorize(
             detail="Client ID does not match",
         )
 
-    # Construct authorization URL with request object and PKCE parameters
     authorization_url = (
-        f"{conf.AUTHORIZATION_ENDPOINT}?"
-        f"client_id={conf.OAUTH_CLIENT_ID}&"
+        f"{conf.ORY_AUTHORIZATION_ENDPOINT}?"
+        f"client_id={conf.ORY_CLIENT_ID}&"
         f"response_type=code&"
         f"redirect_uri={par_request['redirect_uri']}&"
         f"scope={par_request['scope']}&"
@@ -153,10 +152,11 @@ async def authorize(
 @app.post("/api/v1/authorize/token", response_model=models.TokenResponse)
 async def token(
     grant_type: Annotated[str, Form()],
-    redirect_uri: Annotated[str, Form()],
-    code_verifier: Annotated[str, Form()],
-    code: Annotated[str, Form()],
     x_amzn_mtls_clientcert: Annotated[str | None, Header()],
+    redirect_uri: Annotated[str | None, Form()] = None,
+    code_verifier: Annotated[str | None, Form()] = None,
+    code: Annotated[str | None, Form()] = None,
+    refresh_token: Annotated[str | None, Form()] = None,
 ) -> models.TokenResponse:
     """
     Token issuing endpoint
@@ -178,24 +178,38 @@ async def token(
             status_code=401,
             detail=str(e),
         )
+    if grant_type == "authorization_code":
+        if not code or not code_verifier or not redirect_uri:
+            raise HTTPException(status_code=400, detail="Missing required parameters")
 
-    payload = {
-        "grant_type": grant_type,
-        "code": code,
-        "redirect_uri": redirect_uri,
-        "client_id": conf.OAUTH_CLIENT_ID,
-        "code_verifier": code_verifier,
-    }
+        payload = {
+            "grant_type": grant_type,
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "client_id": conf.ORY_CLIENT_ID,
+            "code_verifier": code_verifier,
+        }
+    elif grant_type == "refresh_token":
+        if not refresh_token:
+            raise HTTPException(status_code=400, detail="Missing refresh token")
+
+        payload = {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": conf.ORY_CLIENT_ID,
+        }
+    else:
+        raise HTTPException(status_code=400, detail="Invalid grant type")
     session = requests.Session()
-    if conf.OAUTH_CLIENT_ID and conf.OAUTH_CLIENT_SECRET:
-        session.auth = (conf.OAUTH_CLIENT_ID, conf.OAUTH_CLIENT_SECRET)
+    if conf.ORY_CLIENT_ID and conf.ORY_CLIENT_SECRET:
+        session.auth = (conf.ORY_CLIENT_ID, conf.ORY_CLIENT_SECRET)
     else:
         raise HTTPException(
             status_code=500,
             detail="Client ID and Secret not set in environment",
         )
     response = requests.post(
-        f"{conf.TOKEN_ENDPOINT}",
+        f"{conf.ORY_TOKEN_ENDPOINT}",
         data=payload,
     )
     if response.status_code != 200:
@@ -206,29 +220,94 @@ async def token(
     enhanced_token = auth.create_enhanced_access_token(
         result["access_token"],
         x_amzn_mtls_clientcert,
-        f"{conf.OAUTH_URL}/.well-known/jwks.json",
+        f"{conf.ORY_URL}/.well-known/jwks.json",
     )
     return models.TokenResponse(
         access_token=enhanced_token,
-        refresh_token=result["refresh_token"],
+        refresh_token=result.get("refresh_token"),
     )
+
+
+@app.post("/api/v1/authorize/revoke")
+async def revoke_token(
+    token: str = Form(...),
+    token_type_hint: str = Form(None),
+    x_amzn_mtls_clientcert: str | None = Header(None),
+):
+    """
+    Token revocation endpoint
+
+    - Requires mTLS authentication (client certificate validation)
+    - Calls Ory Hydra's token revocation endpoint
+    - Supports both access and refresh token revocation
+    """
+
+    # Ensure client provided an mTLS certificate
+    if x_amzn_mtls_clientcert is None:
+        raise HTTPException(status_code=401, detail="No client certificate provided")
+
+    # Validate client certificate (ensure it's authorized)
+    client_cert = directory.parse_cert(x_amzn_mtls_clientcert)
+    try:
+        directory.require_role(
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            client_cert,
+        )
+    except directory.CertificateRoleError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+    # Prepare revocation request to Hydra
+    payload = {"token": token, "token_type_hint": token_type_hint}
+    session = requests.Session()
+    if conf.ORY_CLIENT_ID and conf.ORY_CLIENT_SECRET:
+        session.auth = (conf.ORY_CLIENT_ID, conf.ORY_CLIENT_SECRET)
+    else:
+        raise HTTPException(
+            status_code=500, detail="Client ID and Secret not set in environment"
+        )
+
+    response = requests.post(
+        f"{conf.ORY_URL}/oauth2/revoke",
+        data=payload,
+    )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    return {"status": "success", "message": "Token revoked"}
 
 
 @app.get("/.well-known/openid-configuration")
 async def get_openid_configuration():
     logger.info("Getting OpenID configuration")
     return {
-        "issuer": f"{conf.ISSUER_URL}",
-        "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
+        "issuer": conf.ISSUER_URL,
         "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+        "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
         "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
+        "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
         "jwks_uri": f"{conf.ISSUER_URL}/.well-known/jwks.json",
-        "introspection_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/introspect",
-        "response_types_supported": ["code", "id_token", "token"],
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code", "refresh_token"],
         "subject_types_supported": ["public"],
-        "id_token_signing_alg_values_supported": ["ES256"],
-        "token_endpoint_auth_methods_supported": ["private_key_jwt"],
-        "token_endpoint_auth_signing_alg_values_supported": ["ES256"],
+        "token_endpoint_auth_methods_supported": ["tls_client_auth"],
+        "require_pushed_authorization_requests": True,
+        "code_challenge_methods_supported": ["S256"],
+        "scopes_supported": ["openid", "profile", "email"],
+        "claims_supported": ["sub", "client_id", "cnf", "iss", "exp", "iat"],
+        "mtls_endpoint_aliases": {
+            "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+            "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
+            "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
+            "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
+        },
+        "fapi_profiles_supported": [
+            "https://openid.net/specs/fapi-2_0-security-profile.html"
+        ],
+        "tls_client_certificate_bound_access_tokens": True,
+        "authorization_response_iss_parameter_supported": True,
+        "require_signed_request_object": True,
+        "request_object_signing_alg_values_supported": ["PS256", "ES256"],
     }
 
 
