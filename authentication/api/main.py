@@ -277,6 +277,15 @@ async def revoke_token(
     return {"status": "success", "message": "Token revoked"}
 
 
+"""
+Remove subject_types_supported (no OpenID Connect), 
+require_signed_request_object (we don't use JWT signing), 
+scopes_supported (because that's a long list of License URLs) and 
+claims_supported (because we're not doing OpenID Connect and the tokens are opaque)
+
+"""
+
+
 @app.get("/.well-known/oauth-authorization-server")
 async def get_openid_configuration():
     logger.info("Getting Oauth configuration")
@@ -289,12 +298,9 @@ async def get_openid_configuration():
         "jwks_uri": f"{conf.ISSUER_URL}/.well-known/jwks.json",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
-        "subject_types_supported": ["public"],
         "token_endpoint_auth_methods_supported": ["tls_client_auth"],
         "require_pushed_authorization_requests": True,
         "code_challenge_methods_supported": ["S256"],
-        "scopes_supported": ["openid", "profile", "email"],
-        "claims_supported": ["sub", "client_id", "cnf", "iss", "exp", "iat"],
         "mtls_endpoint_aliases": {
             "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
             "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
@@ -303,7 +309,6 @@ async def get_openid_configuration():
         },
         "tls_client_certificate_bound_access_tokens": True,
         "authorization_response_iss_parameter_supported": True,
-        "require_signed_request_object": True,
         "request_object_signing_alg_values_supported": ["PS256", "ES256"],
     }
 
