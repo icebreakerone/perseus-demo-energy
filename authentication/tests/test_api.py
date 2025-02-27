@@ -70,7 +70,6 @@ def test_pushed_authorization_request(mock_redis_connection):
             "redirect_uri": "https://mobile.example.com/cb",
             "code_challenge": "W78hCS0q72DfIHa...kgZkEJuAFaT4",
             "scope": "profile",
-            "state": "abc123",
             "response_type": "code",
         },
         headers={"x-amzn-mtls-clientcert": cert_urlencoded},
@@ -90,7 +89,6 @@ def test_authorization_code(mock_get_request):
         "client_id": CLIENT_ID,
         "redirect_uri": redirect,
         "scope": "profile",
-        "state": "abc123",
         "code_challenge": "123123123",
     }
     response = client.get(

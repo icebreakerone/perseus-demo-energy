@@ -277,15 +277,6 @@ async def revoke_token(
     return {"status": "success", "message": "Token revoked"}
 
 
-"""
-Remove subject_types_supported (no OpenID Connect), 
-require_signed_request_object (we don't use JWT signing), 
-scopes_supported (because that's a long list of License URLs) and 
-claims_supported (because we're not doing OpenID Connect and the tokens are opaque)
-
-"""
-
-
 @app.get("/.well-known/oauth-authorization-server")
 async def get_openid_configuration():
     logger.info("Getting Oauth configuration")
