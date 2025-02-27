@@ -86,7 +86,7 @@ def test_consumption(
         api_consumption_url,
         headers={
             "Authorization": "Bearer token",
-            "x-amzn-mtls-clientcert": quote(pem),
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
         },
     )
 

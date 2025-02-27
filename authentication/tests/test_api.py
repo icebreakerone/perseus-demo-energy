@@ -72,7 +72,7 @@ def test_pushed_authorization_request(mock_redis_connection):
             "scope": "profile",
             "response_type": "code",
         },
-        headers={"x-amzn-mtls-clientcert": cert_urlencoded},
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
     )
 
     assert response.status_code == 201
@@ -97,7 +97,7 @@ def test_authorization_code(mock_get_request):
             "client_id": CLIENT_ID,
             "request_uri": "urn:ietf:params:oauth:request_uri:O38VUUUC1quZR59Fhx0TrTLZGX4",
         },
-        headers={"x-amzn-mtls-clientcert": cert_urlencoded},
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
         follow_redirects=False,
     )
     assert response.status_code == 302
@@ -123,7 +123,7 @@ def test_token_success(mock_directory, mock_auth):
             "code_verifier": "mock_verifier",
             "code": "mock_code",
         },
-        headers={"x-amzn-mtls-clientcert": "mock_cert"},
+        headers={"x-amzn-mtls-clientcert-leaf": "mock_cert"},
     )
 
     assert response.status_code == 200
