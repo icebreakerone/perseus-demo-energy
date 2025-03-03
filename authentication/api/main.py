@@ -49,10 +49,9 @@ async def docs() -> dict:
 async def pushed_authorization_request(
     response_type: Annotated[str, Form()],
     redirect_uri: Annotated[str, Form()],
-    state: Annotated[str, Form()],
     code_challenge: Annotated[str, Form()],
     scope: Annotated[str, Form()],
-    x_amzn_mtls_clientcert: Annotated[str, Header()],
+    x_amzn_mtls_clientcert_leaf: Annotated[str, Header()],
 ) -> dict:
     """
     Store the request in redis, return a request_uri to the client
@@ -64,12 +63,12 @@ async def pushed_authorization_request(
     """
     # Client authentication by mtls
     # In production the Perseus directory will be able to check certificates
-    if not x_amzn_mtls_clientcert:
+    if not x_amzn_mtls_clientcert_leaf:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Client certificate required",
         )
-    client_cert = directory.parse_cert(x_amzn_mtls_clientcert)
+    client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     client_id = directory.extensions.decode_application(client_cert)
     # Get args as dict
     parameters = {
@@ -78,7 +77,6 @@ async def pushed_authorization_request(
         "client_id": client_id,
         "code_challenge_method": "S256",  # "plain" or "S256
         "redirect_uri": redirect_uri,
-        "state": state,
         "scope": scope,
     }
     token = par.get_token()
@@ -105,14 +103,14 @@ async def pushed_authorization_request(
 )
 async def authorize(
     request_uri: str,
-    x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
+    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
 ):
-    if not x_amzn_mtls_clientcert:
+    if not x_amzn_mtls_clientcert_leaf:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Client certificate required",
         )
-    client_cert = directory.parse_cert(x_amzn_mtls_clientcert)
+    client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     client_id = directory.extensions.decode_application(client_cert)
     if not request_uri:
         raise HTTPException(
@@ -139,7 +137,6 @@ async def authorize(
         f"response_type=code&"
         f"redirect_uri={par_request['redirect_uri']}&"
         f"scope={par_request['scope']}&"
-        f"state={par_request['state']}&"
         f"code_challenge={par_request['code_challenge']}&"
         f"code_challenge_method=S256&"
         f"request={json.dumps(par_request)}"
@@ -152,7 +149,7 @@ async def authorize(
 @app.post("/api/v1/authorize/token", response_model=models.TokenResponse)
 async def token(
     grant_type: Annotated[str, Form()],
-    x_amzn_mtls_clientcert: Annotated[str | None, Header()],
+    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()],
     redirect_uri: Annotated[str | None, Form()] = None,
     code_verifier: Annotated[str | None, Form()] = None,
     code: Annotated[str | None, Form()] = None,
@@ -165,9 +162,9 @@ async def token(
     but due to missing features in Ory Hydra authorisation code flow we need to generate
     our own id_token, and add client certificate details to the token
     """
-    if x_amzn_mtls_clientcert is None:
+    if x_amzn_mtls_clientcert_leaf is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
-    client_cert = directory.parse_cert(x_amzn_mtls_clientcert)
+    client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
             "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
@@ -219,7 +216,7 @@ async def token(
     # Add in our required client certificate thumbprint
     enhanced_token = auth.create_enhanced_access_token(
         result["access_token"],
-        x_amzn_mtls_clientcert,
+        x_amzn_mtls_clientcert_leaf,
         f"{conf.ORY_URL}/.well-known/jwks.json",
     )
     return models.TokenResponse(
@@ -232,7 +229,7 @@ async def token(
 async def revoke_token(
     token: str = Form(...),
     token_type_hint: str = Form(None),
-    x_amzn_mtls_clientcert: str | None = Header(None),
+    x_amzn_mtls_clientcert_leaf: str | None = Header(None),
 ):
     """
     Token revocation endpoint
@@ -243,11 +240,11 @@ async def revoke_token(
     """
 
     # Ensure client provided an mTLS certificate
-    if x_amzn_mtls_clientcert is None:
+    if x_amzn_mtls_clientcert_leaf is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
 
     # Validate client certificate (ensure it's authorized)
-    client_cert = directory.parse_cert(x_amzn_mtls_clientcert)
+    client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
             "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",

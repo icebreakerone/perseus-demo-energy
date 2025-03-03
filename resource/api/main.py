@@ -52,15 +52,15 @@ def consumption(
     from_date: datetime.date = Query(alias="from"),
     to_date: datetime.date = Query(alias="to"),
     token: HTTPAuthorizationCredentials = Depends(security),
-    x_amzn_mtls_clientcert: Annotated[str | None, Header()] = None,
+    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
 ):
-    if not x_amzn_mtls_clientcert:
+    if not x_amzn_mtls_clientcert_leaf:
         raise HTTPException(
             status_code=401,
             detail="Client certificate required",
         )
-    cert = directory.parse_cert(x_amzn_mtls_clientcert)
+    cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
             "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
@@ -76,7 +76,7 @@ def consumption(
         # And check the certificate binding
         try:
             decoded, headers = auth.check_token(
-                x_amzn_mtls_clientcert,
+                x_amzn_mtls_clientcert_leaf,
                 token.credentials,
                 x_fapi_interaction_id,
             )

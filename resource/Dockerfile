@@ -9,4 +9,4 @@ RUN pipenv install --system --deploy --ignore-pipfile
 COPY ./api /code/api
 COPY ./data /code/data
 EXPOSE 8080
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8080", "--log-level", "info", "--access-log"]
