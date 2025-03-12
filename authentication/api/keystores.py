@@ -1,4 +1,3 @@
-import logging
 from functools import lru_cache
 
 import boto3
@@ -9,8 +8,9 @@ from .exceptions import (
     KeyNotFoundError,
 )
 
+from .logger import get_logger
 
-log = logging.getLogger(__name__)
+logger = get_logger()
 
 
 @lru_cache(maxsize=None)
@@ -36,20 +36,19 @@ def get_key(key_path: str) -> PrivateKeyTypes:
 
     """
     ssm_client = get_boto3_client("ssm")
-    log.info(f"Getting {key_path}")
+    logger.info(f"Getting {key_path}")
     try:
         param_value = ssm_client.get_parameter(Name=key_path, WithDecryption=True)[
             "Parameter"
         ]["Value"]
         key_pem = param_value.encode("utf-8")
     except (ssm_client.exceptions.ParameterNotFound, ssm_client.exceptions.ClientError):
-        log.warning("jwt signing key not found in SSM. Trying local file.")
+        logger.warning("jwt signing key not found in SSM. Trying local file.")
         try:
             with open(key_path, "rb") as key_file:
                 key_pem = key_file.read()
         except FileNotFoundError:
             raise KeyNotFoundError("jwt signing key not found in SSM or local file.")
-    print(key_pem)
     loaded_key = serialization.load_pem_private_key(
         key_pem, password=None, backend=default_backend()
     )

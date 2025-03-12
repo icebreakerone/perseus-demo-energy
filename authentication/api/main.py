@@ -1,22 +1,28 @@
 from typing import Annotated
 import json
-import logging
 
 import requests
 
-from fastapi import FastAPI, Header, HTTPException, status, Form, Request
+from fastapi import (
+    FastAPI,
+    Request,
+    Header,
+    HTTPException,
+    status,
+    Form,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import Response
-
+import mangum
 from ib1 import directory
 from . import models
 from . import conf
 from . import par
 from . import auth
+from .logger import get_logger
 
-
-logger = logging.getLogger(__name__)
+logger = get_logger()
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Demo Authentication Server",
@@ -58,12 +64,14 @@ async def pushed_authorization_request(
     """
     # Client authentication by mtls
     # In production the Perseus directory will be able to check certificates
+    logger.info("PAR request")
+    logger.info(request.headers)
     if not x_amzn_mtls_clientcert_leaf:
-        logger.info(request.headers)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Client certificate required",
         )
+
     client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     client_id = directory.extensions.decode_application(client_cert)
     # Get args as dict
@@ -99,15 +107,7 @@ async def pushed_authorization_request(
 )
 async def authorize(
     request_uri: str,
-    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
 ):
-    if not x_amzn_mtls_clientcert_leaf:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Client certificate required",
-        )
-    client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
-    client_id = directory.extensions.decode_application(client_cert)
     if not request_uri:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -120,11 +120,6 @@ async def authorize(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Request URI does not exist or has expired",
-        )
-    if par_request["client_id"] != client_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Client ID does not match",
         )
 
     authorization_url = (
@@ -145,7 +140,7 @@ async def authorize(
 @app.post("/api/v1/authorize/token", response_model=models.TokenResponse)
 async def token(
     grant_type: Annotated[str, Form()],
-    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()],
+    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
     redirect_uri: Annotated[str | None, Form()] = None,
     code_verifier: Annotated[str | None, Form()] = None,
     code: Annotated[str | None, Form()] = None,
@@ -193,15 +188,9 @@ async def token(
         }
     else:
         raise HTTPException(status_code=400, detail="Invalid grant type")
-    session = requests.Session()
-    if conf.ORY_CLIENT_ID and conf.ORY_CLIENT_SECRET:
-        session.auth = (conf.ORY_CLIENT_ID, conf.ORY_CLIENT_SECRET)
-    else:
-        raise HTTPException(
-            status_code=500,
-            detail="Client ID and Secret not set in environment",
-        )
-    response = requests.post(
+    session = auth.get_session()
+
+    response = session.post(
         f"{conf.ORY_TOKEN_ENDPOINT}",
         data=payload,
     )
@@ -223,6 +212,7 @@ async def token(
 
 @app.post("/api/v1/authorize/revoke")
 async def revoke_token(
+    request: Request,
     token: str = Form(...),
     token_type_hint: str = Form(None),
     x_amzn_mtls_clientcert_leaf: str | None = Header(None),
@@ -271,23 +261,22 @@ async def revoke_token(
 
 
 @app.get("/.well-known/oauth-authorization-server")
-async def get_openid_configuration(request: Request):
+async def get_openid_configuration():
     logger.info("Getting Oauth configuration")
-    logger.info(request.headers)
     return {
         "issuer": conf.ISSUER_URL,
-        "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+        "authorization_endpoint": f"{conf.UNPROTECTED_URL}/api/v1/authorize",
         "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
         "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
         "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
-        "jwks_uri": f"{conf.ISSUER_URL}/.well-known/jwks.json",
+        "jwks_uri": f"{conf.UNPROTECTED_URL}/.well-known/jwks.json",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
         "token_endpoint_auth_methods_supported": ["tls_client_auth"],
         "require_pushed_authorization_requests": True,
         "code_challenge_methods_supported": ["S256"],
         "mtls_endpoint_aliases": {
-            "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+            "authorization_endpoint": f"{conf.UNPROTECTED_URL}/api/v1/authorize",
             "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
             "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
             "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
@@ -320,4 +309,5 @@ def custom_openapi():
     return app.openapi_schema
 
 
+handler = mangum.Mangum(app, lifespan="auto")
 app.openapi = custom_openapi  # type: ignore

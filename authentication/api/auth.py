@@ -1,17 +1,44 @@
 import base64
 import json
 
+import boto3
+import requests
 import jwt
 from jwt import algorithms
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes
-
+from fastapi import (
+    HTTPException,
+)
 
 from .exceptions import AccessTokenDecodingError
 from . import conf
-from .logger import logger
+from .logger import get_logger
 from . import keystores
 from ib1 import directory
+
+
+logger = get_logger()
+
+
+def _get_ory_secret_from_ssm():
+    ssm = boto3.client("ssm")
+    response = ssm.get_parameter(Name=conf.ORY_CLIENT_SECRET_PARAM, WithDecryption=True)
+    return response["Parameter"]["Value"]
+
+
+def get_session():
+    session = requests.Session()
+    if conf.ORY_CLIENT_ID and conf.ORY_CLIENT_SECRET:
+        session.auth = (conf.ORY_CLIENT_ID, conf.ORY_CLIENT_SECRET)
+    elif conf.ORY_CLIENT_SECRET_PARAM:
+        session.auth = (conf.ORY_CLIENT_ID, _get_ory_secret_from_ssm())
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Client ID and Secret not set",
+        )
+    return session
 
 
 def get_thumbprint(cert: str) -> str:

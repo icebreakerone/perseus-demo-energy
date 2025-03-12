@@ -5,10 +5,21 @@ DIRNAME = os.path.dirname(os.path.realpath(__file__))
 
 
 ISSUER_URL = os.environ.get(
-    "ISSUER_URL", "https://perseus-demo-authentication.ib1.org"
+    "ISSUER_URL", "https://mtls.perseus-demo-authentication.ib1.org"
 )  # This server, used to generate openid-configuration
 
-ORY_CLIENT_SECRET = os.environ.get("ORY_CLIENT_SECRET")  # Ory Hydra Oauth2 client
+UNPROTECTED_URL = os.environ.get(  # For endpoints that don't require mtls
+    "UNPROTECTED_URL", "https://perseus-demo-authentication.ib1.org"
+)  # This server, used to generate openid-configuration
+
+ENV = os.environ.get("ENV", "dev")
+
+ORY_CLIENT_SECRET = os.environ.get(
+    "ORY_CLIENT_SECRET"
+)  # Ory Hydra Oauth2 client secret for local dev
+ORY_CLIENT_SECRET_PARAM = os.environ.get(
+    "ORY_CLIENT_SECRET_PARAM"
+)  # To retrieve the secret from SSM
 ORY_CLIENT_ID = os.environ.get("ORY_CLIENT_ID")  # Ory Hydra Oauth2 client
 ORY_URL = os.environ.get("ORY_URL")  # Ory Hydra Oauth2 server
 ORY_TOKEN_ENDPOINT = (
@@ -28,7 +39,7 @@ REDIRECT_URI = os.environ.get(  #
 )
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")
-ENV = os.environ.get("ENV", "dev")
+
 
 JWT_SIGNING_KEY = os.environ.get(
     "JWT_SIGNING_KEY", f"/copilot/perseus-directory/{ENV}/secrets/jwt-signing-key"

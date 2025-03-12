@@ -20,6 +20,7 @@ pytest-coverage = "*"
 asn1crypto = "*"
 ib1-directory = "*"
 jwcrypto = "*"
+loguru = "*"
 
 [dev-packages]
 black = "*"
