@@ -4,13 +4,7 @@ import logging
 
 import requests
 
-from fastapi import (
-    FastAPI,
-    Header,
-    HTTPException,
-    status,
-    Form,
-)
+from fastapi import FastAPI, Header, HTTPException, status, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import Response
@@ -51,7 +45,8 @@ async def pushed_authorization_request(
     redirect_uri: Annotated[str, Form()],
     code_challenge: Annotated[str, Form()],
     scope: Annotated[str, Form()],
-    x_amzn_mtls_clientcert_leaf: Annotated[str, Header()],
+    request: Request,
+    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
 ) -> dict:
     """
     Store the request in redis, return a request_uri to the client
@@ -64,6 +59,7 @@ async def pushed_authorization_request(
     # Client authentication by mtls
     # In production the Perseus directory will be able to check certificates
     if not x_amzn_mtls_clientcert_leaf:
+        logger.info(request.headers)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Client certificate required",
@@ -275,8 +271,9 @@ async def revoke_token(
 
 
 @app.get("/.well-known/oauth-authorization-server")
-async def get_openid_configuration():
+async def get_openid_configuration(request: Request):
     logger.info("Getting Oauth configuration")
+    logger.info(request.headers)
     return {
         "issuer": conf.ISSUER_URL,
         "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
