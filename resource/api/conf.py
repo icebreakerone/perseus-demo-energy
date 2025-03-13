@@ -23,3 +23,7 @@ AUTHENTICATION_SERVER_CA = os.environ.get(
 )
 
 API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")
+PROVIDER_ROLE = os.environ.get(
+    "PROVIDER_ROLE",
+    "https://registry.core.pilot.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider",
+)

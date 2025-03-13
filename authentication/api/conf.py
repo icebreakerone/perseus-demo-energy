@@ -44,3 +44,8 @@ API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")
 JWT_SIGNING_KEY = os.environ.get(
     "JWT_SIGNING_KEY", f"/copilot/perseus-directory/{ENV}/secrets/jwt-signing-key"
 )
+
+PROVIDER_ROLE = os.environ.get(
+    "PROVIDER_ROLE",
+    "https://registry.core.pilot.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider",
+)

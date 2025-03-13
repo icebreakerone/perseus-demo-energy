@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from api.main import app, conf
 from api import auth
-from tests import client_certificate, CLIENT_ID
+from tests import client_certificate, CLIENT_ID, TEST_ROLE
 
 client = TestClient(app)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -81,11 +81,7 @@ def test_pushed_authorization_request(mock_redis_connection):
 
 @patch("api.par.get_request")
 def test_authorization_code(mock_get_request):
-    cert_urlencoded = client_certificate(
-        roles=[
-            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting-provider"
-        ]
-    )
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
     redirect = "http://anywhere.com"
     mock_get_request.return_value = {
         "client_id": CLIENT_ID,

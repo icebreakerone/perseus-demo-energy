@@ -163,7 +163,7 @@ async def token(
     client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
-            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting-provider",
+            conf.PROVIDER_ROLE,
             client_cert,
         )
     except directory.CertificateRoleError as e:
@@ -242,7 +242,7 @@ async def revoke_token(
     client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
-            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting-provider",
+            conf.PROVIDER_ROLE,
             client_cert,
         )
     except directory.CertificateRoleError as e:
