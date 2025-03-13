@@ -1,9 +1,9 @@
 from functools import lru_cache
 
-import boto3
+import boto3  # type: ignore[import-untyped]
+from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
 from .exceptions import (
     KeyNotFoundError,
 )
@@ -18,7 +18,7 @@ def get_boto3_client(service_name):
     return boto3.client(service_name)
 
 
-def get_key(key_path: str) -> PrivateKeyTypes:
+def get_key(key_path: str) -> ec.EllipticCurvePrivateKey:
     """
     Return the key (stored in ssm as a secure string) as bytes.
     If the call to SSM get parameter fails, try to load the key from a local file defined as conf.SIGNING_KEY.
@@ -52,4 +52,6 @@ def get_key(key_path: str) -> PrivateKeyTypes:
     loaded_key = serialization.load_pem_private_key(
         key_pem, password=None, backend=default_backend()
     )
+    if not isinstance(loaded_key, ec.EllipticCurvePrivateKey):
+        raise TypeError("The private key is not an EllipticCurvePrivateKey")
     return loaded_key

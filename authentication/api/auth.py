@@ -1,7 +1,9 @@
 import base64
 import json
+import uuid
+import time
 
-import boto3
+import boto3  # type: ignore[import-untyped]
 import requests
 import jwt
 from jwt import algorithms
@@ -39,6 +41,24 @@ def get_session():
             detail="Client ID and Secret not set",
         )
     return session
+
+
+def create_state_token(context: dict | None = None) -> str:
+    """
+    A signed JWT token to be used as a state parameter in OAuth2 interactions with ory hydra
+    """
+    private_key = keystores.get_key(conf.JWT_SIGNING_KEY)
+    payload = {
+        "sub": "par",
+        "jti": str(uuid.uuid4()),
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 600,
+    }
+    logger.info(f"Creating state token with payload: {payload}")
+    logger.info(f"Key type: {type(private_key)}")
+    if context:
+        payload.update(context)
+    return jwt.encode(payload, private_key, algorithm="ES256")
 
 
 def get_thumbprint(cert: str) -> str:
@@ -87,8 +107,6 @@ def create_enhanced_access_token(
     )
     claims["client_id"] = client_id
     private_key = keystores.get_key(conf.JWT_SIGNING_KEY)
-    if not isinstance(private_key, ec.EllipticCurvePrivateKey):
-        raise TypeError("The private key is not an EllipticCurvePrivateKey")
     return jwt.encode(claims, private_key, algorithm="ES256", headers={"kid": "1"})
 
 

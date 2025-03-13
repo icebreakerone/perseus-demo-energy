@@ -14,7 +14,6 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import Response
-import mangum
 from ib1 import directory
 from . import models
 from . import conf
@@ -82,7 +81,11 @@ async def pushed_authorization_request(
         "code_challenge_method": "S256",  # "plain" or "S256
         "redirect_uri": redirect_uri,
         "scope": scope,
+        "state": auth.create_state_token(
+            {"client_id": client_id}
+        ),  # For ory hydra interaction
     }
+    logger.info({"storing": parameters})
     token = par.get_token()
     par.store_request(token, parameters)
     return {
@@ -130,9 +133,10 @@ async def authorize(
         f"scope={par_request['scope']}&"
         f"code_challenge={par_request['code_challenge']}&"
         f"code_challenge_method=S256&"
-        f"request={json.dumps(par_request)}"
+        f"request={json.dumps(par_request)}&"
+        f"state={par_request['state']}"
     )
-
+    logger.info(f"Redirecting to {authorization_url}")
     # Redirect the user to the authorization URL
     return Response(status_code=302, headers={"Location": authorization_url})
 
@@ -309,5 +313,4 @@ def custom_openapi():
     return app.openapi_schema
 
 
-handler = mangum.Mangum(app, lifespan="auto")
 app.openapi = custom_openapi  # type: ignore

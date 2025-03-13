@@ -75,10 +75,14 @@ fastapi_service = AuthenticationAPIServiceConstruct(
     vpc=network.vpc,
     ssm_policy=ssm_policy.policy,
     environment={
-        "API_DOMAIN": "preprod.perseus-demo-authentication.ib1.org",
+        "API_DOMAIN": f'{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}',
+        "UNPROTECTED_URL": f'https://{contexts[deployment_context]["subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}',
+        "JWT_SIGNING_KEY": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/jwt-signing-key",
         "REDIS_HOST": redis.redis.attr_redis_endpoint_address,
         "ORY_CLIENT_ID": "f67916ce-de33-4e2f-a8e3-cbd5f6459c30",
         "ORY_URL": "https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com",
+        "ISSUER_URL": f"https://{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}",
+        "ORY_CLIENT_SECRET_PARAM": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/client_secret",
     },
     ecs_sg=network.ecs_sg,
     mtls_target_group=alb.mtls_target_group,
@@ -86,6 +90,5 @@ fastapi_service = AuthenticationAPIServiceConstruct(
     mtls_alb_sg=alb.mtls_alb_sg,
     public_alb_sg=alb.public_alb_sg,
 )
-
 
 app.synth()
