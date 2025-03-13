@@ -29,7 +29,7 @@ ib1-directory create-application-certificates --issuer-key-file client-issuer-ke
   --organization_name "EDP Demo"  \
   --country UK \
   --state London \
-  --role https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting \
+  --role https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting-provider \
   --application_uri https://registry.core.pilot.trust.ib1.org/application/edp-demo
 
 # Create sigining certificates

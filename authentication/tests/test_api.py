@@ -82,7 +82,9 @@ def test_pushed_authorization_request(mock_redis_connection):
 @patch("api.par.get_request")
 def test_authorization_code(mock_get_request):
     cert_urlencoded = client_certificate(
-        roles=["https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"]
+        roles=[
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting-provider"
+        ]
     )
     redirect = "http://anywhere.com"
     mock_get_request.return_value = {

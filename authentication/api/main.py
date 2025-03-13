@@ -157,12 +157,13 @@ async def token(
     but due to missing features in Ory Hydra authorisation code flow we need to generate
     our own id_token, and add client certificate details to the token
     """
+    logger.info("Token request")
     if x_amzn_mtls_clientcert_leaf is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
     client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
-            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting-provider",
             client_cert,
         )
     except directory.CertificateRoleError as e:
@@ -171,6 +172,7 @@ async def token(
             detail=str(e),
         )
     if grant_type == "authorization_code":
+        logger.info("Authorization code flow")
         if not code or not code_verifier or not redirect_uri:
             raise HTTPException(status_code=400, detail="Missing required parameters")
 
@@ -182,6 +184,7 @@ async def token(
             "code_verifier": code_verifier,
         }
     elif grant_type == "refresh_token":
+        logger.info("Refresh token flow")
         if not refresh_token:
             raise HTTPException(status_code=400, detail="Missing refresh token")
 
@@ -199,6 +202,7 @@ async def token(
         data=payload,
     )
     if response.status_code != 200:
+        logger.error(response.text)
         raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
 
@@ -208,6 +212,7 @@ async def token(
         x_amzn_mtls_clientcert_leaf,
         f"{conf.ORY_URL}/.well-known/jwks.json",
     )
+    logger.info("Token issued")
     return models.TokenResponse(
         access_token=enhanced_token,
         refresh_token=result.get("refresh_token"),
@@ -237,7 +242,7 @@ async def revoke_token(
     client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
-            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting-provider",
             client_cert,
         )
     except directory.CertificateRoleError as e:

@@ -63,7 +63,7 @@ def consumption(
     cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
-            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting-provider",
             cert,
         )
     except CertificateError as e:
