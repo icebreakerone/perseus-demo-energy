@@ -102,6 +102,7 @@ def create_enhanced_access_token(
     claims = decode_with_jwks(external_token, external_oauth_url)
     logger.info(f"Claims: {claims}")
     claims["cnf"] = {"x5t#S256": get_thumbprint(client_certificate)}
+    claims["iss"] = conf.ISSUER_URL
     client_id = directory.extensions.decode_application(
         directory.parse_cert(client_certificate)
     )

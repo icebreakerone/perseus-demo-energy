@@ -15,6 +15,7 @@ ib1-directory = "*"
 ib1-provenance = "==0.2b"
 boto3 = "*"
 httpx = "*"
+loguru = "*"
 
 [dev-packages]
 pytest = "*"

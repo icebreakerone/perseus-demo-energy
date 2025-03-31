@@ -205,7 +205,7 @@ async def token(
         logger.error(response.text)
         raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
-
+    logger.info(result)
     # Add in our required client certificate thumbprint
     enhanced_token = auth.create_enhanced_access_token(
         result["access_token"],
@@ -250,13 +250,7 @@ async def revoke_token(
 
     # Prepare revocation request to Hydra
     payload = {"token": token, "token_type_hint": token_type_hint}
-    session = requests.Session()
-    if conf.ORY_CLIENT_ID and conf.ORY_CLIENT_SECRET:
-        session.auth = (conf.ORY_CLIENT_ID, conf.ORY_CLIENT_SECRET)
-    else:
-        raise HTTPException(
-            status_code=500, detail="Client ID and Secret not set in environment"
-        )
+    session = auth.get_session()
 
     response = requests.post(
         f"{conf.ORY_URL}/oauth2/revoke",

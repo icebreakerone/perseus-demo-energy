@@ -22,11 +22,9 @@ ORY_CLIENT_SECRET_PARAM = os.environ.get(
 )  # To retrieve the secret from SSM
 ORY_CLIENT_ID = os.environ.get("ORY_CLIENT_ID")  # Ory Hydra Oauth2 client
 ORY_URL = os.environ.get("ORY_URL")  # Ory Hydra Oauth2 server
-ORY_TOKEN_ENDPOINT = (
-    os.environ.get(  # Token issuing is on our side, using the Ory Hydra api
-        "ORY_TOKEN_ENDPOINT",
-        f"{ISSUER_URL}/oauth2/token",
-    )
+ORY_TOKEN_ENDPOINT = os.environ.get(
+    "ORY_TOKEN_ENDPOINT",
+    f"{ORY_URL}/oauth2/token",
 )
 
 ORY_AUTHORIZATION_ENDPOINT = os.environ.get(  # User logins are handled on Ory Hydra
