@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy authentication
-        uses: ./.github/templates/deploy/
+        uses: ./.github/templates/deploy_cdk/
         with:
           folder: authentication
           environment: ${{ env.ENVIRONMENT }}

@@ -1,0 +1,51 @@
+name: Static Docs
+description: Build static deployment of api docs
+inputs:
+  deployment_context:
+    description: "The environment to deploy to"
+    required: true
+  folder:
+    description: "The folder to run deploy from"
+    required: true
+  aws-access-key-id:
+    required: true
+    type: string
+  aws-secret-access-key:
+    required: true
+    type: string
+  aws-region:
+    required: true
+    type: string
+
+runs:
+  using: "composite"
+  steps:
+    - uses: "actions/setup-python@v4"
+      with:
+        python-version: "3.12"
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+    - name: Install ${{ inputs.folder }} dependencies
+      shell: bash
+      run: |
+        cd ${{ inputs.folder }}
+        pip install pipenv
+        pipenv install
+        npm install -g aws-cdk
+    - name: Build static docs
+      shell: bash
+      run: |
+        cd ${{ inputs.folder }}
+        pipenv run python -m api.export 
+    - name: Deploy CDK Stack
+      shell: bash
+      run: |
+        cd docs-api
+        pip install -r requirements.txt
+        cdk context --clear
+        cdk --context deployment_context=${{inputs.deployment_context}} synthesize
+        cdk --context deployment_context=${{inputs.deployment_context}} deploy --require-approval never
