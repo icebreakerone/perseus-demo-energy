@@ -1,4 +1,3 @@
-import logging
 from functools import lru_cache
 
 import boto3

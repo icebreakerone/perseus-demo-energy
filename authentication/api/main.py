@@ -1,7 +1,6 @@
 from typing import Annotated
 import json
 
-import requests
 
 from fastapi import (
     FastAPI,
@@ -62,9 +61,6 @@ async def pushed_authorization_request(
     - [Client authentication methods](https://www.rfc-editor.org/rfc/rfc6749.html#section-3.2.1)
     """
     # Client authentication by mtls
-    # In production the Perseus directory will be able to check certificates
-    logger.info("PAR request")
-    logger.info(request.headers)
     if not x_amzn_mtls_clientcert_leaf:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -85,7 +81,6 @@ async def pushed_authorization_request(
             {"client_id": client_id}
         ),  # For ory hydra interaction
     }
-    logger.info({"storing": parameters})
     token = par.get_token()
     par.store_request(token, parameters)
     return {
@@ -157,7 +152,6 @@ async def token(
     but due to missing features in Ory Hydra authorisation code flow we need to generate
     our own id_token, and add client certificate details to the token
     """
-    logger.info("Token request")
     if x_amzn_mtls_clientcert_leaf is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
     client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
@@ -201,18 +195,19 @@ async def token(
         f"{conf.ORY_TOKEN_ENDPOINT}",
         data=payload,
     )
+    logger.info(f"Token response: {response.status_code} {response.text}")
     if response.status_code != 200:
         logger.error(response.text)
         raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
-    logger.info(result)
+    logger.info(f"Token result: {result}")
     # Add in our required client certificate thumbprint
     enhanced_token = auth.create_enhanced_access_token(
         result["access_token"],
         x_amzn_mtls_clientcert_leaf,
         f"{conf.ORY_URL}/.well-known/jwks.json",
     )
-    logger.info("Token issued")
+    logger.info(f"Enhanced token: {enhanced_token}")
     return models.TokenResponse(
         access_token=enhanced_token,
         refresh_token=result.get("refresh_token"),
@@ -252,7 +247,7 @@ async def revoke_token(
     payload = {"token": token, "token_type_hint": token_type_hint}
     session = auth.get_session()
 
-    response = requests.post(
+    response = session.post(
         f"{conf.ORY_URL}/oauth2/revoke",
         data=payload,
     )

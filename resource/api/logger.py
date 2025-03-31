@@ -1,6 +1,5 @@
 from loguru import logger
 import sys
-from uvicorn.config import LOGGING_CONFIG
 
 
 logger.remove()

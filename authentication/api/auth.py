@@ -54,8 +54,6 @@ def create_state_token(context: dict | None = None) -> str:
         "iat": int(time.time()),
         "exp": int(time.time()) + 600,
     }
-    logger.info(f"Creating state token with payload: {payload}")
-    logger.info(f"Key type: {type(private_key)}")
     if context:
         payload.update(context)
     return jwt.encode(payload, private_key, algorithm="ES256")

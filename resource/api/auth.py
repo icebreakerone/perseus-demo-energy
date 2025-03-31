@@ -1,4 +1,3 @@
-import logging
 import uuid
 from typing import Optional, Tuple
 import email.utils
@@ -17,7 +16,6 @@ from .exceptions import (
     AccessTokenTimeError,
     AccessTokenDecodingError,
 )
-from .keystores import get_certificate
 from . import conf
 from ib1 import directory
 

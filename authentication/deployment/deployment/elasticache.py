@@ -26,7 +26,7 @@ class RedisConstruct(Construct):
         )
         self.redis_host_param = ssm.StringParameter(
             self,
-            f"RedisHostParam",
+            "RedisHostParam",
             string_value=self.redis.attr_redis_endpoint_address,
             parameter_name="/authentication-service/redis-host",
         )

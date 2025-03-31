@@ -10,7 +10,6 @@ from deployment.policies import SSMPermissionsConstruct
 
 from deployment.elasticache import RedisConstruct
 
-from deployment.policies import SSMPermissionsConstruct
 from deployment.authentication_service import AuthenticationAPIServiceConstruct
 from deployment.loadbalancer import LoadBalancer
 from models import Context
