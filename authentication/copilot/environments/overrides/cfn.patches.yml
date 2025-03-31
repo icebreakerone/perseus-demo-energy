@@ -1,8 +1,0 @@
-
-# Add verified MutualAuthentication to the HTTPSListener
-- op: add
-  path: /Resources/HTTPSListener/Properties/MutualAuthentication
-  value: 
-    Mode: "verify"  
-    TrustStoreArn: arn:aws:elasticloadbalancing:eu-west-2:232615051732:truststore/PerseusDemoTruststore/90ae6295e483d9f9
-    

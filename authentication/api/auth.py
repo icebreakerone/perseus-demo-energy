@@ -1,17 +1,62 @@
 import base64
 import json
+import uuid
+import time
 
+import boto3  # type: ignore[import-untyped]
+import requests
 import jwt
 from jwt import algorithms
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes
-
+from fastapi import (
+    HTTPException,
+)
 
 from .exceptions import AccessTokenDecodingError
 from . import conf
-from .logger import logger
+from .logger import get_logger
 from . import keystores
 from ib1 import directory
+
+
+logger = get_logger()
+
+
+def _get_ory_secret_from_ssm():
+    ssm = boto3.client("ssm")
+    response = ssm.get_parameter(Name=conf.ORY_CLIENT_SECRET_PARAM, WithDecryption=True)
+    return response["Parameter"]["Value"]
+
+
+def get_session():
+    session = requests.Session()
+    if conf.ORY_CLIENT_ID and conf.ORY_CLIENT_SECRET:
+        session.auth = (conf.ORY_CLIENT_ID, conf.ORY_CLIENT_SECRET)
+    elif conf.ORY_CLIENT_SECRET_PARAM:
+        session.auth = (conf.ORY_CLIENT_ID, _get_ory_secret_from_ssm())
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Client ID and Secret not set",
+        )
+    return session
+
+
+def create_state_token(context: dict | None = None) -> str:
+    """
+    A signed JWT token to be used as a state parameter in OAuth2 interactions with ory hydra
+    """
+    private_key = keystores.get_key(conf.JWT_SIGNING_KEY)
+    payload = {
+        "sub": "par",
+        "jti": str(uuid.uuid4()),
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 600,
+    }
+    if context:
+        payload.update(context)
+    return jwt.encode(payload, private_key, algorithm="ES256")
 
 
 def get_thumbprint(cert: str) -> str:
@@ -55,13 +100,12 @@ def create_enhanced_access_token(
     claims = decode_with_jwks(external_token, external_oauth_url)
     logger.info(f"Claims: {claims}")
     claims["cnf"] = {"x5t#S256": get_thumbprint(client_certificate)}
+    claims["iss"] = conf.ISSUER_URL
     client_id = directory.extensions.decode_application(
         directory.parse_cert(client_certificate)
     )
     claims["client_id"] = client_id
     private_key = keystores.get_key(conf.JWT_SIGNING_KEY)
-    if not isinstance(private_key, ec.EllipticCurvePrivateKey):
-        raise TypeError("The private key is not an EllipticCurvePrivateKey")
     return jwt.encode(claims, private_key, algorithm="ES256", headers={"kid": "1"})
 
 

@@ -1,11 +1,10 @@
 from typing import Annotated
 import json
-import logging
 
-import requests
 
 from fastapi import (
     FastAPI,
+    Request,
     Header,
     HTTPException,
     status,
@@ -14,15 +13,14 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import Response
-
 from ib1 import directory
 from . import models
 from . import conf
 from . import par
 from . import auth
+from .logger import get_logger
 
-
-logger = logging.getLogger(__name__)
+logger = get_logger()
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Demo Authentication Server",
@@ -51,7 +49,8 @@ async def pushed_authorization_request(
     redirect_uri: Annotated[str, Form()],
     code_challenge: Annotated[str, Form()],
     scope: Annotated[str, Form()],
-    x_amzn_mtls_clientcert_leaf: Annotated[str, Header()],
+    request: Request,
+    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
 ) -> dict:
     """
     Store the request in redis, return a request_uri to the client
@@ -62,12 +61,12 @@ async def pushed_authorization_request(
     - [Client authentication methods](https://www.rfc-editor.org/rfc/rfc6749.html#section-3.2.1)
     """
     # Client authentication by mtls
-    # In production the Perseus directory will be able to check certificates
     if not x_amzn_mtls_clientcert_leaf:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Client certificate required",
         )
+
     client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     client_id = directory.extensions.decode_application(client_cert)
     # Get args as dict
@@ -78,6 +77,9 @@ async def pushed_authorization_request(
         "code_challenge_method": "S256",  # "plain" or "S256
         "redirect_uri": redirect_uri,
         "scope": scope,
+        "state": auth.create_state_token(
+            {"client_id": client_id}
+        ),  # For ory hydra interaction
     }
     token = par.get_token()
     par.store_request(token, parameters)
@@ -103,15 +105,7 @@ async def pushed_authorization_request(
 )
 async def authorize(
     request_uri: str,
-    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
 ):
-    if not x_amzn_mtls_clientcert_leaf:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Client certificate required",
-        )
-    client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
-    client_id = directory.extensions.decode_application(client_cert)
     if not request_uri:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -125,11 +119,6 @@ async def authorize(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Request URI does not exist or has expired",
         )
-    if par_request["client_id"] != client_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Client ID does not match",
-        )
 
     authorization_url = (
         f"{conf.ORY_AUTHORIZATION_ENDPOINT}?"
@@ -139,9 +128,10 @@ async def authorize(
         f"scope={par_request['scope']}&"
         f"code_challenge={par_request['code_challenge']}&"
         f"code_challenge_method=S256&"
-        f"request={json.dumps(par_request)}"
+        f"request={json.dumps(par_request)}&"
+        f"state={par_request['state']}"
     )
-
+    logger.info(f"Redirecting to {authorization_url}")
     # Redirect the user to the authorization URL
     return Response(status_code=302, headers={"Location": authorization_url})
 
@@ -149,7 +139,7 @@ async def authorize(
 @app.post("/api/v1/authorize/token", response_model=models.TokenResponse)
 async def token(
     grant_type: Annotated[str, Form()],
-    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()],
+    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
     redirect_uri: Annotated[str | None, Form()] = None,
     code_verifier: Annotated[str | None, Form()] = None,
     code: Annotated[str | None, Form()] = None,
@@ -167,7 +157,7 @@ async def token(
     client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
-            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            conf.PROVIDER_ROLE,
             client_cert,
         )
     except directory.CertificateRoleError as e:
@@ -176,6 +166,7 @@ async def token(
             detail=str(e),
         )
     if grant_type == "authorization_code":
+        logger.info("Authorization code flow")
         if not code or not code_verifier or not redirect_uri:
             raise HTTPException(status_code=400, detail="Missing required parameters")
 
@@ -187,6 +178,7 @@ async def token(
             "code_verifier": code_verifier,
         }
     elif grant_type == "refresh_token":
+        logger.info("Refresh token flow")
         if not refresh_token:
             raise HTTPException(status_code=400, detail="Missing refresh token")
 
@@ -197,28 +189,25 @@ async def token(
         }
     else:
         raise HTTPException(status_code=400, detail="Invalid grant type")
-    session = requests.Session()
-    if conf.ORY_CLIENT_ID and conf.ORY_CLIENT_SECRET:
-        session.auth = (conf.ORY_CLIENT_ID, conf.ORY_CLIENT_SECRET)
-    else:
-        raise HTTPException(
-            status_code=500,
-            detail="Client ID and Secret not set in environment",
-        )
-    response = requests.post(
+    session = auth.get_session()
+
+    response = session.post(
         f"{conf.ORY_TOKEN_ENDPOINT}",
         data=payload,
     )
+    logger.info(f"Token response: {response.status_code} {response.text}")
     if response.status_code != 200:
+        logger.error(response.text)
         raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
-
+    logger.info(f"Token result: {result}")
     # Add in our required client certificate thumbprint
     enhanced_token = auth.create_enhanced_access_token(
         result["access_token"],
         x_amzn_mtls_clientcert_leaf,
         f"{conf.ORY_URL}/.well-known/jwks.json",
     )
+    logger.info(f"Enhanced token: {enhanced_token}")
     return models.TokenResponse(
         access_token=enhanced_token,
         refresh_token=result.get("refresh_token"),
@@ -227,6 +216,7 @@ async def token(
 
 @app.post("/api/v1/authorize/revoke")
 async def revoke_token(
+    request: Request,
     token: str = Form(...),
     token_type_hint: str = Form(None),
     x_amzn_mtls_clientcert_leaf: str | None = Header(None),
@@ -247,7 +237,7 @@ async def revoke_token(
     client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
-            "https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting",
+            conf.PROVIDER_ROLE,
             client_cert,
         )
     except directory.CertificateRoleError as e:
@@ -255,15 +245,9 @@ async def revoke_token(
 
     # Prepare revocation request to Hydra
     payload = {"token": token, "token_type_hint": token_type_hint}
-    session = requests.Session()
-    if conf.ORY_CLIENT_ID and conf.ORY_CLIENT_SECRET:
-        session.auth = (conf.ORY_CLIENT_ID, conf.ORY_CLIENT_SECRET)
-    else:
-        raise HTTPException(
-            status_code=500, detail="Client ID and Secret not set in environment"
-        )
+    session = auth.get_session()
 
-    response = requests.post(
+    response = session.post(
         f"{conf.ORY_URL}/oauth2/revoke",
         data=payload,
     )
@@ -279,18 +263,18 @@ async def get_openid_configuration():
     logger.info("Getting Oauth configuration")
     return {
         "issuer": conf.ISSUER_URL,
-        "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+        "authorization_endpoint": f"{conf.UNPROTECTED_URL}/api/v1/authorize",
         "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
         "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
         "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
-        "jwks_uri": f"{conf.ISSUER_URL}/.well-known/jwks.json",
+        "jwks_uri": f"{conf.UNPROTECTED_URL}/.well-known/jwks.json",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
         "token_endpoint_auth_methods_supported": ["tls_client_auth"],
         "require_pushed_authorization_requests": True,
         "code_challenge_methods_supported": ["S256"],
         "mtls_endpoint_aliases": {
-            "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+            "authorization_endpoint": f"{conf.UNPROTECTED_URL}/api/v1/authorize",
             "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
             "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
             "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",

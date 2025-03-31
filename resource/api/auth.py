@@ -1,4 +1,3 @@
-import logging
 import uuid
 from typing import Optional, Tuple
 import email.utils
@@ -17,12 +16,12 @@ from .exceptions import (
     AccessTokenTimeError,
     AccessTokenDecodingError,
 )
-from .keystores import get_certificate
 from . import conf
 from ib1 import directory
 
+from .logger import get_logger
 
-log = logging.getLogger(__name__)
+logger = get_logger()
 
 
 def check_certificate(cert: x509.Certificate, decoded_token: dict) -> bool:
@@ -46,7 +45,7 @@ def check_certificate(cert: x509.Certificate, decoded_token: dict) -> bool:
         try:
             sha256 = decoded_token["cnf"]["x5t#S256"]
         except KeyError:
-            log.warning("No x5t#S256 claim in token response, unable to proceed!")
+            logger.warning("No x5t#S256 claim in token response, unable to proceed!")
             raise AccessTokenCertificateError(
                 "Token does not contain a certificate binding"
             )
@@ -58,7 +57,7 @@ def check_certificate(cert: x509.Certificate, decoded_token: dict) -> bool:
             "utf-8",
         )
         if fingerprint != sha256:
-            log.warning(
+            logger.warning(
                 f"Token thumbprint {sha256} does not match "
                 f"presented client cert thumbprint {fingerprint}"
             )
@@ -67,7 +66,7 @@ def check_certificate(cert: x509.Certificate, decoded_token: dict) -> bool:
             )
     else:
         # No CNF claim in the token
-        log.warning("No cnf claim in token response, unable to proceed!")
+        logger.warning("No cnf claim in token response, unable to proceed!")
         raise AccessTokenCertificateError(
             "Token does not contain a certificate binding"
         )
@@ -120,8 +119,8 @@ def check_token(
 
     decoded = decode_with_jwks(
         token,
-        conf.AUTHENTICATION_SERVER + "/.well-known/jwks.json",
-        get_certificate(conf.AUTHENTICATION_SERVER_CA),
+        conf.AUTHENTICATION_SERVER
+        + "/.well-known/jwks.json",  # Use unprotected endpoints
     )
     # Examples of tests to apply
     if decoded["client_id"] != client_id:
@@ -138,8 +137,8 @@ def check_token(
     # Get FAPI interaction ID if set, or create a new one otherwise
     if x_fapi_interaction_id is None:
         x_fapi_interaction_id = str(uuid.uuid4())
-        log.debug(f"issuing new interaction ID = {x_fapi_interaction_id}")
+        logger.debug(f"issuing new interaction ID = {x_fapi_interaction_id}")
     else:
-        log.debug(f"using existing interaction ID = {x_fapi_interaction_id}")
+        logger.debug(f"using existing interaction ID = {x_fapi_interaction_id}")
     headers["x-fapi-interaction-id"] = x_fapi_interaction_id
     return decoded, headers
