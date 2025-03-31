@@ -22,6 +22,9 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - uses: "actions/setup-python@v4"
+      with:
+        python-version: "3.12"
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
