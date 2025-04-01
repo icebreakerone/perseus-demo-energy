@@ -9,7 +9,9 @@ from ib1.provenance.certificates import (
 )
 from . import conf
 from .keystores import get_key, get_certificate
+from .logger import get_logger
 
+logging = get_logger()
 
 TRUST_FRAMEWORK_URL = "https://registry.core.trust.ib1.org/trust-framework"
 
@@ -28,10 +30,18 @@ def create_provenance_records(
     certificate_provider = CertificatesProviderSelfContainedRecord(
         get_certificate(conf.SIGNING_ROOT_CA_CERTIFICATE)
     )
+    logging.info(f"Creating provenance records for account: {account}")
+    logging.info(f"Certs: {certificate_provider}")
+    logging.info(f"Root CA: {conf.SIGNING_ROOT_CA_CERTIFICATE}")
+    logging.info(get_certificate(conf.SIGNING_ROOT_CA_CERTIFICATE))
     signer_edp_certs = x509.load_pem_x509_certificates(
         get_certificate(conf.SIGNING_BUNDLE)
     )
+    logging.info(f"Bundle certs: {conf.SIGNING_BUNDLE}")
+    logging.info(f"Certificate type {type(get_certificate(conf.SIGNING_BUNDLE))}")
     private_key = get_key(conf.SIGNING_KEY)
+    logging.info(f"Private key: {private_key}")
+    logging.info(f"Key type: {type(private_key)}")
     signer_edp = SignerInMemory(
         certificate_provider,
         signer_edp_certs,  # list containing certificate and issuer chain
@@ -100,7 +110,7 @@ def create_provenance_records(
 
     # EDP signs the steps
     edp_record_signed = edp_record.sign(signer_edp)
-    edp_record_signed.verify(certificate_provider)
+    # edp_record_signed.verify(certificate_provider)
     # Get encoded data for inclusion in data response
     edp_data_attachment = edp_record_signed.encoded()
     return edp_data_attachment

@@ -1,9 +1,9 @@
 from loguru import logger
 import sys
 
-# Use Loguru for logging
+
 logger.remove()
-logger.add(sys.stdout, format="{message}")  # , serialize=True
+logger.add(sys.stdout, serialize=True)
 
 
 def get_logger():

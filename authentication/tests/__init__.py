@@ -12,9 +12,9 @@ from cryptography.hazmat.primitives import hashes
 from ib1.directory.extensions import encode_roles, encode_application
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-REGISTRY_URL = "https://registry.core.ib1.org"
+REGISTRY_URL = "https://registry.core.trust.ib1.org"
 SCHEME_URL = f"{REGISTRY_URL}/scheme/perseus"
-TEST_ROLE = f"{SCHEME_URL}/role/carbon-accounting"
+TEST_ROLE = f"{SCHEME_URL}/role/carbon-accounting-provider"
 CLIENT_ID = "https://directory.core.ib1.org/member/836153"
 
 

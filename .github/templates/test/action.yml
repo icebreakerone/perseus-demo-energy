@@ -25,4 +25,4 @@ runs:
       run: |
         # stop the build if there are Python syntax errors or undefined names
         cd ${{ inputs.folder }}
-        pytest .
+        pytest -s tests/

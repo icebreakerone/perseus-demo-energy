@@ -1,4 +1,3 @@
-import logging
 from functools import lru_cache
 
 import boto3
@@ -11,7 +10,9 @@ from .exceptions import (
 
 from . import conf
 
-log = logging.getLogger(__name__)
+from .logger import get_logger
+
+logger = get_logger()
 
 
 @lru_cache(maxsize=None)
@@ -37,14 +38,14 @@ def get_key(key_path: str) -> PrivateKeyTypes:
 
     """
     ssm_client = get_boto3_client("ssm")
-    log.info(f"Getting {key_path}")
+    logger.info(f"Getting {key_path}")
     try:
         param_value = ssm_client.get_parameter(Name=key_path, WithDecryption=True)[
             "Parameter"
         ]["Value"]
         key_pem = param_value.encode("utf-8")
     except (ssm_client.exceptions.ParameterNotFound, ssm_client.exceptions.ClientError):
-        log.warning("signing key not found in SSM. Trying local file.")
+        logger.warning("signing key not found in SSM. Trying local file.")
         try:
             with open(conf.SIGNING_KEY, "rb") as key_file:
                 key_pem = key_file.read()
@@ -58,6 +59,7 @@ def get_key(key_path: str) -> PrivateKeyTypes:
 def get_certificate(certificate_path: str) -> bytes:
     s3_client = get_boto3_client("s3")
     if certificate_path.startswith("s3://"):
+        logger.info(f"Getting certificate from s3: {certificate_path}")
         bucket, key = certificate_path.split("s3://")[1].split("/", 1)
         obj = s3_client.get_object(Bucket=bucket, Key=key)
         certificate = obj["Body"].read()
@@ -65,4 +67,5 @@ def get_certificate(certificate_path: str) -> bytes:
     else:
         with open(certificate_path, "rb") as cert_file:
             certificate = cert_file.read()
+    logger.info(f"Retrieve certificate: {certificate}")
     return certificate

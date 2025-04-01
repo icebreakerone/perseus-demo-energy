@@ -73,7 +73,7 @@ def test_consumption(
     )
     mock_ib1_directory_get_key.return_value = get_private_key()
     pem, _, _, _ = client_certificate(
-        roles=["https://registry.core.ib1.org/scheme/perseus/role/carbon-accounting"],
+        roles=[conf.PROVIDER_ROLE],
         application="https://directory.ib1.org/application/123456",
     )
 
@@ -86,7 +86,7 @@ def test_consumption(
         api_consumption_url,
         headers={
             "Authorization": "Bearer token",
-            "x-amzn-mtls-clientcert": quote(pem),
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
         },
     )
 
