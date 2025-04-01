@@ -55,7 +55,10 @@ network = NetworkConstruct(
     stack, "Network", environment_name=contexts[deployment_context]["environment_name"]
 )
 ssm_policy = SSMPermissionsConstruct(
-    stack, "SSMPermissions", app_name="perseus-demo-authentication", env_name="dev"
+    stack,
+    "SSMPermissions",
+    app_name="perseus-demo-authentication",
+    env_name=contexts[deployment_context]["environment_name"],
 )
 redis = RedisConstruct(stack, "Redis", vpc=network.vpc, redis_sg=network.redis_sg)
 
