@@ -4,7 +4,13 @@ from constructs import Construct
 
 class RedisConstruct(Construct):
     def __init__(
-        self, scope: Construct, id: str, vpc: ec2.Vpc, redis_sg: ec2.SecurityGroup
+        self,
+        scope: Construct,
+        id: str,
+        vpc: ec2.Vpc,
+        redis_sg: ec2.SecurityGroup,
+        env_name: str,
+        **kwargs,
     ):
         super().__init__(scope, id)
 
@@ -28,5 +34,5 @@ class RedisConstruct(Construct):
             self,
             "RedisHostParam",
             string_value=self.redis.attr_redis_endpoint_address,
-            parameter_name="/authentication-service/redis-host",
+            parameter_name=f"/authentication-service/{env_name}/redis-host",
         )

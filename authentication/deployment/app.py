@@ -33,16 +33,15 @@ contexts: dict[str, Context] = {
     "prod": {
         "environment_name": "prod",
         "mtls_subdomain": "mtls",
-        "mtls_certificate": "d2730747-65d6-408b-bd23-6f6a19a87516",  # Needs changing
+        "mtls_certificate": "990577be-0028-46d0-ab80-d79e1a0f9990",
         "trust_store": "PerseusDemoTruststore/90ae6295e483d9f9",
         "subdomain": "",
-        "certificate": "d2730747-65d6-408b-bd23-6f6a19a87516",  # Needs changing
+        "certificate": "d4547c2b-3c08-4f5d-b709-663e27ea0ebf",
         "hosted_zone_id": "Z06253313MKVN98JLAQRK",
         "hosted_zone_name": "perseus-demo-authentication.ib1.org",
     },
 }
 
-print(os.getenv("CDK_DEFAULT_ACCOUNT"), os.getenv("CDK_DEFAULT_REGION"))
 stack = Stack(
     app,
     f"AuthenticationStack-{deployment_context}",
@@ -60,7 +59,13 @@ ssm_policy = SSMPermissionsConstruct(
     app_name="perseus-demo-authentication",
     env_name=contexts[deployment_context]["environment_name"],
 )
-redis = RedisConstruct(stack, "Redis", vpc=network.vpc, redis_sg=network.redis_sg)
+redis = RedisConstruct(
+    stack,
+    "Redis",
+    vpc=network.vpc,
+    redis_sg=network.redis_sg,
+    env_name=contexts[deployment_context]["environment_name"],
+)
 
 
 alb = LoadBalancer(
