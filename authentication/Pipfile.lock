@@ -452,12 +452,12 @@
         },
         "ib1-directory": {
             "hashes": [
-                "sha256:87c227fa18426dcc5512ec7fe6cc38c195aef040dbf8cdc20e2be50dc60f9875",
-                "sha256:c90d81d45c95a0761fba9a50da586a1b18a4953dea4aba12fa31b44e8b932d68"
+                "sha256:0ad311cb0764d18d552ff77f860edccaeaa582de1f5488233d73ec83a3002592",
+                "sha256:1d1effb3fdc652c6956b59b0b4fd27a088bea17268d82af7a4ee3e51306e3ea9"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.10' and python_version < '4.0'",
-            "version": "==0.9.0"
+            "version": "==0.9.1"
         },
         "idna": {
             "hashes": [
