@@ -12,7 +12,7 @@ import base64
 from ib1 import directory
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-CLIENT_ID = "https://directory.core.ib1.org/member/836153"
+CLIENT_ID = "https://directory.core.ib1.org/application/836153"
 CATALOG_ENTRY_URL = "https://perseus-demo-energy.ib1.org/data-service/consumption"
 with open(f"{ROOT_DIR}/fixtures/test-suite-key.pem") as f:
     SIGNING_KEY = f.read()
@@ -20,8 +20,10 @@ with open(f"{ROOT_DIR}/fixtures/test-suite-key.pem") as f:
 
 def client_certificate(
     roles: list[str] | None = None,
-    application: str | None = None,
+    member: str | None = None,
+    add_application: bool = False,
 ) -> tuple[str, str, rsa.RSAPrivateKey, str]:
+    # Switch to usings ib1 directory
     # Generate private key
     private_key = rsa.generate_private_key(
         public_exponent=65537, key_size=2048, backend=default_backend()
@@ -57,13 +59,19 @@ def client_certificate(
         .not_valid_before(datetime.strptime("2024-08-28 12:51:03", "%Y-%m-%d %H:%M:%S"))
         .not_valid_after(datetime.strptime("2025-08-28 12:51:03", "%Y-%m-%d %H:%M:%S"))
     )
+
     if roles:
         certificate_builder = directory.extensions.encode_roles(
             certificate_builder, roles
         )
-    if application:
-        certificate_builder = directory.extensions.encode_application(
-            certificate_builder, application
+    if member:
+        certificate_builder = directory.extensions.encode_member(
+            certificate_builder, member
+        )
+    if add_application:
+        certificate_builder = certificate_builder.add_extension(
+            x509.SubjectAlternativeName([x509.UniformResourceIdentifier(CLIENT_ID)]),
+            critical=False,
         )
     # Sign the certificate
     certificate = certificate_builder.sign(
