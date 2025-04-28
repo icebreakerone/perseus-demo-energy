@@ -1,5 +1,5 @@
 class FrameworkAuthError(Exception):
-    """Base class for exceptions in this module."""
+    """Base class for auth exceptions in this module."""
 
 
 class KeyNotFoundError(FrameworkAuthError):
@@ -49,4 +49,8 @@ class AccessTokenAudienceError(AccessTokenValidatorError):
 
 
 class AccessTokenCertificateError(AccessTokenValidatorError):
+    pass
+
+
+class PermissionStorageError(Exception):
     pass

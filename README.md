@@ -106,7 +106,11 @@ The script will generate the required certificates, keys and bundles and move th
 
 **Others**
 
-The remaining files in certs/generated directory will be the key and certificate for each of the three CAs with matching intermediates, as well as a key and certificate suitable for making test client requests named edp-demo-client-key.pem and edp-demo-client-cert.pem.
+The remaining files in scripts/generated directory will be the key and certificate for each of the three CAs with matching intermediates. Files in cerscriptsts/generated/client can be used by a client application (such as the demo cap) to make mtls secured connections and verify the server certificate.
+
+- certs/client/edp-demo-client-bundle.pem: Client mtls certificate
+- ccerts/client/edp-demo-client-key.pem: Client private key
+- certs/client/server-bundle.pem: Root CA and intermediate certificate to validate the server certificate
 
 ## Running the local docker environment
 

@@ -27,9 +27,11 @@ ORY_TOKEN_ENDPOINT = os.environ.get(
     f"{ORY_URL}/oauth2/token",
 )
 
-ORY_AUTHORIZATION_ENDPOINT = os.environ.get(  # User logins are handled on Ory Hydra
-    "ORY_AUTHORIZATION_ENDPOINT",
-    f"{ORY_URL}/oauth2/auth",
+ORY_AUTHORIZATION_ENDPOINT = (
+    os.environ.get(  # User logins are handled on Ory Hydra via a 302 redirect
+        "ORY_AUTHORIZATION_ENDPOINT",
+        f"{ORY_URL}/oauth2/auth",
+    )
 )
 
 REDIRECT_URI = os.environ.get(  #
