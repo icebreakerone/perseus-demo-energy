@@ -37,6 +37,7 @@ def ensure_table_exists(table_name: str):
                 {"AttributeName": "account", "AttributeType": "S"},
                 {"AttributeName": "client", "AttributeType": "S"},
                 {"AttributeName": "refreshToken", "AttributeType": "S"},
+                {"AttributeName": "evidenceId", "AttributeType": "S"},
             ],
             GlobalSecondaryIndexes=[
                 {
@@ -49,7 +50,18 @@ def ensure_table_exists(table_name: str):
                         "ReadCapacityUnits": 5,
                         "WriteCapacityUnits": 5,
                     },
-                }
+                },
+                {
+                    "IndexName": "evidence-id-index",
+                    "KeySchema": [
+                        {"AttributeName": "evidenceId", "KeyType": "HASH"},
+                    ],
+                    "Projection": {"ProjectionType": "ALL"},
+                    "ProvisionedThroughput": {
+                        "ReadCapacityUnits": 5,
+                        "WriteCapacityUnits": 5,
+                    },
+                },
             ],
             BillingMode="PAY_PER_REQUEST",
         )
@@ -95,6 +107,25 @@ def get_permission_by_token(
         IndexName="refresh-token-index",
         KeyConditionExpression="refreshToken = :pid",
         ExpressionAttributeValues={":pid": str(refresh_token)},
+    )
+
+    items = response.get("Items", [])
+    if not items:
+        return None
+
+    return models.Permission(**items[0])
+
+
+def get_permission_by_evidence_id(
+    evidence_id: str, table_name="Permissions"
+) -> models.Permission | None:
+    db = get_dynamodb_resource()
+    table = db.Table(table_name)
+
+    response = table.query(
+        IndexName="evidence-id-index",
+        KeyConditionExpression="evidenceId = :pid",
+        ExpressionAttributeValues={":pid": str(evidence_id)},
     )
 
     items = response.get("Items", [])

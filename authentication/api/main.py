@@ -1,5 +1,6 @@
 from typing import Annotated
 import json
+import os
 
 from cryptography import x509
 from fastapi import (
@@ -10,6 +11,7 @@ from fastapi import (
     status,
     Form,
 )
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import Response
@@ -19,14 +21,20 @@ from . import conf
 from . import par
 from . import auth
 from . import permissions
+from . import evidence
+
 from .logger import get_logger
 
 logger = get_logger()
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Demo Authentication Server",
     # root_path=conf.OPEN_API_ROOT,
 )
+
+app.include_router(evidence.html_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +43,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory=f"{ROOT_DIR}/static"), name="static")
 
 
 @app.get("/")

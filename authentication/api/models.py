@@ -101,6 +101,7 @@ class Permission(BaseModel):
     expires: datetime.datetime
     refreshToken: str
     revoked: datetime.datetime | None
+    evidenceId: str = Field(default_factory=lambda: str(uuid.uuid4()))
     dataAvailableFrom: datetime.datetime
     tokenIssuedAt: datetime.datetime
     tokenExpires: datetime.datetime
@@ -115,6 +116,7 @@ class Permission(BaseModel):
                     "lastGranted": "2024-03-31T23:30Z",
                     "expires": "2025-03-31T23:30Z",
                     "refreshToken": "adfjlasjklasjdkasjdklasdjkalju2318902yu89hae",
+                    "evidenceId": "6f8c8b2d-4a3b-4c5e-9f1d-0f7a2e5b8c3f",
                     "revoked": "2024-07-01T12:34Z",
                     "dataAvailableFrom": "2021-07-12T00:00Z",
                     "tokenIssuedAt": "2024-06-30T23:30Z",
