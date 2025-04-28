@@ -1,6 +1,5 @@
 import datetime
 from typing import Optional
-from uuid import UUID
 
 import boto3
 

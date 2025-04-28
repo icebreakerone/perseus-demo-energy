@@ -1,7 +1,5 @@
 import datetime
-import uuid
 from api.permissions import token_to_permission
-from api.models import Permission
 
 
 def test_token_to_permission():

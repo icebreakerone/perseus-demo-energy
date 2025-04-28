@@ -1,7 +1,6 @@
 import datetime
 import uuid
-from typing import Optional
-from pydantic import BaseModel, Field, field_validator, field_serializer
+from pydantic import BaseModel, Field, field_serializer
 
 from . import examples
 

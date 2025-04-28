@@ -9,7 +9,6 @@ class DynamoDBConstruct(Construct):
         scope: Construct,
         id: str,
         vpc: ec2.Vpc,
-        security_group: ec2.SecurityGroup,
         env_name: str,
         **kwargs,
     ):
@@ -44,10 +43,7 @@ class DynamoDBConstruct(Construct):
             projection_type=dynamodb.ProjectionType.ALL,
         )
         # Add VPC endpoint for DynamoDB
-        ec2.InterfaceVpcEndpoint(
-            self,
+        vpc.add_gateway_endpoint(
             "DynamoDBVpcEndpoint",
-            vpc=vpc,
-            service=ec2.InterfaceVpcEndpointAwsService.DYNAMODB,
-            security_groups=[security_group],
+            service=ec2.GatewayVpcEndpointAwsService.DYNAMODB,
         )

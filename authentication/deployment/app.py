@@ -80,7 +80,6 @@ dynamodb = DynamoDBConstruct(
     stack,
     "DynamoDB",
     vpc=network.vpc,
-    security_group=network.redis_sg,
     env_name=contexts[deployment_context]["environment_name"],
 )
 fastapi_service = AuthenticationAPIServiceConstruct(
