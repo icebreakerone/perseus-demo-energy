@@ -1,0 +1,108 @@
+
+    /* Custom color palette based on IB1 brand guidelines */
+    :root {
+        --black: #0D1C22;
+        --dark-blue: #1A3844;
+        --grey-4: #5A7084;
+        --grey-3: #91A9BD;
+        --grey-2: #C8D4DE;
+        --grey-1: #ECF0F1;
+        --orange: #ff4d11;
+        --accent-color: #FFEC00;
+        --white: #fff;
+      }
+  
+      body {
+        background-color: var(--grey-1);
+        color: var(--black);
+        font-family: "Open Sans", sans-serif;
+      }
+      .logo {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+      }
+      /* Center the content */
+      .content-container {
+        max-width: 800px;
+        margin-top: 100px;
+      }
+  
+      .section-title {
+        margin-top: 20px;
+      }
+      
+  
+      /* Customizing Navbar */
+      .bg-light {
+        background-color: var(--grey-3)!important;
+        
+      }
+      .navbar-brand, .nav-link, .btn {
+        color:var(--black)!important;
+      }
+      .navbar-nav .nav-link.active {
+        background-color: transparent;
+        text-decoration: underline;
+        color: var(--accent-color)!important;
+        text-decoration-color: var(--accent-color)!important; /* Accent color for underline */
+        text-underline-offset: 5px; /* Offset the underline slightly for spacing */
+      }
+      
+      .navbar-nav .nav-link:hover {
+        text-decoration: underline;
+        text-underline-offset: 5px;
+        text-decoration-color: var(--accent-color); /* Keep underline on hover */
+      }
+  
+      /* Customizing card elements */
+      .card {
+        background-color: white;
+        border: 1px solid var(--black);
+      }
+      .card-title {
+        color: var(--dark-blue);
+      }
+  
+      /* Buttons */
+      .btn{
+        background-color: var(--grey-2);
+        color:var(--grey-4)!important;
+        border-color: var(--grey-4)!important;
+      }
+      .btn-outline-danger {
+        border-color: var(--accent-color);
+      }
+      .btn-outline-danger:hover {
+        background-color: var(--accent-color);
+        color: white;
+      }
+      /* Custom styles for the organization information box */
+      .organization-info {
+        color: white;
+        padding: 20px;
+        border-radius: 5px;
+        border: 1px solid var(--black);
+        background-color: var(--grey-4);
+      }
+  
+      /* Links in the organization info */
+      .organization-info a {
+        color: white;
+        
+        text-decoration: underline;
+      }
+      .organization-info-icon {
+        font-size: 1.2em;
+        margin-right: 5px;
+        color: --white;
+      }
+
+      .table-primary{
+        
+      }
+
+      .table-primary th, .table-primary td {
+        background-color: var(--grey-2);
+        font-weight:normal;
+      }

@@ -7,6 +7,9 @@ import boto3
 from . import models
 from . import conf
 from .exceptions import PermissionStorageError
+from .logger import get_logger
+
+logger = get_logger()
 
 
 def get_dynamodb_resource():
@@ -65,43 +68,39 @@ def ensure_table_exists(table_name: str):
             ],
             BillingMode="PAY_PER_REQUEST",
         )
-        print(f"Creating table {table_name}...")
+        logger.info(f"Creating table {table_name}...")
         db.Table(table_name).wait_until_exists()
-        print("Table ready!")
+        logger.info("Table ready!")
 
 
-def write_permission(permission: models.Permission, table_name: str = "Permissions"):
-    ensure_table_exists(table_name)
+def write_permission(permission: models.Permission):
+    ensure_table_exists(conf.DYNAMODB_TABLE)
     db = get_dynamodb_resource()
-    table = db.Table(table_name)
+    table = db.Table(conf.DYNAMODB_TABLE)
 
     item = permission.model_dump()
     table.put_item(Item=item)
-    print(
+    logger.info(
         f"Permission stored for account={permission.account} + client={permission.client}"
     )
 
 
-def get_permission(
-    account: str, client: str, table_name: str = "Permissions"
-) -> Optional[models.Permission]:
+def get_permission(account: str, client: str) -> Optional[models.Permission]:
     db = get_dynamodb_resource()
-    table = db.Table(table_name)
+    table = db.Table(conf.DYNAMODB_TABLE)
 
     response = table.get_item(Key={"account": account, "client": client})
     item = response.get("Item")
     if not item:
-        print("Permission not found.")
+        logger.info(f"Permission not found: {account} + {client}")
         return None
 
     return models.Permission(**item)
 
 
-def get_permission_by_token(
-    refresh_token: str, table_name="Permissions"
-) -> models.Permission | None:
+def get_permission_by_token(refresh_token: str) -> models.Permission | None:
     db = get_dynamodb_resource()
-    table = db.Table(table_name)
+    table = db.Table(conf.DYNAMODB_TABLE)
 
     response = table.query(
         IndexName="refresh-token-index",
@@ -116,11 +115,9 @@ def get_permission_by_token(
     return models.Permission(**items[0])
 
 
-def get_permission_by_evidence_id(
-    evidence_id: str, table_name="Permissions"
-) -> models.Permission | None:
+def get_permission_by_evidence_id(evidence_id: str) -> models.Permission | None:
     db = get_dynamodb_resource()
-    table = db.Table(table_name)
+    table = db.Table(conf.DYNAMODB_TABLE)
 
     response = table.query(
         IndexName="evidence-id-index",

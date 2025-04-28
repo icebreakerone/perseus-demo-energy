@@ -11,6 +11,7 @@ from deployment.policies import SSMPermissionsConstruct
 from deployment.elasticache import RedisConstruct
 
 from deployment.authentication_service import AuthenticationAPIServiceConstruct
+from deployment.dynamodb import DynamoDBConstruct
 from deployment.loadbalancer import LoadBalancer
 from models import Context
 
@@ -75,7 +76,13 @@ alb = LoadBalancer(
     context=contexts[deployment_context],
 )
 
-
+dynamodb = DynamoDBConstruct(
+    stack,
+    "DynamoDB",
+    vpc=network.vpc,
+    security_group=network.redis_sg,
+    env_name=contexts[deployment_context]["environment_name"],
+)
 fastapi_service = AuthenticationAPIServiceConstruct(
     stack,
     "FastAPIService",
@@ -90,12 +97,14 @@ fastapi_service = AuthenticationAPIServiceConstruct(
         "ORY_URL": "https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com",
         "ISSUER_URL": f"https://{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}",
         "ORY_CLIENT_SECRET_PARAM": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/client_secret",
+        "DYNAMODB_TABLE": dynamodb.table.table_name,
     },
     ecs_sg=network.ecs_sg,
     mtls_target_group=alb.mtls_target_group,
     public_target_group=alb.public_target_group,
     mtls_alb_sg=alb.mtls_alb_sg,
     public_alb_sg=alb.public_alb_sg,
+    table=dynamodb.table,
 )
 
 app.synth()
