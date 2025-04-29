@@ -21,6 +21,7 @@ asn1crypto = "*"
 ib1-directory = "*"
 jwcrypto = "*"
 loguru = "*"
+jinja2 = "*"
 
 [dev-packages]
 black = "*"

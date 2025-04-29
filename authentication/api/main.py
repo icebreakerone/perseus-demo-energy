@@ -1,15 +1,17 @@
 from typing import Annotated
 import json
+import os
 
-
+from cryptography import x509
 from fastapi import (
     FastAPI,
-    Request,
+    Depends,
     Header,
     HTTPException,
     status,
     Form,
 )
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import Response
@@ -18,14 +20,21 @@ from . import models
 from . import conf
 from . import par
 from . import auth
+from . import permissions
+from . import evidence
+
 from .logger import get_logger
 
 logger = get_logger()
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Demo Authentication Server",
     # root_path=conf.OPEN_API_ROOT,
 )
+
+app.include_router(evidence.html_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -34,6 +43,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory=f"{ROOT_DIR}/static"), name="static")
 
 
 @app.get("/")
@@ -49,7 +60,6 @@ async def pushed_authorization_request(
     redirect_uri: Annotated[str, Form()],
     code_challenge: Annotated[str, Form()],
     scope: Annotated[str, Form()],
-    request: Request,
     x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
 ) -> dict:
     """
@@ -136,21 +146,11 @@ async def authorize(
     return Response(status_code=302, headers={"Location": authorization_url})
 
 
-@app.post("/api/v1/authorize/token", response_model=models.TokenResponse)
-async def token(
-    grant_type: Annotated[str, Form()],
-    x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
-    redirect_uri: Annotated[str | None, Form()] = None,
-    code_verifier: Annotated[str | None, Form()] = None,
-    code: Annotated[str | None, Form()] = None,
-    refresh_token: Annotated[str | None, Form()] = None,
-) -> models.TokenResponse:
+async def parsed_client_cert(
+    x_amzn_mtls_clientcert_leaf: str | None = Header(None),
+) -> x509.Certificate:
     """
-    Token issuing endpoint
-
-    We use the Ory Hydra endpoint to issue the token and validate authorisation code flow
-    but due to missing features in Ory Hydra authorisation code flow we need to generate
-    our own id_token, and add client certificate details to the token
+    Parse the client certificate from the request header
     """
     if x_amzn_mtls_clientcert_leaf is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
@@ -165,6 +165,26 @@ async def token(
             status_code=401,
             detail=str(e),
         )
+    return client_cert
+
+
+@app.post("/api/v1/authorize/token", response_model=models.TokenResponse)
+async def token(
+    grant_type: Annotated[str, Form()],
+    redirect_uri: Annotated[str | None, Form()] = None,
+    code_verifier: Annotated[str | None, Form()] = None,
+    code: Annotated[str | None, Form()] = None,
+    refresh_token: Annotated[str | None, Form()] = None,
+    client_cert: x509.Certificate = Depends(parsed_client_cert),
+) -> models.TokenResponse:
+    """
+    Token issuing endpoint
+
+    We use the Ory Hydra endpoint to issue the token and validate authorisation code flow
+    but due to missing features in Ory Hydra authorisation code flow we need to generate
+    our own id_token, and add client certificate details to the token
+    """
+
     if grant_type == "authorization_code":
         logger.info("Authorization code flow")
         if not code or not code_verifier or not redirect_uri:
@@ -204,22 +224,47 @@ async def token(
     # Add in our required client certificate thumbprint
     enhanced_token = auth.create_enhanced_access_token(
         result["access_token"],
-        x_amzn_mtls_clientcert_leaf,
+        client_cert,
         f"{conf.ORY_URL}/.well-known/jwks.json",
     )
+    encoded_token = auth.encode_jwt(
+        enhanced_token,
+    )
+    # permissions.store_permission(
     logger.info(f"Enhanced token: {enhanced_token}")
+    permissions.store_permission(enhanced_token, result.get("refresh_token"))
     return models.TokenResponse(
-        access_token=enhanced_token,
+        access_token=encoded_token,
         refresh_token=result.get("refresh_token"),
     )
 
 
-@app.post("/api/v1/authorize/revoke")
+@app.post("/api/v1/permissions", dependencies=[Depends(parsed_client_cert)])
+async def get_permissions(
+    token: str = Form(...),
+):
+    """
+    Permissions endpoint
+
+    - Requires mTLS authentication (client certificate validation)
+    - Returns the permissions for the client
+    """
+
+    # Get permissions from Redis
+    permissions_data = permissions.get_permission_by_token(token)
+    if permissions_data is None:
+        logger.error(f"No permissions found for {token}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No permissions found for token",
+        )
+    return {"permissions": permissions_data}
+
+
+@app.post("/api/v1/authorize/revoke", dependencies=[Depends(parsed_client_cert)])
 async def revoke_token(
-    request: Request,
     token: str = Form(...),
     token_type_hint: str = Form(None),
-    x_amzn_mtls_clientcert_leaf: str | None = Header(None),
 ):
     """
     Token revocation endpoint
@@ -228,21 +273,6 @@ async def revoke_token(
     - Calls Ory Hydra's token revocation endpoint
     - Supports both access and refresh token revocation
     """
-
-    # Ensure client provided an mTLS certificate
-    if x_amzn_mtls_clientcert_leaf is None:
-        raise HTTPException(status_code=401, detail="No client certificate provided")
-
-    # Validate client certificate (ensure it's authorized)
-    client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
-    try:
-        directory.require_role(
-            conf.PROVIDER_ROLE,
-            client_cert,
-        )
-    except directory.CertificateRoleError as e:
-        raise HTTPException(status_code=401, detail=str(e))
-
     # Prepare revocation request to Hydra
     payload = {"token": token, "token_type_hint": token_type_hint}
     session = auth.get_session()
@@ -267,6 +297,7 @@ async def get_openid_configuration():
         "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
         "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
         "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
+        "permissions_endpoint": f"{conf.ISSUER_URL}/api/v1/permissions",
         "jwks_uri": f"{conf.UNPROTECTED_URL}/.well-known/jwks.json",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
@@ -278,6 +309,7 @@ async def get_openid_configuration():
             "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
             "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
             "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
+            "permissions_endpoint": f"{conf.ISSUER_URL}/api/v1/permissions",
         },
         "tls_client_certificate_bound_access_tokens": True,
         "authorization_response_iss_parameter_supported": True,

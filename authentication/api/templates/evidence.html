@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block page_content %}
+
+      
+
+  <!-- Trust Framework Memberships Section -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <p>
+
+          <dl>
+            <dt>OAuth Issuer</dt>
+            <dd>{{ permission.oauthIssuer }}</dd>
+
+            <dt>Client</dt>
+            <dd>{{ permission.client }}</dd>
+
+            <dt>License</dt>
+            <dd>{{ permission.license }}</dd>
+
+            <dt>Account</dt>
+            <dd>{{ permission.account }}</dd>
+
+            <dt>Last Granted</dt>
+            <dd>{{ permission.lastGranted }}</dd>
+
+            <dt>Expires</dt>
+            <dd>{{ permission.expires }}</dd>
+
+            <dt>Refresh Token</dt>
+            <dd>{{ permission.refreshToken }}</dd>
+
+            <dt>Evidence ID</dt>
+            <dd>{{ permission.evidenceId }}</dd>
+            {% if permission.revoked %}
+            <dt>Revoked</dt>
+            <dd>{{ permission.revoked }}</dd>
+            {% endif %}
+            <dt>Data Available From</dt>
+            <dd>{{ permission.dataAvailableFrom }}</dd>
+
+            <dt>Token Issued At</dt>
+            <dd>{{ permission.tokenIssuedAt }}</dd>
+
+            <dt>Token Expires</dt>
+            <dd>{{ permission.tokenExpires }}</dd>
+          </dl>
+            
+      </p>
+    </div>
+  </div>
+  
+    
+{% endblock %}

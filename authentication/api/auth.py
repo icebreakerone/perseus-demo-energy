@@ -7,6 +7,7 @@ import boto3  # type: ignore[import-untyped]
 import requests
 import jwt
 from jwt import algorithms
+from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes
 from fastapi import (
@@ -59,15 +60,12 @@ def create_state_token(context: dict | None = None) -> str:
     return jwt.encode(payload, private_key, algorithm="ES256")
 
 
-def get_thumbprint(cert: str) -> str:
+def get_thumbprint(cert: x509.Certificate) -> str:
     """
     Returns the thumbprint of a certificate
     """
-    parsed_cert = directory.parse_cert(cert)
     thumbprint = str(
-        base64.urlsafe_b64encode(parsed_cert.fingerprint(hashes.SHA256())).replace(
-            b"=", b""
-        ),
+        base64.urlsafe_b64encode(cert.fingerprint(hashes.SHA256())).replace(b"=", b""),
         "utf-8",
     )
     return thumbprint
@@ -79,7 +77,6 @@ def decode_with_jwks(token: str, jwks_url: str) -> dict:
     """
     logger.info(f"Decoding token with jwks_url: {jwks_url}")
     jwks_client = jwt.PyJWKClient(jwks_url, headers={"User-Agent": "ib1/1.0"})
-    logger.error(f"Could not connect to JWKS URL: {jwks_url}")
 
     header = jwt.get_unverified_header(token)
     key = jwks_client.get_signing_key(header["kid"]).key
@@ -94,17 +91,19 @@ def decode_with_jwks(token: str, jwks_url: str) -> dict:
 
 
 def create_enhanced_access_token(
-    external_token: str, client_certificate: str, external_oauth_url: str
-) -> str:
+    external_token: str, client_certificate: x509.Certificate, external_oauth_url: str
+) -> dict:
     logger.info("Creating enhanced access token")
     claims = decode_with_jwks(external_token, external_oauth_url)
     logger.info(f"Claims: {claims}")
     claims["cnf"] = {"x5t#S256": get_thumbprint(client_certificate)}
     claims["iss"] = conf.ISSUER_URL
-    client_id = directory.extensions.decode_application(
-        directory.parse_cert(client_certificate)
-    )
+    client_id = directory.extensions.decode_application(client_certificate)
     claims["client_id"] = client_id
+    return claims
+
+
+def encode_jwt(claims: dict) -> str:
     private_key = keystores.get_key(conf.JWT_SIGNING_KEY)
     return jwt.encode(claims, private_key, algorithm="ES256", headers={"kid": "1"})
 
