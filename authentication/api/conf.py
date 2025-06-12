@@ -27,9 +27,11 @@ ORY_TOKEN_ENDPOINT = os.environ.get(
     f"{ORY_URL}/oauth2/token",
 )
 
-ORY_AUTHORIZATION_ENDPOINT = os.environ.get(  # User logins are handled on Ory Hydra
-    "ORY_AUTHORIZATION_ENDPOINT",
-    f"{ORY_URL}/oauth2/auth",
+ORY_AUTHORIZATION_ENDPOINT = (
+    os.environ.get(  # User logins are handled on Ory Hydra via a 302 redirect
+        "ORY_AUTHORIZATION_ENDPOINT",
+        f"{ORY_URL}/oauth2/auth",
+    )
 )
 
 REDIRECT_URI = os.environ.get(  #
@@ -47,3 +49,7 @@ PROVIDER_ROLE = os.environ.get(
     "PROVIDER_ROLE",
     "https://registry.core.pilot.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider",
 )
+
+DYNAMODB_TABLE = os.environ.get(
+    "DYNAMODB_TABLE", "permissions-local"
+)  # DynamoDB table name

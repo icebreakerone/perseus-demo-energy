@@ -30,6 +30,7 @@ class FakeConf:
         self.ORY_URL = "https://test-oauth.io"
         self.ORY_CLIENT_ID = "abc-123"
         self.JWKS_URL = f"{self.ORY_URL}/.well-known/jwks.json"
+        self.JWT_SIGNING_KEY = f"{ROOT_DIR}/fixtures/server-signing-private-key.pem"
         self.ORY_TOKEN_ENDPOINT = f"{self.ORY_URL}/oauth2/token"
         self.REDIRECT_URI = "https://test-accounting.org/callback"
         self.REDIS_HOST = "redis"
@@ -49,7 +50,7 @@ def mock_directory():
 def mock_auth():
     """Mock JWT enhancement function."""
     with patch(
-        "api.main.auth.create_enhanced_access_token", return_value=MOCK_ENHANCED_TOKEN
+        "api.main.auth.encode_jwt", return_value=MOCK_ENHANCED_TOKEN
     ) as mock_auth:
         yield mock_auth
 
@@ -112,8 +113,9 @@ def test_authorization_code(mock_get_request):
 @patch("api.main.conf", FakeConf())
 @patch("api.auth.conf", FakeConf())
 @patch("api.auth.decode_with_jwks")
+@patch("api.main.permissions")
 @responses.activate
-def test_token_success(mock_decode_with_jwks, mock_directory, mock_auth):
+def test_token_success(mock_permissions, mock_decode_with_jwks, mock_auth):
     """Test a successful token request."""
     cert_urlencoded = client_certificate(roles=[TEST_ROLE])
     mock_decode_with_jwks.return_value = {
@@ -121,7 +123,11 @@ def test_token_success(mock_decode_with_jwks, mock_directory, mock_auth):
         "exp": int(time.time()) + 3600,
         "iat": int(time.time()),
         "sub": "mock_user",
+        "iss": FakeConf().ISSUER_URL,
+        "scp": ["https://directory.ib1.org/roles/test"],
+        "ext": {},
     }
+    mock_permissions.return_value = True
     responses.add(
         responses.POST,
         f"{FakeConf().ORY_URL}/oauth2/token",

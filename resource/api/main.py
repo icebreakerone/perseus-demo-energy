@@ -2,6 +2,7 @@ import json
 import datetime
 from typing import Annotated
 
+# import x509
 
 from fastapi import FastAPI, HTTPException, Response, Depends, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -82,9 +83,6 @@ def consumption(
             )
         except AccessTokenValidatorError as e:
             raise HTTPException(status_code=401, detail=str(e))
-        else:
-            for key, value in headers.items():
-                response.headers[key] = value
     else:
         raise HTTPException(status_code=401, detail="No token provided")
     # Create a new provenance record
@@ -107,7 +105,6 @@ def consumption(
     return {"data": data, "provenance": record}
 
 
-# Custom OpenAPI schema configuration
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema

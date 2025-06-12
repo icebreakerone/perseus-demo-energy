@@ -5,6 +5,7 @@ from aws_cdk import (
     aws_iam as iam,
     aws_ecr_assets as ecr_assets,
     aws_elasticloadbalancingv2 as elbv2,
+    aws_dynamodb as dynamodb,
 )
 from constructs import Construct
 
@@ -22,6 +23,7 @@ class AuthenticationAPIServiceConstruct(Construct):
         public_target_group: elbv2.ApplicationTargetGroup,
         mtls_alb_sg: ec2.SecurityGroup,
         public_alb_sg: ec2.SecurityGroup,
+        table: dynamodb.Table,
     ):
         super().__init__(scope, id)
 
@@ -34,6 +36,7 @@ class AuthenticationAPIServiceConstruct(Construct):
                 "AmazonSSMManagedInstanceCore"
             )
         )
+        table.grant_read_write_data(task_def.task_role)
         container = task_def.add_container(
             "AuthenticationAPIContainer",
             image=ecs.ContainerImage.from_asset(

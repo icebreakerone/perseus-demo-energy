@@ -74,7 +74,8 @@ def test_consumption(
     mock_ib1_directory_get_key.return_value = get_private_key()
     pem, _, _, _ = client_certificate(
         roles=[conf.PROVIDER_ROLE],
-        application="https://directory.ib1.org/application/123456",
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
     )
 
     mock_create_provenance_records = mocker.patch(

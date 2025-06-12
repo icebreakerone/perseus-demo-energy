@@ -10,11 +10,12 @@ from jwt.algorithms import ECAlgorithm
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
-
+from ib1 import directory
 from api.auth import (
     decode_with_jwks,
     create_jwks,
     create_enhanced_access_token,
+    encode_jwt,
     get_thumbprint,
 )
 from tempfile import NamedTemporaryFile
@@ -121,13 +122,16 @@ def test_create_enhanced_access_token(mock_get_key, mock_decode_with_jwks):
     mock_private_key = TEST_PRIVATE_KEY
     mock_get_key.return_value = mock_private_key
     with open(f"{ROOT_DIR}/fixtures/test-client-cert.pem", "r") as f:
-        test_certificate = f.read()
+        test_certificate = directory.parse_cert(f.read())
     enhanced_token = create_enhanced_access_token(
-        {}, test_certificate, "https://mocked-oauth.com/.well-known/jwks.json"
+        {},
+        test_certificate,
+        "https://mocked-oauth.com/.well-known/jwks.json",
     )
+    encoded_token = encode_jwt(enhanced_token)
 
     decoded_enhanced_token = jwt.decode(
-        enhanced_token, TEST_PUBLIC_KEY, algorithms=["ES256"]
+        encoded_token, TEST_PUBLIC_KEY, algorithms=["ES256"]
     )
     assert "cnf" in decoded_enhanced_token
     assert "x5t#S256" in decoded_enhanced_token["cnf"]

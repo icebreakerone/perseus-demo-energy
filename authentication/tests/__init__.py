@@ -9,13 +9,14 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives import hashes
 
-from ib1.directory.extensions import encode_roles, encode_application
+from ib1.directory.extensions import encode_roles, encode_member
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 REGISTRY_URL = "https://registry.core.trust.ib1.org"
 SCHEME_URL = f"{REGISTRY_URL}/scheme/perseus"
 TEST_ROLE = f"{SCHEME_URL}/role/carbon-accounting-provider"
-CLIENT_ID = "https://directory.core.ib1.org/member/836153"
+CLIENT_ID = "https://directory.core.ib1.org/application/836153"
+MEMBER = "https://directory.ib1.org/member/123456"
 
 
 def client_certificate(
@@ -59,7 +60,11 @@ def client_certificate(
     )
     if roles:
         certificate_builder = encode_roles(certificate_builder, roles)
-    certificate_builder = encode_application(certificate_builder, client_id)
+    certificate_builder = encode_member(certificate_builder, MEMBER)
+    certificate_builder = certificate_builder.add_extension(
+        x509.SubjectAlternativeName([x509.UniformResourceIdentifier(CLIENT_ID)]),
+        critical=False,
+    )
     # Sign the certificate
     certificate = certificate_builder.sign(
         private_key=private_key, algorithm=hashes.SHA256(), backend=default_backend()
