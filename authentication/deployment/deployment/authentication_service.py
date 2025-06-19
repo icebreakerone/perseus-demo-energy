@@ -55,11 +55,9 @@ class AuthenticationAPIServiceConstruct(Construct):
             cluster=cluster,
             task_definition=task_def,
             desired_count=1,
-            assign_public_ip=False,
+            assign_public_ip=True,
             security_groups=[ecs_sg],
-            vpc_subnets=ec2.SubnetSelection(
-                subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS
-            ),
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
             enable_execute_command=True,
         )
         self.service.attach_to_application_target_group(mtls_target_group)

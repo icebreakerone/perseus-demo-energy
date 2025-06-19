@@ -10,15 +10,17 @@ class NetworkConstruct(Construct):
             self,
             f"AuthenticationVpc-{environment_name}",
             max_azs=2,
-            nat_gateways=1,
+            nat_gateways=0,
             subnet_configuration=[
                 ec2.SubnetConfiguration(
                     name=f"EDP-{environment_name}-PrivateSubnets",
-                    subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                    subnet_type=ec2.SubnetType.PRIVATE_ISOLATED,
                     cidr_mask=28,
                 ),
                 ec2.SubnetConfiguration(
-                    name="Public", subnet_type=ec2.SubnetType.PUBLIC, cidr_mask=24
+                    name=f"EDP-{environment_name}-PublicSubnets",
+                    subnet_type=ec2.SubnetType.PUBLIC,
+                    cidr_mask=28,
                 ),
             ],
         )
@@ -26,6 +28,21 @@ class NetworkConstruct(Construct):
         self.vpc.add_interface_endpoint(
             f"{environment_name}-SSMEndpoint",
             service=ec2.InterfaceVpcEndpointAwsService.SSM,
+        )
+
+        self.vpc.add_interface_endpoint(
+            f"{environment_name}-CloudWatchLogsEndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
+        )
+
+        self.vpc.add_interface_endpoint(
+            f"{environment_name}-ECRDockerEndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER,
+        )
+
+        self.vpc.add_interface_endpoint(
+            f"{environment_name}-ECREndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.ECR,
         )
 
         self.redis_sg = ec2.SecurityGroup(
@@ -37,4 +54,22 @@ class NetworkConstruct(Construct):
             peer=self.ecs_sg,
             connection=ec2.Port.tcp(6379),
             description="Allow ECS tasks to access Redis",
+        )
+
+        self.ecs_sg.add_egress_rule(
+            peer=ec2.Peer.ipv4(self.vpc.vpc_cidr_block),
+            connection=ec2.Port.tcp(443),
+            description="Allow ECS tasks to access VPC endpoints",
+        )
+
+        self.ecs_sg.add_egress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.tcp(443),
+            description="Allow ECS tasks to access S3, DynamoDB, and external HTTPS APIs",
+        )
+
+        self.ecs_sg.add_egress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.tcp(80),
+            description="Allow ECS tasks to access external HTTP APIs",
         )
