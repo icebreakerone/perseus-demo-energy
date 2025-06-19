@@ -14,11 +14,19 @@ class RedisConstruct(Construct):
     ):
         super().__init__(scope, id)
 
+        # Use private isolated subnets for Redis (more secure) with VPC endpoints for connectivity
+        # Select subnets with PRIVATE_ISOLATED type using SubnetSelection
+        private_subnet_selection = vpc.select_subnets(
+            subnet_type=ec2.SubnetType.PRIVATE_ISOLATED
+        )
+
         subnet_group = elasticache.CfnSubnetGroup(
             self,
             "RedisSubnetGroup",
             description="Redis subnet group",
-            subnet_ids=[subnet.subnet_id for subnet in vpc.private_subnets],
+            subnet_ids=[
+                subnet.subnet_id for subnet in private_subnet_selection.subnets
+            ],
         )
 
         self.redis = elasticache.CfnCacheCluster(
