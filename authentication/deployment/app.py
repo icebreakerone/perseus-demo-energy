@@ -24,7 +24,7 @@ contexts: dict[str, Context] = {
     "dev": {
         "environment_name": "dev",
         "mtls_subdomain": "preprod.mtls",
-        "mtls_certificate": "ec5a6487-70c1-42aa-96bb-7696b34f6b8a",
+        "mtls_certificate": "507e3751-89c9-4e71-888f-9d22eed4f085",
         "trust_store": "PerseusDemoTruststore/90ae6295e483d9f9",
         "subdomain": "preprod",
         "certificate": "54953fe2-52bf-4568-8242-4ab0115bac18",
@@ -34,7 +34,7 @@ contexts: dict[str, Context] = {
     "prod": {
         "environment_name": "prod",
         "mtls_subdomain": "mtls",
-        "mtls_certificate": "990577be-0028-46d0-ab80-d79e1a0f9990",
+        "mtls_certificate": "9a286285-c171-447e-9ce1-06ddcd343ca5",
         "trust_store": "PerseusDemoTruststore/90ae6295e483d9f9",
         "subdomain": "",
         "certificate": "d4547c2b-3c08-4f5d-b709-663e27ea0ebf",
