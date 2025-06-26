@@ -18,4 +18,4 @@ observability:
 http:
   public:
     certificates:
-      - arn:aws:acm:eu-west-2:232615051732:certificate/c8e6eaf1-d8f9-4eae-8416-c27944b376f7
+      - arn:aws:acm:eu-west-2:232615051732:certificate/535b09e0-4f69-41ad-853a-316754f81e6b
