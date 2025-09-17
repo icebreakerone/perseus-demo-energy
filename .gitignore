@@ -20,6 +20,7 @@ certs/
 
 *.pem
 !**/tests/fixtures/*.pem
+!**/truststores/*/*.pem
 
 cdk.context.json
 *.ipynb
