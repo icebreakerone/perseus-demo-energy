@@ -50,25 +50,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy resource
-        uses: ./.github/templates/deploy/
+        uses: ./.github/templates/deploy_cdk/
         with:
           folder: resource
           environment: ${{ env.ENVIRONMENT }}
-          service_name: perseus-resource
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
-  deploy-resource-docs:
-    runs-on: ubuntu-latest
-    needs: test-resource
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/preprod'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy resource docs
-        uses: ./.github/templates/deploy_docs/
-        with:
-          folder: resource
-          deployment_context: resource-${{ env.ENVIRONMENT }}
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+  

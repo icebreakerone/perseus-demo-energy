@@ -16,6 +16,8 @@ from .exceptions import CertificateError, AccessTokenValidatorError
 
 from ib1 import directory
 
+# Import Mangum for Lambda integration
+from mangum import Mangum
 
 security = HTTPBearer(auto_error=False)
 
@@ -29,7 +31,14 @@ app = FastAPI(
 
 @app.get("/", response_model=dict)
 def root():
-    return {"urls": ["/datasources", "/datasources/{id}/{measure}"]}
+    return {
+        "urls": ["/datasources", "/datasources/{id}/{measure}"],
+        "documentation": {
+            "swagger_ui": "/docs",
+            "redoc": "/redoc",
+            "openapi_json": "/openapi.json",
+        },
+    }
 
 
 @app.get("/datasources", response_model=models.Datasources)
@@ -96,7 +105,7 @@ def consumption(
         permission_expires=permission_expires,
         permission_granted=permission_granted,
         account=decoded["sub"],
-        service_url=f"https://perseus-demo-energy.ib1.org/consumption/datasources/{id}/{measure}",
+        service_url=f"https://{conf.API_DOMAIN}/datasources/{id}/{measure}",
         fapi_id=headers["x-fapi-interaction-id"],
         cap_member=directory.extensions.decode_application(cert),
     )
@@ -121,3 +130,6 @@ def custom_openapi():
 
 
 app.openapi = custom_openapi  # type: ignore
+
+# Create Lambda handler
+handler = Mangum(app)

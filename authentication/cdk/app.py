@@ -1,13 +1,13 @@
 import os
 
 
-from aws_cdk import App, Stack
+from aws_cdk import App, Stack  # type: ignore
 import aws_cdk as cdk
 
 
 from deployment.networking import NetworkConstruct
 from deployment.policies import SSMPermissionsConstruct
-
+from deployment.truststore import TruststoreConstruct
 from deployment.elasticache import RedisConstruct
 
 from deployment.authentication_service import AuthenticationAPIServiceConstruct
@@ -19,27 +19,23 @@ app = App()
 
 deployment_context = app.node.try_get_context("deployment_context") or "dev"
 
-
+HOSTED_ZONE_NAME = "perseus-demo-authentication.ib1.org"
 contexts: dict[str, Context] = {
     "dev": {
         "environment_name": "dev",
         "mtls_subdomain": "preprod.mtls",
         "mtls_certificate": "507e3751-89c9-4e71-888f-9d22eed4f085",
-        "trust_store": "PerseusDemoTruststore/90ae6295e483d9f9",
         "subdomain": "preprod",
         "certificate": "54953fe2-52bf-4568-8242-4ab0115bac18",
-        "hosted_zone_id": "Z06253313MKVN98JLAQRK",
-        "hosted_zone_name": "perseus-demo-authentication.ib1.org",
+        "hosted_zone_name": HOSTED_ZONE_NAME,
     },
     "prod": {
         "environment_name": "prod",
         "mtls_subdomain": "mtls",
         "mtls_certificate": "9a286285-c171-447e-9ce1-06ddcd343ca5",
-        "trust_store": "PerseusDemoTruststore/90ae6295e483d9f9",
         "subdomain": "",
         "certificate": "d4547c2b-3c08-4f5d-b709-663e27ea0ebf",
-        "hosted_zone_id": "Z06253313MKVN98JLAQRK",
-        "hosted_zone_name": "perseus-demo-authentication.ib1.org",
+        "hosted_zone_name": HOSTED_ZONE_NAME,
     },
 }
 
@@ -68,12 +64,21 @@ redis = RedisConstruct(
     env_name=contexts[deployment_context]["environment_name"],
 )
 
+# Create truststore using the existing S3 bucket from the resource deployment
+truststore = TruststoreConstruct(
+    stack,
+    "Truststore",
+    environment_name=contexts[deployment_context]["environment_name"],
+    existing_bucket_name=f"perseus-resource-truststore-{contexts[deployment_context]['environment_name']}",
+    truststore_key="bundle.pem",
+)
 
 alb = LoadBalancer(
     stack,
     "ALB",
     vpc=network.vpc,
     context=contexts[deployment_context],
+    trust_store=truststore.trust_store,
 )
 
 dynamodb = DynamoDBConstruct(

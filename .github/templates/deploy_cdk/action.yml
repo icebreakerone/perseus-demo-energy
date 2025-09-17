@@ -37,7 +37,7 @@ runs:
     - name: Deploy CDK Stack
       shell: bash
       run: |
-        cd ${{inputs.folder}}/deployment
+        cd ${{inputs.folder}}/cdk
         pip install -r requirements.txt
         cdk context --clear
         cdk --context deployment_context=${{inputs.environment}} deploy --require-approval never
