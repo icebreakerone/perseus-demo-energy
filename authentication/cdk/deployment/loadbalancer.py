@@ -15,6 +15,7 @@ class LoadBalancer(Construct):
         id: str,
         vpc: ec2.Vpc,
         context: Context,
+        trust_store: elbv2.CfnTrustStore,
     ):
         super().__init__(scope, id)
 
@@ -71,7 +72,7 @@ class LoadBalancer(Construct):
             ssl_policy="ELBSecurityPolicy-TLS-1-2-2017-01",
             mutual_authentication={
                 "mode": "verify",
-                "trustStoreArn": f"arn:aws:elasticloadbalancing:{scope.region}:{scope.account}:truststore/PerseusDemoTruststore/90ae6295e483d9f9",  # type: ignore
+                "trustStoreArn": trust_store.attr_trust_store_arn,
             },
         )
 
