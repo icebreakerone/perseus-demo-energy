@@ -92,8 +92,8 @@ fastapi_lambda = FastAPILambdaConstruct(
         ),
         "ENV": contexts[deployment_context]["environment_name"],
         "SIGNING_KEY": f"/copilot/perseus-demo-energy/{deployment_context}/secrets/signing-key",
-        "SIGNING_ROOT_CA_CERTIFICATE": "s3://perseus-demo-energy-certificate-store/signing-ca-cert.pem",
-        "SIGNING_BUNDLE": "s3://perseus-demo-energy-certificate-store/edp-demo-issued-intermediate-bundle.pem",
+        "SIGNING_ROOT_CA_CERTIFICATE": "s3://perseus-demo-energy-certificate-store/signing-root-ca.pem",
+        "SIGNING_BUNDLE": "s3://perseus-demo-energy-certificate-store/signing-issued-bundle.pem",
         "AUTHENTICATION_SERVER": (
             f"https://{contexts[deployment_context]['subdomain']}.perseus-demo-authentication.ib1.org"
             if contexts[deployment_context]["subdomain"]

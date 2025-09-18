@@ -98,7 +98,6 @@ The script will generate the required certificates, keys and bundles and move th
 
 **Resource**
 
-- resource/server-ca-cert.pem: verify connections to the authentication server
 - resource/signing-issued-intermediate-bundle.pem: A chain of issued certificate and intermediate used in creating provenance records
 - resource/edp-demo-signing-key.pem: Provenance record signing key
 - resource/edp-demo-signing-cert.pem: Provenance record signing certificate
