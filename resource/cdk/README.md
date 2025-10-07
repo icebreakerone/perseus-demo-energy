@@ -40,14 +40,7 @@ cdk deploy --context deployment_context=prod
 
 ## Truststore Setup
 
-Before deploying, you need to upload the truststore.pem file to the S3 bucket:
-
-1. Deploy the stack first to create the S3 bucket
-2. Upload your truststore.pem file to the bucket:
-   ```bash
-   aws s3 cp truststore.pem s3://perseus-resource-truststore-{env}-{account}/truststore.pem
-   ```
-3. Redeploy the stack to update the API Gateway mTLS configuration
+Before deploying, make sure you have truststore files available for your environment, eg. truststores/directory-dev-client-certificates/bundle.pem
 
 ## Environment Variables
 

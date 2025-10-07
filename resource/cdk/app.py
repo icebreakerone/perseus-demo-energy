@@ -29,7 +29,7 @@ contexts: dict[str, Context] = {
         "mtls_subdomain": "mtls",
         "trust_store": "PerseusDemoTruststore/90ae6295e483d9f9",
         "subdomain": "",
-        "certificate": "d4547c2b-3c08-4f5d-b709-663e27ea0ebf",
+        "certificate": "50752488-303e-4757-85d3-fea66ae0a2d0",
         "mtls_certificate": "dc498c29-daa3-4eab-bd0e-dcce2d4de2c2",
         "hosted_zone_name": HOSTED_ZONE_NAME,
     },
