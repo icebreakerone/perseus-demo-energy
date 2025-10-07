@@ -102,6 +102,7 @@ fastapi_service = AuthenticationAPIServiceConstruct(
         "ISSUER_URL": f"https://{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}",
         "ORY_CLIENT_SECRET_PARAM": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/client_secret",
         "DYNAMODB_TABLE": dynamodb.table.table_name,
+        "PROVIDER_ROLE": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider",
     },
     ecs_sg=network.ecs_sg,
     mtls_target_group=alb.mtls_target_group,
