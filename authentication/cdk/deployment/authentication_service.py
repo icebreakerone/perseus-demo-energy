@@ -37,6 +37,14 @@ class AuthenticationAPIServiceConstruct(Construct):
             )
         )
         table.grant_read_write_data(task_def.task_role)
+        # Add ListTables permission for DynamoDB operations
+        task_def.task_role.add_to_principal_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:ListTables"],
+                resources=["*"],  # ListTables requires * resource
+                effect=iam.Effect.ALLOW,
+            )
+        )
         container = task_def.add_container(
             "AuthenticationAPIContainer",
             image=ecs.ContainerImage.from_asset(

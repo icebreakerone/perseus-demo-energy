@@ -157,10 +157,15 @@ class DualApiGatewayConstruct(Construct):
         )
 
         # Create custom domain for public API
+        public_domain_name = (
+            f"{context['subdomain']}.{context['hosted_zone_name']}"
+            if context["subdomain"]
+            else context["hosted_zone_name"]
+        )
         self.public_domain = apigwv2.DomainName(
             self,
             "PublicDomain",
-            domain_name=f"{context['subdomain']}.{context['hosted_zone_name']}",
+            domain_name=public_domain_name,
             certificate=acm.Certificate.from_certificate_arn(
                 self,
                 "PublicCertificate",
@@ -225,7 +230,7 @@ class DualApiGatewayConstruct(Construct):
             self,
             "MTLSAliasRecord",
             zone=hosted_zone,
-            record_name=(context["mtls_subdomain"] if context["subdomain"] else None),
+            record_name=context["mtls_subdomain"],
             target=route53.RecordTarget.from_alias(
                 targets.ApiGatewayv2DomainProperties(
                     regional_domain_name=self.mtls_domain.regional_domain_name,
@@ -239,7 +244,7 @@ class DualApiGatewayConstruct(Construct):
             self,
             "PublicAliasRecord",
             zone=hosted_zone,
-            record_name=context["subdomain"] if context["subdomain"] else None,
+            record_name=context["subdomain"] if context["subdomain"] else "@",
             target=route53.RecordTarget.from_alias(
                 targets.ApiGatewayv2DomainProperties(
                     regional_domain_name=self.public_domain.regional_domain_name,
