@@ -12,9 +12,6 @@ It may also be a useful reference for developers who are creating secure data en
 - [Resource API](#resource-api)
 - [Environment variables](#environment-variables)
 - [Running a dev server](#running-a-dev-server)
-- [Creating self-signed certificates](#creating-self-signed-certificates)
-  - [Using client certificates](#using-client-certificates)
-- [Creating signing certificates](#creating-signing-certificates)
 - [Running the local docker environment](#running-the-local-docker-environment)
 - [Pushed Authorization Request (PAR)](#pushed-authorization-request-par)
 - [Testing the API with client.py](#testing-the-api-with-clientpy)
@@ -27,6 +24,9 @@ It may also be a useful reference for developers who are creating secure data en
   - [Authentication and consent](#authentication-and-consent)
     - [Flow steps for Ory Hydra with external user management and consent services](#flow-steps-for-ory-hydra-with-external-user-management-and-consent-services)
 - [FAPI Flow](#fapi-flow)
+- [Deployment](#deployment)
+  - [System Context Diagram](#system-context-diagram)
+  - [Container Diagram](#container-diagram)
 
 ## Authentication API
 
@@ -222,6 +222,34 @@ A full example is available at [https://www.ory.sh/docs/hydra/guides/custom-ui-o
 
 ![FAPI Flow diagram](docs/fapi-authlete-flow.png)
 
+## Deployment
+
+Both APIs are deployed using cdk. With a fresh install, the resource api should be deployed first as the trust store for client mtls connections is shared with both deployments.
+
+```bash
+cd /resource/cdk
+cdk deploy --context deployment_context=dev
+cd /authentication/cdk
+cdk deploy --context deployment_context=dev
 ```
 
-```
+### Preparing certificates
+
+The certificates required for the mtls truststores are available at https://member.core.sandbox.trust.ib1.org/ca. The cdk deployments will upload these certificates into the truststores if they are available, using the locations:
+
+- resource/cdk/truststores/directory-dev-client-certificates
+- resource/cdk/truststores/directory-prod-client-certificates
+
+A set of signing certificates are also required for signing provenance records. The CA files can be download as above, and a key and certificate can be created from https://member.core.sandbox.trust.ib1.org/applications/ by clicking "New Signing Certificate" and following instructions.
+
+A script is available ([resource/cdk/scripts/upload-certificates.sh](resource/cdk/scripts/upload-certificates.sh)) which will upload files into the correct locations. You will need to create a certificate chain with the leaf certificate and the intermediate CA. Check the upload script for further details.
+
+Another script is available [resource/cdk/scripts/checkcerts.sh](resource/cdk/scripts/checkcerts.sh) which can be used to check you a valid set of signing certificates before uploading.
+
+### System Context Diagram
+
+![System Context Diagram](docs/System%20Context%20Diagram.png)
+
+### Container Diagram
+
+![Container Diagram](docs/Container%20Diagram.png)
