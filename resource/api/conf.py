@@ -8,8 +8,8 @@ AUTHENTICATION_SERVER = os.environ.get(
 )
 OPEN_API_ROOT = "/dev" if ENV == "prod" else ""
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# Probably should include the bundles and certificates in the image?
-# Or they are retrieved from s3
+
+# Can be local or s3 + ssm
 SIGNING_KEY = os.environ.get("SIGNING_KEY", "/certs/edp-demo-signing-key.pem")
 SIGNING_ROOT_CA_CERTIFICATE = os.environ.get(
     "SIGNING_ROOT_CA_CERTIFICATE", f"{ROOT_DIR}/certs/signing-ca-cert.pem"

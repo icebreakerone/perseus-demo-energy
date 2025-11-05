@@ -1,6 +1,6 @@
 import os
 
-from aws_cdk import App, Stack
+from aws_cdk import App, Stack, Tags
 import aws_cdk as cdk
 
 from deployment.policies import SSMPermissionsConstruct
@@ -46,6 +46,9 @@ stack = Stack(
     env=cdk_env,
     description=f"Resource API deployment for {deployment_context} environment",
 )
+
+Tags.of(stack).add("ib1:p-perseus:owner", "kip.parker@ib1.org")
+Tags.of(stack).add("ib1:p-perseus:stage", deployment_context)
 
 # Create SSM permissions policy
 ssm_policy = SSMPermissionsConstruct(

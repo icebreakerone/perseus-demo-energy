@@ -1,0 +1,25 @@
+@startuml System Context Diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title System Context Diagram - Perseus Demo Authentication and Resource APIs
+
+Person(user, "User", "A user who wants to access their energy data")
+
+System_Boundary(perseus_demo, "Perseus Demo System") {
+    System(auth_api, "Authentication API", "Handles OAuth2/OIDC flows, issues certificate-bound tokens, validates client certificates via mTLS")
+    System(resource_api, "Resource API", "Provides protected data endpoints, validates tokens and client certificates via mTLS")
+}
+
+System_Ext(client_app, "Client Application", "Third-party application that initiates authentication and requests user data")
+
+Rel(user, client_app, "Requests to connect/authenticate", "HTTPS")
+Rel(client_app, auth_api, "Initiates authentication flow", "mTLS\n(client certificate)")
+Rel(user, auth_api, "Authenticates", "HTTPS")
+Rel_U(auth_api, client_app, "Returns certificate-bound token", "HTTPS")
+Rel(client_app, resource_api, "Requests user data", "mTLS + Bearer Token\n(client certificate + access token)")
+Rel_D(resource_api, client_app, "Returns user data", "HTTPS")
+
+@enduml
+
