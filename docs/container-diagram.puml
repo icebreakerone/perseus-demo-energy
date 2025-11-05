@@ -1,0 +1,62 @@
+@startuml Container Diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container Diagram - Perseus Demo Authentication and Resource APIs
+
+Person(user, "User", "A user who wants to access their energy data")
+
+System_Boundary(perseus_demo, "Perseus Demo System") {
+    System_Boundary(auth_system, "Authentication API System") {
+        Container(mtls_alb, "mTLS ALB", "AWS Application Load Balancer", "Handles mTLS connections from clients, validates client certificates using truststore")
+        Container(public_alb, "Public ALB", "AWS Application Load Balancer", "Handles public HTTPS connections for user authentication flows")
+        Container(auth_api, "Authentication API", "FastAPI Container (ECS Fargate)", "Handles OAuth2/OIDC flows, issues certificate-bound tokens, validates client certificates")
+        ContainerDb(redis, "Redis", "AWS ElastiCache", "Stores Pushed Authorization Request (PAR) tokens")
+        ContainerDb(dynamodb, "Permissions Store", "AWS DynamoDB", "Stores user permissions and refresh tokens")
+        ContainerDb(truststore_s3_auth, "Truststore", "AWS S3", "Stores client certificate CA bundle for mTLS validation")
+    }
+    
+    System_Boundary(resource_system, "Resource API System") {
+        Container(mtls_apigw, "mTLS API Gateway", "AWS API Gateway v2", "Handles mTLS connections, validates client certificates")
+        Container(public_apigw, "Public API Gateway", "AWS API Gateway v2", "Handles public HTTPS connections for API documentation")
+        Container(lambda_authorizer, "Certificate Authorizer", "AWS Lambda", "Validates client certificates before forwarding requests")
+        Container(resource_api, "Resource API", "FastAPI Lambda", "Provides protected data endpoints, validates tokens and certificates")
+        ContainerDb(truststore_s3_resource, "Truststore", "AWS S3", "Stores client certificate CA bundle for mTLS validation (shared)")
+        ContainerDb(cert_store_s3, "Certificate Store", "AWS S3", "Stores signing certificates for provenance records")
+        ContainerDb(ssm_store, "Parameter Store", "AWS Systems Manager", "Stores signing keys and secrets")
+    }
+}
+
+System_Ext(client_app, "Client Application", "Third-party application that initiates authentication and requests user data")
+System_Ext(ory_hydra, "Ory Hydra", "OAuth2/OIDC provider service", "External OAuth2 provider for user authentication and authorization")
+
+Rel(user, client_app, "Requests to connect/authenticate", "HTTPS")
+Rel(client_app, mtls_alb, "Initiates authentication flow", "mTLS\n(client certificate)")
+Rel(user, public_alb, "Authenticates via browser", "HTTPS")
+Rel(mtls_alb, auth_api, "Forwards mTLS requests", "HTTPS")
+Rel(public_alb, auth_api, "Forwards public requests", "HTTPS")
+Rel(auth_api, redis, "Stores/retrieves PAR tokens", "Redis Protocol")
+Rel(auth_api, dynamodb, "Stores/retrieves permissions", "DynamoDB API")
+Rel(auth_api, ory_hydra, "Exchanges authorization codes", "HTTPS")
+Rel_U(ory_hydra, auth_api, "Returns OAuth tokens", "HTTPS")
+Rel(auth_api, truststore_s3_auth, "Reads truststore bundle", "S3 API")
+Rel_U(mtls_alb, client_app, "Returns certificate-bound token", "HTTPS")
+Rel_U(public_alb, client_app, "Redirects with auth code", "HTTPS")
+
+Rel(client_app, mtls_apigw, "Requests user data", "mTLS + Bearer Token\n(client certificate + access token)")
+Rel(mtls_apigw, lambda_authorizer, "Validates certificate", "Invoke")
+Rel_U(lambda_authorizer, mtls_apigw, "Authorizer result", "Response")
+Rel(mtls_apigw, resource_api, "Forwards authorized requests", "HTTPS")
+Rel(resource_api, truststore_s3_resource, "Reads truststore bundle", "S3 API")
+Rel(resource_api, cert_store_s3, "Reads signing certificates", "S3 API")
+Rel(resource_api, ssm_store, "Reads signing keys", "SSM API")
+Rel(resource_api, auth_api, "Validates access token", "HTTPS\n(/.well-known/jwks.json)")
+Rel_U(resource_api, mtls_apigw, "Returns user data", "HTTPS")
+Rel_U(mtls_apigw, client_app, "Returns user data", "HTTPS")
+
+Rel(user, public_apigw, "Views API documentation", "HTTPS")
+Rel(public_apigw, resource_api, "Serves documentation", "HTTPS")
+
+@enduml
+

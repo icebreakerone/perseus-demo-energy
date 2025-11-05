@@ -80,13 +80,3 @@ To destroy the stack:
 ```bash
 cdk destroy --context deployment_context=dev
 ```
-
-## Differences from Copilot Deployment
-
-This CDK deployment provides:
-
-- Serverless architecture (Lambda vs ECS)
-- Pay-per-request pricing model
-- Automatic scaling
-- Simplified operational overhead
-- Native AWS service integration
