@@ -1,7 +1,7 @@
 import os
 
 
-from aws_cdk import App, Stack  # type: ignore
+from aws_cdk import App, Stack, Tags  # type: ignore
 import aws_cdk as cdk
 
 
@@ -46,6 +46,10 @@ stack = Stack(
         account=os.getenv("CDK_DEFAULT_ACCOUNT"), region=os.getenv("CDK_DEFAULT_REGION")
     ),
 )
+
+# Add tags to the stack
+Tags.of(stack).add("ib1:p-perseus:owner", "kip.parker@ib1.org")
+Tags.of(stack).add("ib1:p-perseus:stage", deployment_context)
 
 network = NetworkConstruct(
     stack, "Network", environment_name=contexts[deployment_context]["environment_name"]
