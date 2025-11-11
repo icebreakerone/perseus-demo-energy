@@ -240,6 +240,8 @@ The certificates required for the mtls truststores are available at https://memb
 - resource/cdk/truststores/directory-dev-client-certificates
 - resource/cdk/truststores/directory-prod-client-certificates
 
+Both the resource and authentication apps use these CA certificates. If the CA certificates need to be updated, the truststore used by the authentication app will need to be renewed by running resource/cdk/scripts/renew_truststores.sh
+
 A set of signing certificates are also required for signing provenance records. The CA files can be download as above, and a key and certificate can be created from https://member.core.sandbox.trust.ib1.org/applications/ by clicking "New Signing Certificate" and following instructions.
 
 A script is available ([resource/cdk/scripts/upload-certificates.sh](resource/cdk/scripts/upload-certificates.sh)) which will upload files into the correct locations. You will need to create a certificate chain with the leaf certificate and the intermediate CA. Check the upload script for further details.
