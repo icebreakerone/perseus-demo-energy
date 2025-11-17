@@ -1,6 +1,5 @@
 import json
 import datetime
-import logging
 from typing import Annotated
 
 # import x509
@@ -9,6 +8,8 @@ from fastapi import FastAPI, HTTPException, Response, Depends, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.openapi.utils import get_openapi
 from starlette.requests import Request
+from ib1 import directory
+from mangum import Mangum
 
 from . import models
 from . import auth
@@ -19,10 +20,6 @@ from .logger import get_logger
 
 logger = get_logger()
 
-from ib1 import directory
-
-# Import Mangum for Lambda integration
-from mangum import Mangum
 
 security = HTTPBearer(auto_error=False)
 
