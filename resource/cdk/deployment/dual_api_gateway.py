@@ -1,3 +1,6 @@
+import json
+import os
+
 from aws_cdk import (
     aws_apigatewayv2 as apigwv2,
     aws_apigatewayv2_integrations as apigwv2_integrations,
@@ -8,9 +11,11 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_lambda as lambda_,
     aws_logs as logs,
+    aws_iam as iam,
     Duration,
     Stack,
     CfnOutput,
+    RemovalPolicy,
 )
 from constructs import Construct
 from .authorizer import CertificateAuthorizerConstruct
@@ -24,22 +29,30 @@ class DualApiGatewayConstruct(Construct):
         context: dict,
         fastapi_lambda: lambda_.Function,
         authorizer: CertificateAuthorizerConstruct,
-        truststore_bucket: s3.Bucket,
+        truststore_bucket,  # TruststoreBucketConstruct instance
     ):
         super().__init__(scope, id)
 
         # ========== mTLS API Gateway ==========
         # Reference existing CloudWatch log group for mTLS API Gateway access logs
-        mtls_log_group_name = (
-            f"/aws/apigateway/perseus-resource-mtls-{context['environment_name']}"
-        )
-        self.mtls_access_log_group = logs.LogGroup.from_log_group_name(
+        mtls_access_log_group = logs.LogGroup(
             self,
             "MTLSApiGatewayAccessLogs",
-            log_group_name=mtls_log_group_name,
+            log_group_name=f"/aws/apigateway/perseus-resource-mtls-{context['environment_name']}",
+            removal_policy=RemovalPolicy.DESTROY,
+            retention=logs.RetentionDays.ONE_WEEK,
+        )
+        mtls_access_log_group.add_to_resource_policy(
+            iam.PolicyStatement(
+                principals=[iam.ServicePrincipal("apigateway.amazonaws.com")],
+                actions=["logs:CreateLogStream", "logs:PutLogEvents"],
+                resources=[
+                    mtls_access_log_group.log_group_arn,
+                    f"{mtls_access_log_group.log_group_arn}:*",
+                ],
+            )
         )
 
-        # Create HTTP API Gateway v2 with mTLS for secure endpoints
         self.mtls_api = apigwv2.HttpApi(
             self,
             "MTLSResourceAPI",
@@ -57,12 +70,22 @@ class DualApiGatewayConstruct(Construct):
                 allow_headers=["*"],
                 max_age=Duration.days(1),
             ),
-            default_integration=apigwv2_integrations.HttpLambdaIntegration(
-                "DefaultIntegration", fastapi_lambda
-            ),
+            # No default_integration - all routes must be explicitly defined with authorizer
         )
 
+        # Access logs are configured later with the full format including client certificate fields
         # Create custom domain for mTLS API
+        # Get the truststore key - it should be set by TruststoreBucketConstruct
+        truststore_key = getattr(truststore_bucket, "truststore_key", "bundle.pem")
+        print(f"Using truststore key: {truststore_key}")
+        print(f"Truststore bucket: {truststore_bucket.bucket.bucket_name}")
+
+        # Grant API Gateway service permissions to read from the truststore bucket
+        # API Gateway needs to read the truststore file for mTLS validation
+        truststore_bucket.bucket.grant_read(
+            iam.ServicePrincipal("apigateway.amazonaws.com")
+        )
+
         self.mtls_domain = apigwv2.DomainName(
             self,
             "MTLSDomain",
@@ -73,9 +96,8 @@ class DualApiGatewayConstruct(Construct):
                 f"arn:aws:acm:{Stack.of(self).region}:{Stack.of(self).account}:certificate/{context['mtls_certificate']}",
             ),
             mtls=apigwv2.MTLSConfig(
-                bucket=truststore_bucket.bucket,  # type: ignore
-                key=getattr(truststore_bucket, "truststore_key", "bundle.pem"),
-                # Remove version to avoid issues with newly uploaded files
+                bucket=truststore_bucket.bucket,
+                key=truststore_key,
             ),
         )
 
@@ -92,22 +114,38 @@ class DualApiGatewayConstruct(Construct):
         )
 
         # Create Lambda authorizer for mTLS API
+        # For mTLS, we need to include client cert context variables in identity source
+        # This ensures the authorizer is invoked even without Authorization header
         self.mtls_lambda_authorizer = apigwv2_auth.HttpLambdaAuthorizer(
             "MTLSCertificateAuthorizer",
             handler=authorizer.authorizer_function,
+            response_types=[apigwv2_auth.HttpLambdaResponseType.SIMPLE],
             identity_source=[
-                "$request.header.Host"
-            ],  # Use Host header as identity source
+                "$context.identity.clientCert.clientCertPem",
+                "$context.identity.sourceIp",
+            ],  # Include client cert in identity source to ensure authorizer is invoked
             results_cache_ttl=Duration.seconds(0),  # Disable caching for mTLS
         )
-
+        parameter_mapping = apigwv2.ParameterMapping().append_header(
+            "X-Client-Cert",
+            apigwv2.MappingValue.context_variable("authorizer.clientCertPem"),
+        )
         # Create Lambda integration for mTLS API
         self.mtls_lambda_integration = apigwv2_integrations.HttpLambdaIntegration(
             "MTLSLambdaIntegration",
             fastapi_lambda,
+            parameter_mapping=parameter_mapping,
         )
 
         # Add routes to mTLS API (secure endpoints)
+        # Test endpoint for mTLS verification
+        self.mtls_api.add_routes(
+            path="/mtls/test",
+            methods=[apigwv2.HttpMethod.GET],
+            integration=self.mtls_lambda_integration,
+            authorizer=self.mtls_lambda_authorizer,
+        )
+
         self.mtls_api.add_routes(
             path="/datasources",
             methods=[apigwv2.HttpMethod.GET],
@@ -124,16 +162,24 @@ class DualApiGatewayConstruct(Construct):
 
         # ========== Public API Gateway ==========
         # Reference existing CloudWatch log group for public API Gateway access logs
-        public_log_group_name = (
-            f"/aws/apigateway/perseus-resource-public-{context['environment_name']}"
-        )
-        self.public_access_log_group = logs.LogGroup.from_log_group_name(
+        public_access_log_group = logs.LogGroup(
             self,
-            "PublicApiGatewayAccessLogs",
-            log_group_name=public_log_group_name,
+            "PublicAccessLogsGroup",
+            log_group_name=f"/aws/apigateway/perseus-resource-public-{context['environment_name']}",
+            removal_policy=RemovalPolicy.DESTROY,
+            retention=logs.RetentionDays.ONE_WEEK,
+        )
+        public_access_log_group.add_to_resource_policy(
+            iam.PolicyStatement(
+                principals=[iam.ServicePrincipal("apigateway.amazonaws.com")],
+                actions=["logs:CreateLogStream", "logs:PutLogEvents"],
+                resources=[
+                    public_access_log_group.log_group_arn,
+                    f"{public_access_log_group.log_group_arn}:*",
+                ],
+            )
         )
 
-        # Create HTTP API Gateway v2 without mTLS for public endpoints
         self.public_api = apigwv2.HttpApi(
             self,
             "PublicResourceAPI",
@@ -155,6 +201,27 @@ class DualApiGatewayConstruct(Construct):
                 "PublicDefaultIntegration", fastapi_lambda
             ),
         )
+
+        if self.public_api.default_stage is not None:
+            public_cfn_stage = self.public_api.default_stage.node.default_child
+            if isinstance(public_cfn_stage, apigwv2.CfnStage):
+                public_cfn_stage.access_log_settings = (
+                    apigwv2.CfnStage.AccessLogSettingsProperty(
+                        destination_arn=public_access_log_group.log_group_arn,
+                        format=json.dumps(
+                            {
+                                "requestId": "$context.requestId",
+                                "requestTime": "$context.requestTime",
+                                "httpMethod": "$context.httpMethod",
+                                "path": "$context.path",
+                                "status": "$context.status",
+                                "error": "$context.error.message",
+                                "protocol": "$context.protocol",
+                                "sourceIp": "$context.identity.sourceIp",
+                            }
+                        ),
+                    )
+                )
 
         # Create custom domain for public API
         public_domain_name = (
@@ -253,6 +320,60 @@ class DualApiGatewayConstruct(Construct):
             ),
         )
 
+        # Add access logs
+        # Read the logging format from logging.json if it exists, otherwise use defaults
+        logging_json_path = os.path.join(os.path.dirname(__file__), "logging.json")
+        if os.path.exists(logging_json_path):
+            with open(logging_json_path, "r") as f:
+                logging_format = json.load(f)
+        else:
+            # Fallback format if logging.json doesn't exist
+            logging_format = {
+                "apiType": "mtls",
+                "domainName": "$context.domainName",
+                "httpMethod": "$context.httpMethod",
+                "status": "$context.status",
+                "requestId": "$context.requestId",
+                "requestTime": "$context.requestTime",
+                "ip": "$context.identity.sourceIp",
+                "routeKey": "$context.routeKey",
+                "protocol": "$context.protocol",
+                "responseLength": "$context.responseLength",
+                # Useful for debugging authorizer behavior:
+                "authorizerError": "$context.authorizer.error",
+                # These are the client-cert fields (may be empty on OPTIONS, or if using execute-api URL)
+                "clientCertPem": "$context.identity.clientCert.clientCertPem",
+                "subjectDN": "$context.identity.clientCert.subjectDN",
+                "issuerDN": "$context.identity.clientCert.issuerDN",
+                "serialNumber": "$context.identity.clientCert.serialNumber",
+                "notBefore": "$context.identity.clientCert.validity.notBefore",
+                "notAfter": "$context.identity.clientCert.validity.notAfter",
+                # What the authorizer returned
+                "authorizerProperty": "$context.authorizer.clientCertPem",
+            }
+
+        # Convert dict to JSON string for access log format
+        access_log_format = json.dumps(logging_format)
+
+        # Access the default stage's L1 CfnStage construct via escape hatch
+        # This approach works as documented in the GitHub issue
+        from aws_cdk.aws_apigatewayv2 import CfnStage
+
+        default_stage = self.mtls_api.default_stage
+        if default_stage:
+            # Access the L1 Resource in the L2 Stage
+            cfn_stage = default_stage.node.default_child
+            if isinstance(cfn_stage, CfnStage):
+                # Set access log settings directly on the L1 construct
+                # This works because L1 constructs always have the full CloudFormation properties
+                cfn_stage.add_property_override(
+                    "AccessLogSettings",
+                    {
+                        "DestinationArn": mtls_access_log_group.log_group_arn,
+                        "Format": access_log_format,
+                    },
+                )
+
         # Outputs
         CfnOutput(
             self,
@@ -282,16 +403,16 @@ class DualApiGatewayConstruct(Construct):
             description="Public Custom Domain URL",
         )
 
-        CfnOutput(
-            self,
-            "MTLSApiGatewayAccessLogGroup",
-            value=self.mtls_access_log_group.log_group_name,
-            description="mTLS API Gateway Access Log Group",
-        )
+        # CfnOutput(
+        #     self,
+        #     "MTLSApiGatewayAccessLogGroup",
+        #     value=self.mtls_access_log_group.log_group_name,
+        #     description="mTLS API Gateway Access Log Group",
+        # )
 
-        CfnOutput(
-            self,
-            "PublicApiGatewayAccessLogGroup",
-            value=self.public_access_log_group.log_group_name,
-            description="Public API Gateway Access Log Group",
-        )
+        # CfnOutput(
+        #     self,
+        #     "PublicApiGatewayAccessLogGroup",
+        #     value=self.public_access_log_group.log_group_name,
+        #     description="Public API Gateway Access Log Group",
+        # )

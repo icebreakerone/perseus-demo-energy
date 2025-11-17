@@ -4,10 +4,11 @@ from aws_cdk import App, Stack, Tags
 import aws_cdk as cdk
 
 from deployment.policies import SSMPermissionsConstruct
-from deployment.authorizer import CertificateAuthorizerConstruct
 from deployment.s3_bucket import TruststoreBucketConstruct
+from deployment.truststore import TruststoreConstruct
+from deployment.networking import NetworkConstruct
 from deployment.lambda_function import FastAPILambdaConstruct
-from deployment.dual_api_gateway import DualApiGatewayConstruct
+from deployment.loadbalancer import LoadBalancer
 from models import Context
 
 app = App()
@@ -72,10 +73,19 @@ truststore_bucket = TruststoreBucketConstruct(
     truststore_file_path=truststore_file_path,
 )
 
-# Create Lambda authorizer
-authorizer = CertificateAuthorizerConstruct(
+# Create ELB Trust Store from the S3 bucket
+truststore = TruststoreConstruct(
     stack,
-    "CertificateAuthorizer",
+    "Truststore",
+    environment_name=contexts[deployment_context]["environment_name"],
+    existing_bucket_name=truststore_bucket.bucket.bucket_name,
+    truststore_key=truststore_bucket.truststore_key,
+)
+
+# Create networking (VPC for ALB)
+network = NetworkConstruct(
+    stack,
+    "Network",
     environment_name=contexts[deployment_context]["environment_name"],
 )
 
@@ -105,20 +115,23 @@ fastapi_lambda = FastAPILambdaConstruct(
     },
 )
 
-# Create API Gateway
-print(f"Creating API Gateway for {deployment_context}")
-print(f"Truststore bucket: {truststore_bucket.bucket.bucket_name}")
-print(f"FastAPI Lambda: {fastapi_lambda.function.function_name}")
-print(f"Authorizer: {authorizer.authorizer_function.function_name}")
-print(f"Context: {contexts[deployment_context]}")
-
-api_gateway = DualApiGatewayConstruct(
+# Create Application Load Balancer with mTLS
+alb = LoadBalancer(
     stack,
-    "DualApiGateway",
+    "LoadBalancer",
+    vpc=network.vpc,
     context=dict(contexts[deployment_context]),
-    fastapi_lambda=fastapi_lambda.function,
-    authorizer=authorizer,
-    truststore_bucket=truststore_bucket,
+    trust_store=truststore.trust_store,
+    lambda_function=fastapi_lambda.function,
 )
 
+# Note: API Gateway deployment is commented out - using ALB instead
+# api_gateway = DualApiGatewayConstruct(
+#     stack,
+#     "DualApiGateway",
+#     context=dict(contexts[deployment_context]),
+#     fastapi_lambda=fastapi_lambda.function,
+#     authorizer=authorizer,
+#     truststore_bucket=truststore_bucket,
+# )
 app.synth()

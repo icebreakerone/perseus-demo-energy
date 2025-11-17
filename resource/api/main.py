@@ -1,5 +1,6 @@
 import json
 import datetime
+import logging
 from typing import Annotated
 
 # import x509
@@ -7,12 +8,16 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException, Response, Depends, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.openapi.utils import get_openapi
+from starlette.requests import Request
 
 from . import models
 from . import auth
 from . import conf
 from . import provenance
 from .exceptions import CertificateError, AccessTokenValidatorError
+from .logger import get_logger
+
+logger = get_logger()
 
 from ib1 import directory
 
@@ -54,8 +59,22 @@ def datasources() -> dict:
     }
 
 
+@app.get("/mtls/test")
+def mtls_test(x_client_cert: Annotated[str | None, Header()] = None):
+    if x_client_cert:
+        body = (
+            "Client certificate received. First 80 chars:\n"
+            + x_client_cert.replace("\n", " ")[0:80]
+        )
+    else:
+        body = "No X-Client-Cert header found. Check that mTLS and the authorizer are configured correctly."
+
+    return Response(content=body, media_type="text/plain")
+
+
 @app.get("/datasources/{id}/{measure}", response_model=models.MeterData)
 def consumption(
+    request: Request,
     id: str,
     measure: str,
     response: Response,
@@ -65,12 +84,31 @@ def consumption(
     x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
 ):
-    if not x_amzn_mtls_clientcert_leaf:
+    cert_pem = x_amzn_mtls_clientcert_leaf
+
+    if not cert_pem:
+        aws_event = request.scope.get("aws.event", {})
+        cert_context = (
+            aws_event.get("requestContext", {})
+            .get("authentication", {})
+            .get("clientCert", {})
+        )
+        cert_pem = cert_context.get("clientCertPem")
+        logger.info("Loaded certificate from requestContext.authentication")
+    else:
+        logger.info("Loaded certificate from x_amzn_mtls_clientcert_leaf header")
+
+    if not cert_pem:
+        logger.warning("No client certificate found in request")
         raise HTTPException(
             status_code=401,
             detail="Client certificate required",
         )
-    cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
+
+    cert = directory.parse_cert(cert_pem)
+    logger.info(
+        "Parsed certificate subject: %s", directory.extensions.decode_application(cert)
+    )
     try:
         directory.require_role(
             conf.PROVIDER_ROLE,
@@ -86,13 +124,16 @@ def consumption(
         # And check the certificate binding
         try:
             decoded, headers = auth.check_token(
-                x_amzn_mtls_clientcert_leaf,
+                cert_pem,
                 token.credentials,
                 x_fapi_interaction_id,
             )
+            logger.info("Token validated successfully for sub %s", decoded.get("sub"))
         except AccessTokenValidatorError as e:
+            logger.warning("Token validation failed: %s", e)
             raise HTTPException(status_code=401, detail=str(e))
     else:
+        logger.warning("No bearer token provided")
         raise HTTPException(status_code=401, detail="No token provided")
     # Create a new provenance record
     permission_granted = datetime.datetime.now(datetime.timezone.utc)
@@ -111,6 +152,7 @@ def consumption(
     )
     with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:
         data = json.load(f)
+    logger.info("Returning data and provenance for %s", decoded["sub"])
     return {"data": data, "provenance": record}
 
 
