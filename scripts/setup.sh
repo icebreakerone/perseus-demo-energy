@@ -29,7 +29,7 @@ ib1-directory create-application-certificates --issuer-key-file client-issuer-ke
   --organization-name "CAP Demo"  \
   --country UK \
   --state London \
-  --role https://registry.core.pilot.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider \
+  --role https://registry.core.sandbox.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider \
   --application-uri https://registry.core.pilot.trust.ib1.org/application/cap-demo
 
 # Create sigining certificates

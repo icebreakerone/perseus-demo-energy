@@ -31,20 +31,25 @@ class TruststoreBucketConstruct(Construct):
         print(f"Truststore file path: {truststore_file_path}")
         # Upload truststore file if provided
         if truststore_file_path and os.path.exists(truststore_file_path):
-            print(f"Uploading truststore file to {truststore_file_path}")
+            print(f"Uploading truststore file from {truststore_file_path}")
+            truststore_dir = os.path.dirname(truststore_file_path)
+            truststore_filename = os.path.basename(truststore_file_path)
+            print(f"Truststore directory: {truststore_dir}")
+            print(f"Truststore filename: {truststore_filename}")
             self.bucket_deployment = s3_deployment.BucketDeployment(
                 self,
                 "TruststoreDeployment",
-                sources=[
-                    s3_deployment.Source.asset(os.path.dirname(truststore_file_path))
-                ],
+                sources=[s3_deployment.Source.asset(truststore_dir)],
                 destination_bucket=self.bucket,
                 destination_key_prefix="",
                 # Only upload the specific truststore file
                 exclude=["*"],
-                include=[os.path.basename(truststore_file_path)],
+                include=[truststore_filename],
             )
-            self.truststore_key = os.path.basename(truststore_file_path)
+            self.truststore_key = truststore_filename
+            print(
+                f"Truststore will be uploaded to s3://{self.bucket.bucket_name}/{self.truststore_key}"
+            )
         else:
             # Fallback: create a placeholder file or use default
             self.truststore_key = "truststore.pem"

@@ -18,11 +18,11 @@ System_Boundary(perseus_demo, "Perseus Demo System") {
     }
     
     System_Boundary(resource_system, "Resource API System") {
-        Container(mtls_apigw, "mTLS API Gateway", "AWS API Gateway v2", "Handles mTLS connections, validates client certificates")
-        Container(public_apigw, "Public API Gateway", "AWS API Gateway v2", "Handles public HTTPS connections for API documentation")
-        Container(lambda_authorizer, "Certificate Authorizer", "AWS Lambda", "Validates client certificates before forwarding requests")
+        Container(mtls_alb_resource, "mTLS ALB", "AWS Application Load Balancer", "Handles mTLS connections, validates client certificates using ELB Trust Store")
+        Container(public_alb_resource, "Public ALB", "AWS Application Load Balancer", "Handles public HTTPS connections for API documentation")
         Container(resource_api, "Resource API", "FastAPI Lambda", "Provides protected data endpoints, validates tokens and certificates")
-        ContainerDb(truststore_s3_resource, "Truststore", "AWS S3", "Stores client certificate CA bundle for mTLS validation (shared)")
+        ContainerDb(truststore_s3_resource, "Truststore", "AWS S3", "Stores client certificate CA bundle for mTLS validation (shared with auth system)")
+        ContainerDb(truststore_elb_resource, "ELB Trust Store", "AWS ELB Trust Store", "References S3 truststore bundle for ALB mTLS validation")
         ContainerDb(cert_store_s3, "Certificate Store", "AWS S3", "Stores signing certificates for provenance records")
         ContainerDb(ssm_store, "Parameter Store", "AWS Systems Manager", "Stores signing keys and secrets")
     }
@@ -44,19 +44,18 @@ Rel(auth_api, truststore_s3_auth, "Reads truststore bundle", "S3 API")
 Rel_U(mtls_alb, client_app, "Returns certificate-bound token", "HTTPS")
 Rel_U(public_alb, client_app, "Redirects with auth code", "HTTPS")
 
-Rel(client_app, mtls_apigw, "Requests user data", "mTLS + Bearer Token\n(client certificate + access token)")
-Rel(mtls_apigw, lambda_authorizer, "Validates certificate", "Invoke")
-Rel_U(lambda_authorizer, mtls_apigw, "Authorizer result", "Response")
-Rel(mtls_apigw, resource_api, "Forwards authorized requests", "HTTPS")
-Rel(resource_api, truststore_s3_resource, "Reads truststore bundle", "S3 API")
+Rel(client_app, mtls_alb_resource, "Requests user data", "mTLS + Bearer Token\n(client certificate + access token)")
+Rel(mtls_alb_resource, resource_api, "Forwards mTLS requests with client cert in headers", "Lambda Invoke\n(X-Amzn-Mtls-Clientcert-Leaf)")
+Rel(mtls_alb_resource, truststore_elb_resource, "Validates client certificates", "ELB Trust Store API")
+Rel(truststore_elb_resource, truststore_s3_resource, "References truststore bundle", "S3 Reference")
 Rel(resource_api, cert_store_s3, "Reads signing certificates", "S3 API")
 Rel(resource_api, ssm_store, "Reads signing keys", "SSM API")
 Rel(resource_api, auth_api, "Validates access token", "HTTPS\n(/.well-known/jwks.json)")
-Rel_U(resource_api, mtls_apigw, "Returns user data", "HTTPS")
-Rel_U(mtls_apigw, client_app, "Returns user data", "HTTPS")
+Rel_U(resource_api, mtls_alb_resource, "Returns user data", "HTTPS")
+Rel_U(mtls_alb_resource, client_app, "Returns user data", "HTTPS")
 
-Rel(user, public_apigw, "Views API documentation", "HTTPS")
-Rel(public_apigw, resource_api, "Serves documentation", "HTTPS")
+Rel(user, public_alb_resource, "Views API documentation", "HTTPS")
+Rel(public_alb_resource, resource_api, "Serves documentation", "Lambda Invoke")
 
 @enduml
 
