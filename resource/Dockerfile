@@ -4,6 +4,7 @@ RUN pip install pipenv
 COPY Pipfile* /code/
 WORKDIR /code
 RUN pipenv install --system --deploy --ignore-pipfile
+RUN pip install uvicorn[standard]
 COPY ./api /code/api
 COPY ./data /code/data
 EXPOSE 8080

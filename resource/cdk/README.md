@@ -6,10 +6,11 @@ This directory contains the CDK deployment for the Perseus Resource Service, whi
 
 The deployment creates:
 
-- **API Gateway** with mTLS authentication and custom domain
-- **Lambda Function** running the FastAPI application
-- **Lambda Authorizer** for certificate validation
+- **Application Load Balancer (ALB)** with mTLS authentication and custom domain
+- **Lambda Function** running the FastAPI application (targeted by ALB)
+- **ELB Trust Store** for mTLS certificate validation
 - **S3 Bucket** for truststore storage
+- **VPC** with public subnets for ALB
 - **Route53** DNS records
 - **IAM roles and policies** for secure access
 
@@ -25,7 +26,7 @@ The deployment creates:
 ### Development Environment
 
 ```bash
-cd resource/deployment
+cd resource/cdk
 pip install -r requirements.txt
 cdk deploy --context deployment_context=dev
 ```
@@ -33,7 +34,7 @@ cdk deploy --context deployment_context=dev
 ### Production Environment
 
 ```bash
-cd resource/deployment
+cd resource/cdk
 pip install -r requirements.txt
 cdk deploy --context deployment_context=prod
 ```
@@ -58,10 +59,10 @@ The Lambda function is configured with the following environment variables:
 
 ## Certificate Flow
 
-1. Client presents mTLS certificate to API Gateway
-2. API Gateway validates certificate against truststore
-3. Lambda authorizer extracts certificate information
-4. Certificate PEM is passed to FastAPI Lambda via headers
+1. Client presents mTLS certificate to ALB
+2. ALB validates certificate against ELB Trust Store (which references S3 truststore bundle)
+3. ALB extracts certificate information and passes it to Lambda via HTTP headers
+4. Certificate PEM is passed to FastAPI Lambda via `X-Amzn-Mtls-Clientcert-Leaf` header
 5. FastAPI application validates certificate and OAuth token
 6. Energy data is returned with provenance records
 
