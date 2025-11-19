@@ -57,14 +57,14 @@ def datasources() -> dict:
 
 
 @app.get("/mtls/test")
-def mtls_test(x_client_cert: Annotated[str | None, Header()] = None):
-    if x_client_cert:
+def mtls_test(x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None):
+    if x_amzn_mtls_clientcert_leaf:
         body = (
             "Client certificate received. First 80 chars:\n"
-            + x_client_cert.replace("\n", " ")[0:80]
+            + x_amzn_mtls_clientcert_leaf.replace("\n", " ")[0:80]
         )
     else:
-        body = "No X-Client-Cert header found. Check that mTLS and the authorizer are configured correctly."
+        body = "No X-Amzn-Mtls-Clientcert-Leaf header found. Check that mTLS is configured correctly."
 
     return Response(content=body, media_type="text/plain")
 
