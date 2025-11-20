@@ -143,7 +143,7 @@ class LoadBalancer(Construct):
         )
 
         # Public domain record
-        public_record_name = context["subdomain"] if context["subdomain"] else "@"
+        public_record_name = context["subdomain"] if context["subdomain"] else ""
         route53.ARecord(
             self,
             "PublicALBAliasRecord",

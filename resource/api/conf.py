@@ -22,3 +22,6 @@ PROVIDER_ROLE = os.environ.get(
     "PROVIDER_ROLE",
     "https://registry.core.sandbox.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider",
 )
+TRUST_FRAMEWORK_URL = os.environ.get(
+    "TRUST_FRAMEWORK_URL", "https://registry.core.sandbox.trust.ib1.org/trust-framework"
+)
