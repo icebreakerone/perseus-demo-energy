@@ -13,8 +13,6 @@ from .logger import get_logger
 
 logging = get_logger()
 
-TRUST_FRAMEWORK_URL = "https://registry.core.trust.ib1.org/trust-framework"
-
 
 def create_provenance_records(
     from_date: datetime.date,
@@ -48,7 +46,7 @@ def create_provenance_records(
         private_key,  # private key
     )
 
-    edp_record = Record(TRUST_FRAMEWORK_URL)
+    edp_record = Record(conf.TRUST_FRAMEWORK_URL)
     # - Permission step to record consent by end user
     edp_permission_id = edp_record.add_step(
         {
