@@ -14,6 +14,10 @@ from .logger import get_logger
 logging = get_logger()
 
 
+def _date_to_iso(date: datetime.date) -> str:
+    return f"{date.isoformat()}T00:00Z"
+
+
 def create_provenance_records(
     from_date: datetime.date,
     to_date: datetime.date,
@@ -73,8 +77,8 @@ def create_provenance_records(
             "permissions": [edp_permission_id],
             "perseus:scheme": {
                 "meteringPeriod": {
-                    "from": f"{from_date.isoformat()}Z",
-                    "to": f"{to_date.isoformat()}Z",
+                    "from": _date_to_iso(from_date),
+                    "to": _date_to_iso(to_date),
                 }
             },
             "perseus:assurance": {  # TODO add logic to select correct assurance
@@ -98,8 +102,8 @@ def create_provenance_records(
             "path": "/readings",
             "parameters": {
                 "measure": "import",
-                "from": f"{from_date.isoformat()}Z",
-                "to": f"{to_date.isoformat()}Z",
+                "from": _date_to_iso(from_date),
+                "to": _date_to_iso(to_date),
             },
             "permissions": [edp_permission_id],
             "transaction": fapi_id,
