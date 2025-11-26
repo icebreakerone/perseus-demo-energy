@@ -25,8 +25,8 @@ set -e
 
 # Default file paths (based on checkcerts.sh defaults)
 ROOT_CA="./deployment/signing-certs/directory-signing-certificates/root-ca.pem"
-BUNDLE="./deployment/signing-certs/directory-signing-certificates/bundle.pem"
-SIGNING_KEY="./deployment/signing-certs/v60qlnnh-key.pem"
+BUNDLE="./deployment/signing-certs/signing-issued-intermediate-bundle.pem"
+SIGNING_KEY="./deployment/signing-certs/signing-key.pem"
 DEPLOYMENT_CONTEXT="${CDK_DEPLOYMENT_CONTEXT:-prod}"
 
 # Parse named arguments
