@@ -312,7 +312,7 @@ async def get_openid_configuration():
             "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
             "permissions_endpoint": f"{conf.ISSUER_URL}/api/v1/permissions",
         },
-        "use_mtls_endpoint_aliases": true,
+        "use_mtls_endpoint_aliases": True,
         "tls_client_certificate_bound_access_tokens": True,
         "authorization_response_iss_parameter_supported": True,
         "request_object_signing_alg_values_supported": ["PS256", "ES256"],
