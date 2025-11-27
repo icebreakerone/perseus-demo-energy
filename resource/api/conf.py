@@ -22,3 +22,15 @@ PROVIDER_ROLE = os.environ.get(
     "PROVIDER_ROLE",
     "https://registry.core.sandbox.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider",
 )
+TRUST_FRAMEWORK_URL = os.environ.get(
+    "TRUST_FRAMEWORK_URL", "https://registry.core.sandbox.trust.ib1.org/trust-framework"
+)
+
+# Base URL for the Perseus scheme in the Trust Registry.
+# This controls whether we talk to sandbox, pilot, or production.
+# Defaults to sandbox, but can be overridden per environment, e.g.:
+#   SCHEME_BASE_URL=https://registry.core.pilot.trust.ib1.org/scheme/perseus
+SCHEME_BASE_URL = os.environ.get(
+    "SCHEME_BASE_URL",
+    "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
+)

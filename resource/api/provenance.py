@@ -13,7 +13,9 @@ from .logger import get_logger
 
 logging = get_logger()
 
-TRUST_FRAMEWORK_URL = "https://registry.core.trust.ib1.org/trust-framework"
+
+def _date_to_iso(date: datetime.date) -> str:
+    return f"{date.isoformat()}T00:00Z"
 
 
 def create_provenance_records(
@@ -48,17 +50,17 @@ def create_provenance_records(
         private_key,  # private key
     )
 
-    edp_record = Record(TRUST_FRAMEWORK_URL)
+    edp_record = Record(conf.TRUST_FRAMEWORK_URL)
     # - Permission step to record consent by end user
     edp_permission_id = edp_record.add_step(
         {
             "type": "permission",
-            "scheme": "https://registry.core.pilot.trust.ib1.org/scheme/perseus",
+            "scheme": conf.SCHEME_BASE_URL,
             "timestamp": f"{permission_granted.isoformat()[0:-7]}Z",
             "account": account,
             "allows": {
                 "licences": [
-                    "https://registry.core.pilot.trust.ib1.org/scheme/perseus/licence/energy-consumption-data/2024-12-05"
+                    f"{conf.SCHEME_BASE_URL}/licence/energy-consumption-data/2024-12-05"
                 ]
             },
             "expires": f"{permission_expires.isoformat()[0:-7]}Z",
@@ -67,22 +69,22 @@ def create_provenance_records(
     origin_id = edp_record.add_step(
         {
             "type": "origin",
-            "scheme": "https://registry.core.pilot.trust.ib1.org/scheme/perseus",
-            "sourceType": "https://registry.core.pilot.trust.ib1.org/scheme/perseus/source-type/Meter",
+            "scheme": conf.SCHEME_BASE_URL,
+            "sourceType": f"{conf.SCHEME_BASE_URL}/source-type/Meter",
             "origin": "https://www.smartdcc.co.uk/",
             "originLicence": "https://smartenergycodecompany.co.uk/documents/sec/consolidated-sec/",
             "external": True,
             "permissions": [edp_permission_id],
             "perseus:scheme": {
                 "meteringPeriod": {
-                    "from": f"{from_date.isoformat()}Z",
-                    "to": f"{to_date.isoformat()}Z",
+                    "from": _date_to_iso(from_date),
+                    "to": _date_to_iso(to_date),
                 }
             },
             "perseus:assurance": {  # TODO add logic to select correct assurance
-                "dataSource": "https://registry.core.trust.ib1.org/scheme/perseus/assurance/data-source/SmartMeter",
-                "missingData": "https://registry.core.trust.ib1.org/scheme/perseus/assurance/missing-data/Missing",
-                "processing": "https://registry.core.trust.ib1.org/scheme/perseus/assurance/processing/SmartDCCOtherUser",
+                "dataSource": f"{conf.SCHEME_BASE_URL}/assurance/data-source/SmartMeter",
+                "missingData": f"{conf.SCHEME_BASE_URL}/assurance/missing-data/Missing",
+                "processing": f"{conf.SCHEME_BASE_URL}/assurance/processing/SmartDCCOtherUser",
             },
         }
     )
@@ -91,17 +93,17 @@ def create_provenance_records(
     edp_record.add_step(
         {
             "type": "transfer",
-            "scheme": "https://registry.core.pilot.trust.ib1.org/scheme/perseus",
+            "scheme": conf.SCHEME_BASE_URL,
             "of": origin_id,
             "to": cap_member,
-            "standard": "https://registry.core.pilot.trust.ib1.org/scheme/perseus/standard/energy-consumption-data/2024-12-05",
-            "licence": "https://registry.core.pilot.trust.ib1.org/scheme/perseus/licence/energy-consumption-data/2024-12-05",
+            "standard": f"{conf.SCHEME_BASE_URL}/standard/energy-consumption-data/2024-12-05",
+            "licence": f"{conf.SCHEME_BASE_URL}/licence/energy-consumption-data/2024-12-05",
             "service": service_url,
             "path": "/readings",
             "parameters": {
                 "measure": "import",
-                "from": f"{from_date.isoformat()}Z",
-                "to": f"{to_date.isoformat()}Z",
+                "from": _date_to_iso(from_date),
+                "to": _date_to_iso(to_date),
             },
             "permissions": [edp_permission_id],
             "transaction": fapi_id,
