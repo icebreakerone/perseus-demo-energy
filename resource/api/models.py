@@ -19,6 +19,7 @@ class Reading(BaseModel):
 class Datasource(BaseModel):
     id: str
     type: str
+    location: dict
     availableMeasures: list[str]
 
 
@@ -28,6 +29,7 @@ class Datasources(BaseModel):
 
 class MeterData(BaseModel):
     data: list[Reading]
+    location: dict
     provenance: dict
     model_config = {
         "json_schema_extra": {
