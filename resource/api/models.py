@@ -45,6 +45,7 @@ class MeterData(BaseModel):
                             "cumulative": {"value": 1234.5, "unitCode": "WHR"},
                         },
                     ],
+                    "location": {"ukPostcodeOutcode": "SW8"},
                     "provenance": [
                         [
                             "eyJpZCI6IlVSZDB3Z3MiLCJ0eXBlIjoidHJhbnNmZXIiLCJmcm9tIjoiaHR0cHM6...MyOjU2WiJ9",
