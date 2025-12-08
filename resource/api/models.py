@@ -19,6 +19,7 @@ class Reading(BaseModel):
 class Datasource(BaseModel):
     id: str
     type: str
+    location: dict
     availableMeasures: list[str]
 
 
@@ -28,6 +29,7 @@ class Datasources(BaseModel):
 
 class MeterData(BaseModel):
     data: list[Reading]
+    location: dict
     provenance: dict
     model_config = {
         "json_schema_extra": {
@@ -43,6 +45,7 @@ class MeterData(BaseModel):
                             "cumulative": {"value": 1234.5, "unitCode": "WHR"},
                         },
                     ],
+                    "location": {"ukPostcodeOutcode": "SW8"},
                     "provenance": [
                         [
                             "eyJpZCI6IlVSZDB3Z3MiLCJ0eXBlIjoidHJhbnNmZXIiLCJmcm9tIjoiaHR0cHM6...MyOjU2WiJ9",
