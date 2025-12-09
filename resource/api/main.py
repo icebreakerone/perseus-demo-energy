@@ -18,6 +18,9 @@ from . import provenance
 from .exceptions import CertificateError, AccessTokenValidatorError
 from .logger import get_logger
 
+
+DEMO_METER_ID = "S018011012261305588165"
+DEMO_DATA_SOURCE_LOCATION = "SW8"
 logger = get_logger()
 
 
@@ -48,10 +51,11 @@ def datasources() -> dict:
     return {
         "data": [
             {
-                "id": "abcd1234",
-                "type": "Electricity",
-                "availableMeasures": ["Import"],
-            },
+                "id": DEMO_METER_ID,
+                "type": "electricity",
+                "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},
+                "availableMeasures": ["import", "export"],
+            }
         ]
     }
 
@@ -82,7 +86,8 @@ def consumption(
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
 ):
     cert_pem = x_amzn_mtls_clientcert_leaf
-
+    if id != DEMO_METER_ID:
+        raise HTTPException(status_code=404, detail="Meter not found")
     if not cert_pem:
         aws_event = request.scope.get("aws.event", {})
         cert_context = (
@@ -150,7 +155,11 @@ def consumption(
     with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:
         data = json.load(f)
     logger.info("Returning data and provenance for %s", decoded["sub"])
-    return {"data": data, "provenance": record}
+    return {
+        "data": data,
+        "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},
+        "provenance": record,
+    }
 
 
 def custom_openapi():

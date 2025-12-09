@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.2] - 2025-12-08
+
+### Added
+
+-
+
+### Changed
+
+- Raise a 404 for an incorrect meter ID
+
+### Fixed
+
+- Add missing location fields to resource api responses
+
+### Breaking
+
+-
+
 ## [v1.0.1] - 2025-11-27
 
 ### Added
