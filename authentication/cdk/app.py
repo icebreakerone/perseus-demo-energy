@@ -91,6 +91,12 @@ dynamodb = DynamoDBConstruct(
     vpc=network.vpc,
     env_name=contexts[deployment_context]["environment_name"],
 )
+
+if contexts[deployment_context]["subdomain"] == "":
+    unprotected_url = f"https://{contexts[deployment_context]["hosted_zone_name"]}"
+else:
+    unprotected_url = f'https://{contexts[deployment_context]["subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}'
+
 fastapi_service = AuthenticationAPIServiceConstruct(
     stack,
     "FastAPIService",
@@ -98,7 +104,7 @@ fastapi_service = AuthenticationAPIServiceConstruct(
     ssm_policy=ssm_policy.policy,
     environment={
         "API_DOMAIN": f'{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}',
-        "UNPROTECTED_URL": f'https://{contexts[deployment_context]["subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}',
+        "UNPROTECTED_URL": unprotected_url,
         "JWT_SIGNING_KEY": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/jwt-signing-key",
         "REDIS_HOST": redis.redis.attr_redis_endpoint_address,
         "ORY_CLIENT_ID": "f67916ce-de33-4e2f-a8e3-cbd5f6459c30",
