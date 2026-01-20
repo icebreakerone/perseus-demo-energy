@@ -109,7 +109,7 @@ class Permission(BaseModel):
             "examples": [
                 {
                     "oauthIssuer": "https://api.example.com/issuer",
-                    "client": "https://directory.core.pilot.trust.ib1.org/member/28364528",
+                    "client": "https://directory.core.pilot.trust.ib1.org/a/jk8hds78", # Application URI
                     "license": "https://registry.core.pilot.trust.ib1.org/scheme/electricity/license/energy-consumption-data/2024-12-05",
                     "account": "6qIO3KZx0Q",
                     "lastGranted": "2024-03-31T23:30Z",

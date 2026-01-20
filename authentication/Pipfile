@@ -22,6 +22,7 @@ ib1-directory = "*"
 jwcrypto = "*"
 loguru = "*"
 jinja2 = "*"
+rdflib = "*"
 
 [dev-packages]
 black = "*"

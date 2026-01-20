@@ -109,12 +109,6 @@ def cli():
     pass
 
 
-@click.option("--token", help="introspect token returned from authorisation flow")
-@cli.command()
-def introspect(token):
-    print(introspect_token(token))
-
-
 @click.option("--token", help="Decode ID token returned from authorisation flow")
 @cli.command()
 def id_token(token):

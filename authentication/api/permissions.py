@@ -5,7 +5,7 @@ import boto3
 
 from . import models
 from . import conf
-from .exceptions import PermissionStorageError
+from .exceptions import PermissionStorageError, PermissionRevocationError
 from .logger import get_logger
 
 logger = get_logger()
@@ -112,6 +112,19 @@ def get_permission_by_token(refresh_token: str) -> models.Permission | None:
         return None
 
     return models.Permission(**items[0])
+
+
+def revoke_permission(refresh_token: str) -> models.Permission | None:
+    permission = get_permission_by_token(refresh_token)
+    if permission is None:
+        raise PermissionRevocationError(f"Permission not found: {refresh_token}")
+
+    try:
+        permission.revoked = datetime.datetime.now(datetime.timezone.utc)
+        write_permission(permission)
+    except Exception as e:
+        raise PermissionRevocationError(f"Error revoking permission: {str(e)}")
+    return permission
 
 
 def get_permission_by_evidence_id(evidence_id: str) -> models.Permission | None:

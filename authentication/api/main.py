@@ -1,6 +1,8 @@
 from typing import Annotated
+from contextlib import asynccontextmanager
 import json
 import os
+import threading
 
 from cryptography import x509
 from fastapi import (
@@ -22,15 +24,39 @@ from . import par
 from . import auth
 from . import permissions
 from . import evidence
-
+from . import messaging
+from .exceptions import PermissionRevocationError
 from .logger import get_logger
 
 logger = get_logger()
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage background tasks for the FastAPI application."""
+    # Startup: Start message queue worker in background thread
+    logger.info("Starting message queue worker...")
+    worker_thread = threading.Thread(
+        target=messaging.process_message_queue,
+        args=("main-worker",),
+        daemon=True,
+        name="message-queue-worker",
+    )
+    worker_thread.start()
+    logger.info("Message queue worker started")
+
+    yield
+
+    # Shutdown: Worker thread will be terminated as daemon
+    logger.info("Shutting down message queue worker...")
+
+
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Demo Authentication Server",
+    lifespan=lifespan,
     # root_path=conf.OPEN_API_ROOT,
 )
 
@@ -261,10 +287,11 @@ async def get_permissions(
     return {"permissions": permissions_data}
 
 
-@app.post("/api/v1/authorize/revoke", dependencies=[Depends(parsed_client_cert)])
+@app.post("/api/v1/authorize/revoke")
 async def revoke_token(
     token: str = Form(...),
     token_type_hint: str = Form(None),
+    client_cert: x509.Certificate = Depends(parsed_client_cert),
 ):
     """
     Token revocation endpoint
@@ -272,10 +299,19 @@ async def revoke_token(
     - Requires mTLS authentication (client certificate validation)
     - Calls Ory Hydra's token revocation endpoint
     - Supports both access and refresh token revocation
+    - Marks stored permission as revoked
     """
     # Prepare revocation request to Hydra
     payload = {"token": token, "token_type_hint": token_type_hint}
     session = auth.get_session()
+
+    try:
+        revoked_permission = permissions.revoke_permission(token)
+    except PermissionRevocationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if revoked_permission is None:
+        raise HTTPException(status_code=400, detail="Failed to revoke permission")
 
     response = session.post(
         f"{conf.ORY_URL}/oauth2/revoke",
@@ -284,6 +320,19 @@ async def revoke_token(
 
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    # Queue message for asynchronous delivery to the client application
+    try:
+        message_id = messaging.enqueue_revocation_message(revoked_permission)
+        logger.info(
+            f"Enqueued revocation message {message_id} for client {revoked_permission.client}"
+        )
+    except Exception as e:
+        # Log error but don't fail the revocation request
+        logger.error(
+            f"Failed to enqueue revocation message for client {revoked_permission.client}: {str(e)}",
+            exc_info=True,
+        )
 
     return {"status": "success", "message": "Token revoked"}
 
