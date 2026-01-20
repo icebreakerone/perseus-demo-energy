@@ -8,11 +8,14 @@ It may also be a useful reference for developers who are creating secure data en
 
 ## Contents
 
-- [Authentication API](#authentication-api)
-- [Resource API](#resource-api)
-- [Environment variables](#environment-variables)
-- [Running a dev server](#running-a-dev-server)
-- [Running the local docker environment](#running-the-local-docker-environment)
+- [Overview](#overview)
+  - [Authentication API](#authentication-api)
+  - [Resource API](#resource-api)
+- [Development](#development)
+  - [Environment variables](#environment-variables)
+  - [Running a dev server](#running-a-dev-server)
+  - [Creating self signed certificates for development](#creating-self-signed-certificates-for-development)
+  - [Running the local docker environment](#running-the-local-docker-environment)
 - [Pushed Authorization Request (PAR)](#pushed-authorization-request-par)
 - [Ory Hydra](#ory-hydra)
   - [Authentication and consent](#authentication-and-consent)
@@ -23,7 +26,7 @@ It may also be a useful reference for developers who are creating secure data en
   - [System Context Diagram](#system-context-diagram)
   - [Container Diagram](#container-diagram)
 
-## Overview
+## Overview
 
 ### Authentication API
 
@@ -58,8 +61,6 @@ Resource API documentation is available at https://perseus-demo-energy.ib1.org/a
 #### API Endpoints
 
 The Resource API provides the following endpoints:
-
-- **`GET /`** - Root endpoint that returns available API URLs and documentation links (Swagger UI, ReDoc, and OpenAPI JSON).
 
 - **`GET /datasources`** - Lists available data sources. Returns a collection of data sources with their IDs, types, locations, and available measures. Requires both mTLS client certificate authentication and a bearer token (certificate-bound access token). Validates the client certificate has the correct provider role, verifies the token signature and certificate binding.
 
