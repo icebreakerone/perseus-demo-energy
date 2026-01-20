@@ -61,10 +61,9 @@ The Resource API provides the following endpoints:
 
 - **`GET /`** - Root endpoint that returns available API URLs and documentation links (Swagger UI, ReDoc, and OpenAPI JSON).
 
-- **`GET /datasources`** - Lists available data sources. Returns a collection of data sources with their IDs, types, locations, and available measures. This endpoint does not require authentication.
+- **`GET /datasources`** - Lists available data sources. Returns a collection of data sources with their IDs, types, locations, and available measures. Requires both mTLS client certificate authentication and a bearer token (certificate-bound access token). Validates the client certificate has the correct provider role, verifies the token signature and certificate binding.
 
-- **`GET /datasources/{id}/{measure}`** - Retrieves meter data for a specific data source and measure. Requires both mTLS client certificate authentication and a bearer token (certificate-bound access token). Validates the client certificate has the provider role, verifies the token signature and certificate binding, and returns meter consumption data along with a provenance record. Accepts query parameters `from` and `to` to specify the date range for the data.
-
+- **`GET /datasources/{id}/{measure}`** - Retrieves meter data for a specific data source and measure. Requires both mTLS client certificate authentication and a bearer token (certificate-bound access token). Validates the client certificate has the correct provider role, verifies the token signature and certificate binding, and returns meter consumption data along with a provenance record. Accepts query parameters `from` and `to` to specify the date range for the data.
 
 
 ## Development
