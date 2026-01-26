@@ -4,7 +4,7 @@ from typing import Annotated
 
 # import x509
 
-from fastapi import FastAPI, HTTPException, Response, Depends, Header, Query
+from fastapi import FastAPI, HTTPException, Depends, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.openapi.utils import get_openapi
 from starlette.requests import Request
