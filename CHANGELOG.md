@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.0.0] - 
+
+### Added
+
+### Fixed
+- Meter listing endpoint /datasources requires mtls and token authentication
+
+### Changed
+
+- 
+
 ## [v1.0.3] - 2025-12-15
 
 ### Fixed
