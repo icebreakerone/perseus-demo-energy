@@ -113,7 +113,7 @@ def root():
 
 @app.get("/datasources", response_model=models.Datasources)
 def datasources(
-    auth_result: tuple[str, dict, dict, object] = Depends(require_mtls_and_token),
+    auth_result: tuple[dict, dict, object] = Depends(require_mtls_and_token),
 ) -> dict:
     return {
         "data": [
@@ -133,11 +133,11 @@ def consumption(
     measure: str,
     from_date: datetime.date = Query(alias="from"),
     to_date: datetime.date = Query(alias="to"),
-    auth_result: tuple[str, dict, dict, object] = Depends(require_mtls_and_token),
+    auth_result: tuple[dict, dict, object] = Depends(require_mtls_and_token),
 ):
     if id != DEMO_METER_ID:
         raise HTTPException(status_code=404, detail="Meter not found")
-    _, decoded, headers, cert = auth_result
+    decoded, headers, cert = auth_result
     # Create a new provenance record
     permission_granted = datetime.datetime.now(datetime.timezone.utc)
     permission_expires = datetime.datetime.now(

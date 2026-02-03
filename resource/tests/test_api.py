@@ -51,6 +51,47 @@ def test_consumption_bad_token(api_consumption_url):
     assert response.status_code == 401
 
 
+def test_datasources(
+    monkeypatch,
+    mock_check_token,
+):  # noqa
+    """
+    If check token passes, return datasources list and 200
+    """
+    monkeypatch.setattr(
+        conf, "SIGNING_ROOT_CA_CERTIFICATE", f"{ROOT_DIR}/fixtures/test-suite-cert.pem"
+    )
+    monkeypatch.setattr(
+        conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-bundle.pem"
+    )
+    mock_check_token.return_value = (
+        {"sub": "account123"},
+        {"x-fapi-interaction-id": "123"},
+    )
+    pem, _, _, _ = client_certificate(
+        roles=[conf.PROVIDER_ROLE],
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
+    )
+
+    response = client.get(
+        "/datasources",
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "data" in data
+    assert len(data["data"]) == 1
+    assert data["data"][0]["id"] == DEMO_METER_ID
+    assert data["data"][0]["type"] == "electricity"
+    assert data["data"][0]["location"]["ukPostcodeOutcode"] == "SW8"
+    assert data["data"][0]["availableMeasures"] == ["import", "export"]
+
+
 def test_consumption(
     monkeypatch,
     mock_ib1_directory_get_key,
@@ -59,7 +100,7 @@ def test_consumption(
     mocker,
 ):  # noqa
     """
-    If introspection is successful, return data and 200
+    If check token passes, return data and 200
     """
     monkeypatch.setattr(
         conf, "SIGNING_ROOT_CA_CERTIFICATE", f"{ROOT_DIR}/fixtures/test-suite-cert.pem"
