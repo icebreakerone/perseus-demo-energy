@@ -4,7 +4,7 @@ from typing import Annotated
 
 # import x509
 
-from fastapi import FastAPI, HTTPException, Response, Depends, Header, Query
+from fastapi import FastAPI, HTTPException, Depends, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.openapi.utils import get_openapi
 from starlette.requests import Request
@@ -27,67 +27,18 @@ logger = get_logger()
 security = HTTPBearer(auto_error=False)
 
 
-app = FastAPI(
-    docs_url="/api-docs",
-    title="Perseus Energy Demo Resource API",
-    root_path=conf.OPEN_API_ROOT,
-)
-
-
-@app.get("/", response_model=dict)
-def root():
-    return {
-        "urls": ["/datasources", "/datasources/{id}/{measure}"],
-        "documentation": {
-            "swagger_ui": "/docs",
-            "redoc": "/redoc",
-            "openapi_json": "/openapi.json",
-        },
-    }
-
-
-@app.get("/datasources", response_model=models.Datasources)
-def datasources() -> dict:
-    return {
-        "data": [
-            {
-                "id": DEMO_METER_ID,
-                "type": "electricity",
-                "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},
-                "availableMeasures": ["import", "export"],
-            }
-        ]
-    }
-
-
-@app.get("/mtls/test")
-def mtls_test(x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None):
-    if x_amzn_mtls_clientcert_leaf:
-        body = (
-            "Client certificate received. First 80 chars:\n"
-            + x_amzn_mtls_clientcert_leaf.replace("\n", " ")[0:80]
-        )
-    else:
-        body = "No X-Amzn-Mtls-Clientcert-Leaf header found. Check that mTLS is configured correctly."
-
-    return Response(content=body, media_type="text/plain")
-
-
-@app.get("/datasources/{id}/{measure}", response_model=models.MeterData)
-def consumption(
+def require_mtls_and_token(
     request: Request,
-    id: str,
-    measure: str,
-    response: Response,
-    from_date: datetime.date = Query(alias="from"),
-    to_date: datetime.date = Query(alias="to"),
     token: HTTPAuthorizationCredentials = Depends(security),
     x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
     x_fapi_interaction_id: Annotated[str | None, Header()] = None,
-):
+) -> tuple[dict, dict, object]:
+    """
+    Dependency function that validates MTLS certificate and bearer token.
+    Returns tuple of (cert_pem, decoded_token_dict, headers_dict, cert_object).
+    Raises HTTPException if validation fails.
+    """
     cert_pem = x_amzn_mtls_clientcert_leaf
-    if id != DEMO_METER_ID:
-        raise HTTPException(status_code=404, detail="Meter not found")
     if not cert_pem:
         aws_event = request.scope.get("aws.event", {})
         cert_context = (
@@ -137,6 +88,56 @@ def consumption(
     else:
         logger.warning("No bearer token provided")
         raise HTTPException(status_code=401, detail="No token provided")
+
+    return decoded, headers, cert
+
+
+app = FastAPI(
+    docs_url="/api-docs",
+    title="Perseus Energy Demo Resource API",
+    root_path=conf.OPEN_API_ROOT,
+)
+
+
+@app.get("/", response_model=dict)
+def root():
+    return {
+        "urls": ["/datasources", "/datasources/{id}/{measure}"],
+        "documentation": {
+            "swagger_ui": "/docs",
+            "redoc": "/redoc",
+            "openapi_json": "/openapi.json",
+        },
+    }
+
+
+@app.get("/datasources", response_model=models.Datasources)
+def datasources(
+    auth_result: tuple[dict, dict, object] = Depends(require_mtls_and_token),
+) -> dict:
+    return {
+        "data": [
+            {
+                "id": DEMO_METER_ID,
+                "type": "electricity",
+                "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},
+                "availableMeasures": ["import", "export"],
+            }
+        ]
+    }
+
+
+@app.get("/datasources/{id}/{measure}", response_model=models.MeterData)
+def consumption(
+    id: str,
+    measure: str,
+    from_date: datetime.date = Query(alias="from"),
+    to_date: datetime.date = Query(alias="to"),
+    auth_result: tuple[dict, dict, object] = Depends(require_mtls_and_token),
+):
+    if id != DEMO_METER_ID:
+        raise HTTPException(status_code=404, detail="Meter not found")
+    decoded, headers, cert = auth_result
     # Create a new provenance record
     permission_granted = datetime.datetime.now(datetime.timezone.utc)
     permission_expires = datetime.datetime.now(
