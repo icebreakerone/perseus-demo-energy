@@ -2,16 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v2.0.0] - 
+## [v2.0.0] -
 
 ### Added
 
+- Documentation updates detailing endpoints
+
 ### Fixed
+
 - Meter listing endpoint /datasources requires mtls and token authentication
 
 ### Changed
 
-- 
+- Removed references to deprecated client.py script
 
 ## [v1.0.3] - 2025-12-15
 
