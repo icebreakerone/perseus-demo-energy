@@ -8,39 +8,68 @@ It may also be a useful reference for developers who are creating secure data en
 
 ## Contents
 
-- [Authentication API](#authentication-api)
-- [Resource API](#resource-api)
-- [Environment variables](#environment-variables)
-- [Running a dev server](#running-a-dev-server)
-- [Running the local docker environment](#running-the-local-docker-environment)
+- [Overview](#overview)
+  - [Authentication API](#authentication-api)
+  - [Resource API](#resource-api)
+- [Development](#development)
+  - [Environment variables](#environment-variables)
+  - [Running a dev server](#running-a-dev-server)
+  - [Creating self signed certificates for development](#creating-self-signed-certificates-for-development)
+  - [Running the local docker environment](#running-the-local-docker-environment)
 - [Pushed Authorization Request (PAR)](#pushed-authorization-request-par)
-- [Testing the API with client.py](#testing-the-api-with-clientpy)
-  - [Auth](#auth)
-  - [Client demo app](#client-demo-app)
-  - [Introspection](#introspection)
-  - [Client side id_token decoding](#client-side-id_token-decoding)
-  - [Retrieve data from protected endpoint](#retrieve-data-from-protected-endpoint)
 - [Ory Hydra](#ory-hydra)
   - [Authentication and consent](#authentication-and-consent)
     - [Flow steps for Ory Hydra with external user management and consent services](#flow-steps-for-ory-hydra-with-external-user-management-and-consent-services)
 - [FAPI Flow](#fapi-flow)
 - [Deployment](#deployment)
+  - [Preparing certificates](#preparing-certificates)
   - [System Context Diagram](#system-context-diagram)
   - [Container Diagram](#container-diagram)
 
-## Authentication API
+## Overview
+
+### Authentication API
 
 The authentication app is in the [authentication](authentication) directory. It provides endpoints for authenticating and identifying users, and for handling and passing on requests from the client API to the FAPI API. It uses the Ory Hydra service to handle most of the OAuth2 flow, with additional endpoints added to handle the FAPI specific requirements.
 
 Authentication API documentation is available at https://perseus-demo-authentication.ib1.org/api-docs.
 
-## Resource API
+#### API Endpoints
+
+The Authentication API provides the following endpoints:
+
+- **`POST /api/v1/par`** - Pushed Authorization Request (PAR) endpoint. Stores authorization request parameters in Redis and returns a `request_uri` token. Requires mTLS client certificate authentication. The client certificate is used to extract the client ID from the certificate extensions.
+
+- **`GET /api/v1/authorize`** - Authorization endpoint that retrieves the PAR request from Redis and redirects the user to Ory Hydra's authorization endpoint for authentication and consent. Accepts a `request_uri` parameter containing the token from the PAR response.
+
+- **`POST /api/v1/authorize/token`** - Token endpoint that issues access and refresh tokens. Supports both authorization code and refresh token grant types. Requires mTLS client certificate authentication. Enhances tokens from Ory Hydra by adding client certificate thumbprint information and stores permissions in Redis.
+
+- **`POST /api/v1/permissions`** - Permissions endpoint that retrieves stored permission data for a given token. Requires mTLS client certificate authentication.
+
+- **`POST /api/v1/authorize/revoke`** - Token revocation endpoint that revokes access or refresh tokens. Requires mTLS client certificate authentication. Delegates to Ory Hydra's revocation endpoint.
+
+- **`GET /.well-known/oauth-authorization-server`** - OAuth 2.0 authorization server metadata endpoint. Returns server configuration including supported endpoints, grant types, response types, and FAPI-specific features like PAR support and mTLS endpoint aliases.
+
+- **`GET /evidence/{evidence_id}`** - Evidence endpoint that displays user-readable permission records. Used to show users what permissions have been granted and when they expire.
+
+### Resource API
 
 The resource api is in the [resource](resource) directory. It demonstrates how to protect an API endpoint using a certificate bound token obtained from the authentication API's interaction with the FAPI provider.
 
 Resource API documentation is available at https://perseus-demo-energy.ib1.org/api-docs.
 
-## Environment variables
+#### API Endpoints
+
+The Resource API provides the following endpoints:
+
+- **`GET /datasources`** - Lists available data sources. Returns a collection of data sources with their IDs, types, locations, and available measures. Requires both mTLS client certificate authentication and a bearer token (certificate-bound access token). Validates the client certificate has the correct provider role, verifies the token signature and certificate binding.
+
+- **`GET /datasources/{id}/{measure}`** - Retrieves meter data for a specific data source and measure. Requires both mTLS client certificate authentication and a bearer token (certificate-bound access token). Validates the client certificate has the correct provider role, verifies the token signature and certificate binding, and returns meter consumption data along with a provenance record. Accepts query parameters `from` and `to` to specify the date range for the data.
+
+
+## Development
+
+### Environment variables
 
 Both apps have example `.env.template` files in their root directories. These should be copied to `.env` and edited as required. The following environment variables are used in the authentication app:
 
@@ -59,7 +88,7 @@ The following environment variables are used in the resource app:
 
 For more information on generating the client ID and secret, see the [Ory Hydra](#ory-hydra) section.
 
-## Running a dev server
+### Running a dev server
 
 The fastapi servers for each app can be run using:
 
@@ -71,7 +100,7 @@ pipenv run uvicorn api.main:app --reload
 
 **nb** the recommended way to run the apps is using the docker compose environment, as the apps require a redis instance and the resource app requires the authentication app to be running.
 
-## Creating self signed certificates for development
+### Creating self signed certificates for development
 
 The ib1 directory issues three kinds of certificates, client, server and signing. The client and server certificates are used for mTLS and the signing certificates are used to sign provenance records.
 
@@ -84,7 +113,7 @@ cd scripts
 
 The script will generate the required certificates, keys and bundles and move them to the correct file locations for the docker compose dev environment.
 
-### Outline of certificates used
+#### Outline of certificates used
 
 **nginx**
 
@@ -111,7 +140,7 @@ The remaining files in scripts/generated directory will be the key and certifica
 - ccerts/client/edp-demo-client-key.pem: Client private key
 - certs/client/server-bundle.pem: Root CA and intermediate certificate to validate the server certificate
 
-## Running the local docker environment
+### Running the local docker environment
 
 The included docker compose file will bring up both APIs. It uses nginx to proxy requests to uvicorn, with nginx configuration to pass through client certificates to the backend, using the same header as used by AWS ALB (`x-amzn-mtls-clientcert`).
 
@@ -124,58 +153,6 @@ docker-compose up
 As PAR is not available on the Ory Hydra service that this demo is based on, a PAR endpoint has been implemented in this example service. It is expected that production ipmlementations may use the PAR endpoint of their Fapi provider.
 
 In this simple implementation, the request is stored in a redis instance, using a token that matches Fapi requirements as the key.
-
-## Testing the API with client.py
-
-client.py can be used to test authorization code flow, introspection, id_token decoding and retrieving data from the resource URL.
-
-Four commands are available, and are run using:
-
-```bash
-python -W ignore  client.py [auth|introspect|id-token|resource]
-```
-
-nb. The optional `-W ignore` switch suppresses multiple warnings about the self-signed certificates.
-
-### Auth
-
-Running `client.py auth` will perform the initial steps in the authorization code flow, outputting the URL of a UI to log in and confirm consent. The PKCE code verifier will also be in the output, which will be needed after the redirect
-
-```bash
-python -W ignore  client.py auth
-```
-
-Example output:
-
-```bash
-Code verifier: c6P-FfD0ayLslzCUESCsay8QHEg71O0SnKLeHPkOSyOZ6KubKPRaclM4u5veKcqI7MNqZX_xAUt4CUwIwm4JD99EacbtjAABbyY1i972umU9Ong9HFjtJq84y5mljGFy
-https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com/oauth2/auth?client_id=f67916ce-de33-4e2f-a8e3-cbd5f6459c30&response_type=code&redirect_uri=http://127.0.0.1:3000/callback&scope=profile+offline_access&state=9mpb2gDwhp2fLTa_MwJGM21R7FjOQCJq&code_challenge=cksXMlSWrcflDTJoyrpiWX0u2VRV6C--pzetmBIo6LQ&code_challenge_method=S256
-```
-
-By default the client will use the local docker environment and expects instances to be running on ports 8000 (authentication) and 8010 (resource). Testing against other endpoints can be achieved by setting the `AUTHENTICATION_API` and `RESOURCE_API` environment variables, eg. to test against the deployed demo:
-
-```bash
-AUTHENTICATION_API="https://perseus-demo-authentication.ib1.org" RESOURCE_API=https://perseus-demo-energy.ib1.org python -W ignore  client.py auth
-```
-
-Opening the redirect url will present you with the default Ory Hydra log in/ sign up screen, followed by a consent screen:
-
-![Consent screen](docs/consent.png)
-
-Granting consent will redirect to our demo client application, with the authorization code appended to the url. The authorization code can be exchanged for an access token by adding the code_verifier value to the form and submitting:
-
-![Redirect](docs/exchange.png)
-
-### Client demo app
-
-As an alternative to the command line client, the authorization flow can be completed in a browser at https://perseus-demo-accounting.ib1.org/start. Technical information such as the code verifier, token, and the contents of the introspected token are displayed
-at each step.
-
-### Retrieve data from protected endpoints
-
-```bash
-python -W ignore  client.py resource --token <token>
-```
 
 ## Ory Hydra
 
