@@ -153,10 +153,13 @@ def test_token_success(mock_permissions, mock_decode_with_jwks, mock_auth):
 
 @patch("api.main.conf", FakeConf())
 @patch("api.auth.conf", FakeConf())
+@patch("api.main.messaging.send_revocation_message")
 @patch("api.main.permissions.revoke_permission")
 @patch("api.main.auth.get_session")
 @responses.activate
-def test_revoke_token_success(mock_get_session, mock_revoke_permission):
+def test_revoke_token_success(
+    mock_get_session, mock_revoke_permission, mock_send_message
+):
     """Test a successful token revocation."""
     cert_urlencoded = client_certificate(roles=[TEST_ROLE])
     mock_session = MagicMock()
@@ -164,7 +167,8 @@ def test_revoke_token_success(mock_get_session, mock_revoke_permission):
     mock_response.status_code = 200
     mock_session.post.return_value = mock_response
     mock_get_session.return_value = mock_session
-    mock_revoke_permission.return_value = None
+    mock_revoke_permission.return_value = MagicMock()
+    mock_send_message.return_value = True
 
     response = client.post(
         "/api/v1/authorize/revoke",
@@ -224,7 +228,7 @@ def test_revoke_token_hydra_error(mock_get_session, mock_revoke_permission):
     mock_response.text = "Invalid token"
     mock_session.post.return_value = mock_response
     mock_get_session.return_value = mock_session
-    mock_revoke_permission.return_value = None
+    mock_revoke_permission.return_value = {}
 
     response = client.post(
         "/api/v1/authorize/revoke",

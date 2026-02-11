@@ -1,8 +1,6 @@
 from typing import Annotated
-from contextlib import asynccontextmanager
 import json
 import os
-import threading
 
 from cryptography import x509
 from fastapi import (
@@ -33,30 +31,9 @@ logger = get_logger()
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Manage background tasks for the FastAPI application."""
-    # Startup: Start message queue worker in background thread
-    logger.info("Starting message queue worker...")
-    worker_thread = threading.Thread(
-        target=messaging.process_message_queue,
-        args=("main-worker",),
-        daemon=True,
-        name="message-queue-worker",
-    )
-    worker_thread.start()
-    logger.info("Message queue worker started")
-
-    yield
-
-    # Shutdown: Worker thread will be terminated as daemon
-    logger.info("Shutting down message queue worker...")
-
-
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Demo Authentication Server",
-    lifespan=lifespan,
     # root_path=conf.OPEN_API_ROOT,
 )
 
@@ -322,16 +299,13 @@ async def revoke_token(
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
-    # Queue message for asynchronous delivery to the client application
+    # Send revocation message to the client application
     try:
-        message_id = messaging.enqueue_revocation_message(revoked_permission)
-        logger.info(
-            f"Enqueued revocation message {message_id} for client {revoked_permission.client}"
-        )
+        messaging.send_revocation_message(revoked_permission)
     except Exception as e:
         # Log error but don't fail the revocation request
         logger.error(
-            f"Failed to enqueue revocation message for client {revoked_permission.client}: {str(e)}",
+            f"Failed to send revocation message for client {revoked_permission.client}: {str(e)}",
             exc_info=True,
         )
 
