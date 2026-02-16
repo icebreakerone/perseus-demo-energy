@@ -300,6 +300,8 @@ async def revoke_token(
         raise HTTPException(status_code=response.status_code, detail=response.text)
 
     # Send revocation message to the client application
+    # For demo purposes we do allow this to fail without impacting the revocation response
+    # but in a production system you would want to implement retries and error handling here
     try:
         messaging.send_revocation_message(revoked_permission)
     except Exception as e:

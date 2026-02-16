@@ -12,6 +12,7 @@ import requests
 from rdflib import Graph, Namespace, URIRef
 
 from . import models
+from .keystores import get_mtls_cert_paths
 from .logger import get_logger
 
 logger = get_logger()
@@ -20,6 +21,15 @@ logger = get_logger()
 IB1 = Namespace("https://registry.core.trust.ib1.org/ns/ib1#")
 TRUST_FRAMEWORK_URL = "https://registry.core.trust.ib1.org/trust-framework"
 REVOKE_MESSAGE_SUBJECT = "https://registry.trust.ib1.org/message/revoke"
+
+
+def get_mtls_session() -> requests.Session:
+    """Create an HTTP session configured with mTLS client certs if available."""
+    session = requests.Session()
+    cert_paths = get_mtls_cert_paths()
+    if cert_paths:
+        session.cert = cert_paths
+    return session
 
 
 def create_revocation_message(permission: models.Permission) -> dict:
@@ -61,7 +71,8 @@ def fetch_application_url(client_url: str) -> Optional[str]:
     """
     try:
         logger.info(f"Fetching application RDF from Directory: {client_url}")
-        response = requests.get(
+        session = get_mtls_session()
+        response = session.get(
             client_url,
             headers={"Accept": "application/rdf+xml"},
             timeout=10,
@@ -114,7 +125,8 @@ def deliver_message(message_json: str, delivery_url: str) -> bool:
 
         headers = {"Content-Type": "application/json"}
 
-        response = requests.post(
+        session = get_mtls_session()
+        response = session.post(
             delivery_url,
             data=message_json,
             headers=headers,

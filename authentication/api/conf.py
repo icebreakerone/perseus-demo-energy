@@ -53,3 +53,6 @@ PROVIDER_ROLE = os.environ.get(
 DYNAMODB_TABLE = os.environ.get(
     "DYNAMODB_TABLE", "permissions-local"
 )  # DynamoDB table name
+
+MTLS_CLIENT_KEY = os.environ.get("MTLS_CLIENT_KEY")
+MTLS_CLIENT_BUNDLE = os.environ.get("MTLS_CLIENT_BUNDLE")
