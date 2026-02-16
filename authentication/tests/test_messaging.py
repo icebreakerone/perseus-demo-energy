@@ -1,6 +1,5 @@
 import datetime
 import io
-import json
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -11,7 +10,6 @@ from api.messaging import (
     get_mtls_session,
     fetch_application_url,
     deliver_message,
-    create_revocation_message,
     send_revocation_message,
 )
 from api.models import Permission
