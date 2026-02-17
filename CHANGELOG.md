@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Documentation updates detailing endpoints
+- Send message to client endpoint on revocation via mTLS
 
 ### Fixed
 
