@@ -277,7 +277,8 @@ async def revoke_token(
     - Calls Ory Hydra's token revocation endpoint
     - Supports both access and refresh token revocation
     - Marks stored permission as revoked
-    - Queues a message for asynchronous delivery to the client application to notify them of the revocation
+    - Sends a message to the client application to notify them of the revocation
+    __nb__ A production implementation must have robust error handling and retries for the client notification
     """
     # Prepare revocation request to Hydra
     payload = {"token": token, "token_type_hint": token_type_hint}
