@@ -54,3 +54,7 @@ class AccessTokenCertificateError(AccessTokenValidatorError):
 
 class PermissionStorageError(Exception):
     pass
+
+
+class PermissionRevocationError(Exception):
+    pass
