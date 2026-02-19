@@ -2,16 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v2.0.0] -
+## [v2.0.0] - 2016-02-19
 
 ### Added
 
 - Documentation updates detailing endpoints
 - Send message to client endpoint on revocation via mTLS
+- Adds detail of all endpoints to README.md
+- Remove details of deprecated client.py
 
 ### Fixed
 
 - Meter listing endpoint /datasources requires mtls and token authentication
+- Missing authentication on datasource listing endpoint
 
 ### Changed
 
