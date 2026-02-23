@@ -22,12 +22,15 @@ from . import par
 from . import auth
 from . import permissions
 from . import evidence
-
+from . import messaging
+from .exceptions import PermissionRevocationError
 from .logger import get_logger
 
 logger = get_logger()
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Demo Authentication Server",
@@ -261,10 +264,11 @@ async def get_permissions(
     return {"permissions": permissions_data}
 
 
-@app.post("/api/v1/authorize/revoke", dependencies=[Depends(parsed_client_cert)])
+@app.post("/api/v1/authorize/revoke")
 async def revoke_token(
     token: str = Form(...),
     token_type_hint: str = Form(None),
+    client_cert: x509.Certificate = Depends(parsed_client_cert),
 ):
     """
     Token revocation endpoint
@@ -272,10 +276,21 @@ async def revoke_token(
     - Requires mTLS authentication (client certificate validation)
     - Calls Ory Hydra's token revocation endpoint
     - Supports both access and refresh token revocation
+    - Marks stored permission as revoked
+    - Sends a message to the client application to notify them of the revocation
+    __nb__ A production implementation must have robust error handling and retries for the client notification
     """
     # Prepare revocation request to Hydra
     payload = {"token": token, "token_type_hint": token_type_hint}
     session = auth.get_session()
+
+    try:
+        revoked_permission = permissions.revoke_permission(token)
+    except PermissionRevocationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    if revoked_permission is None:
+        raise HTTPException(status_code=400, detail="Failed to revoke permission")
 
     response = session.post(
         f"{conf.ORY_URL}/oauth2/revoke",
@@ -284,6 +299,18 @@ async def revoke_token(
 
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
+
+    # Send revocation message to the client application
+    # For demo purposes we do allow this to fail without impacting the revocation response
+    # but in a production system you would want to implement retries and error handling here
+    try:
+        messaging.send_revocation_message(revoked_permission)
+    except Exception as e:
+        # Log error but don't fail the revocation request
+        logger.error(
+            f"Failed to send revocation message for client {revoked_permission.client}: {str(e)}",
+            exc_info=True,
+        )
 
     return {"status": "success", "message": "Token revoked"}
 

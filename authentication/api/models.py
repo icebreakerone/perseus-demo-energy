@@ -82,14 +82,10 @@ class Cnf(BaseModel):
 
 class Permission(BaseModel):
     """
-
-    evidence - an unguessable URL which
-    uses https with a public CA
-    will present all the evidence, formatted as an HTML document capable of displaying in mobile portrait orientation with 320px width when the user clicks “show evidence”
-    is not expected to display the content of documents or other information provided by the user to identify themselves, just the form of evidence used
-    for Smart Meter data providers, must include how meter ownership was established as well as what permission was given for meter data sharing
-    will contain information about all previous grants of permission and renewals for this end user for the data consumer this URL was generated for, not just for the current token
-
+    A permission as stored in the DynamoDB table, representing a granted permission
+    for a client to access an account with a specific license. Each permission
+    includes details about the OAuth issuer, client, license, account, token information,
+    and evidence of the granted permission.
     """
 
     oauthIssuer: str
@@ -109,7 +105,7 @@ class Permission(BaseModel):
             "examples": [
                 {
                     "oauthIssuer": "https://api.example.com/issuer",
-                    "client": "https://directory.core.pilot.trust.ib1.org/member/28364528",
+                    "client": "https://directory.core.pilot.trust.ib1.org/a/jk8hds78",  # Application URI
                     "license": "https://registry.core.pilot.trust.ib1.org/scheme/electricity/license/energy-consumption-data/2024-12-05",
                     "account": "6qIO3KZx0Q",
                     "lastGranted": "2024-03-31T23:30Z",

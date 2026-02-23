@@ -24,6 +24,7 @@ class AuthenticationAPIServiceConstruct(Construct):
         mtls_alb_sg: ec2.SecurityGroup,
         public_alb_sg: ec2.SecurityGroup,
         table: dynamodb.Table,
+        messaging_policy: iam.ManagedPolicy,
     ):
         super().__init__(scope, id)
 
@@ -31,6 +32,7 @@ class AuthenticationAPIServiceConstruct(Construct):
         log_group = logs.LogGroup(self, "AuthenticationAPILogGroup")
         task_def = ecs.FargateTaskDefinition(self, "TaskDef")
         task_def.task_role.add_managed_policy(ssm_policy)
+        task_def.task_role.add_managed_policy(messaging_policy)
         task_def.task_role.add_managed_policy(  # For exec
             iam.ManagedPolicy.from_aws_managed_policy_name(
                 "AmazonSSMManagedInstanceCore"

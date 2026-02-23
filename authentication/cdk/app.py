@@ -11,8 +11,10 @@ from deployment.truststore import TruststoreConstruct
 from deployment.elasticache import RedisConstruct
 
 from deployment.authentication_service import AuthenticationAPIServiceConstruct
+from deployment.certificates_bucket import CertificatesBucket
 from deployment.dynamodb import DynamoDBConstruct
 from deployment.loadbalancer import LoadBalancer
+from deployment.messaging_policy import MessagingPolicy
 from models import Context
 
 app = App()
@@ -92,6 +94,20 @@ dynamodb = DynamoDBConstruct(
     env_name=contexts[deployment_context]["environment_name"],
 )
 
+certificates_bucket = CertificatesBucket(
+    stack,
+    "CertificatesBucket",
+    environment_name=contexts[deployment_context]["environment_name"],
+)
+
+messaging_policy = MessagingPolicy(
+    stack,
+    "MessagingPolicy",
+    app_name="perseus-demo-authentication",
+    env_name=contexts[deployment_context]["environment_name"],
+    s3_bucket_arn=certificates_bucket.bucket.bucket_arn,
+)
+
 if contexts[deployment_context]["subdomain"] == "":
     unprotected_url = f"https://{contexts[deployment_context]["hosted_zone_name"]}"
 else:
@@ -113,6 +129,8 @@ fastapi_service = AuthenticationAPIServiceConstruct(
         "ORY_CLIENT_SECRET_PARAM": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/client_secret",
         "DYNAMODB_TABLE": dynamodb.table.table_name,
         "PROVIDER_ROLE": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider",
+        "MTLS_CLIENT_KEY": f"s3://{certificates_bucket.bucket.bucket_name}/client-key.pem",
+        "MTLS_CLIENT_BUNDLE": f"s3://{certificates_bucket.bucket.bucket_name}/client-bundle.pem",
     },
     ecs_sg=network.ecs_sg,
     mtls_target_group=alb.mtls_target_group,
@@ -120,6 +138,7 @@ fastapi_service = AuthenticationAPIServiceConstruct(
     mtls_alb_sg=alb.mtls_alb_sg,
     public_alb_sg=alb.public_alb_sg,
     table=dynamodb.table,
+    messaging_policy=messaging_policy.policy,
 )
 
 app.synth()

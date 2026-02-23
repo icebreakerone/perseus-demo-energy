@@ -149,3 +149,94 @@ def test_token_success(mock_permissions, mock_decode_with_jwks, mock_auth):
     assert response.status_code == 200
     json_response = response.json()
     assert json_response["access_token"] == MOCK_TOKEN
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.main.messaging.send_revocation_message")
+@patch("api.main.permissions.revoke_permission")
+@patch("api.main.auth.get_session")
+@responses.activate
+def test_revoke_token_success(
+    mock_get_session, mock_revoke_permission, mock_send_message
+):
+    """Test a successful token revocation."""
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    mock_session = MagicMock()
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_session.post.return_value = mock_response
+    mock_get_session.return_value = mock_session
+    mock_revoke_permission.return_value = MagicMock()
+    mock_send_message.return_value = True
+
+    response = client.post(
+        "/api/v1/authorize/revoke",
+        data={
+            "token": MOCK_REFRESH_TOKEN,
+            "token_type_hint": "refresh_token",
+        },
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 200
+    json_response = response.json()
+    assert json_response["status"] == "success"
+    assert json_response["message"] == "Token revoked"
+    mock_revoke_permission.assert_called_once_with(MOCK_REFRESH_TOKEN)
+    mock_session.post.assert_called_once_with(
+        f"{FakeConf().ORY_URL}/oauth2/revoke",
+        data={"token": MOCK_REFRESH_TOKEN, "token_type_hint": "refresh_token"},
+    )
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.main.permissions.revoke_permission")
+def test_revoke_token_permission_error(mock_revoke_permission):
+    """Test token revocation when permission revocation fails."""
+    from api.exceptions import PermissionRevocationError
+
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    mock_revoke_permission.side_effect = PermissionRevocationError(
+        "Permission not found"
+    )
+
+    response = client.post(
+        "/api/v1/authorize/revoke",
+        data={
+            "token": MOCK_REFRESH_TOKEN,
+        },
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 400
+    assert "Permission not found" in response.json()["detail"]
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.main.permissions.revoke_permission")
+@patch("api.main.auth.get_session")
+@responses.activate
+def test_revoke_token_hydra_error(mock_get_session, mock_revoke_permission):
+    """Test token revocation when Hydra returns an error."""
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    mock_session = MagicMock()
+    mock_response = MagicMock()
+    mock_response.status_code = 400
+    mock_response.text = "Invalid token"
+    mock_session.post.return_value = mock_response
+    mock_get_session.return_value = mock_session
+    mock_revoke_permission.return_value = {}
+
+    response = client.post(
+        "/api/v1/authorize/revoke",
+        data={
+            "token": MOCK_REFRESH_TOKEN,
+        },
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 400
+    assert "Invalid token" in response.json()["detail"]
