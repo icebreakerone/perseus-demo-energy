@@ -1,6 +1,7 @@
 from typing import Annotated
 import json
 import os
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
 
 from cryptography import x509
 from fastapi import (
@@ -8,6 +9,7 @@ from fastapi import (
     Depends,
     Header,
     HTTPException,
+    Request,
     status,
     Form,
 )
@@ -18,7 +20,7 @@ from fastapi.responses import Response
 from ib1 import directory
 from . import models
 from . import conf
-from . import par
+from . import store
 from . import auth
 from . import permissions
 from . import evidence
@@ -94,8 +96,9 @@ async def pushed_authorization_request(
             {"client_id": client_id}
         ),  # For ory hydra interaction
     }
-    token = par.get_token()
-    par.store_request(token, parameters)
+    token = store.get_token()
+    store.store_request(token, parameters)
+    store.store_callback_url(parameters["state"], redirect_uri)
     return {
         "request_uri": f"urn:ietf:params:oauth:request_uri:{token}",
         "expires_in": 600,
@@ -126,7 +129,7 @@ async def authorize(
         )
     # Retrieve PAR data from Redis
     token = request_uri.split(":")[-1]
-    par_request = par.get_request(token)
+    par_request = store.get_request(token)
     if not par_request:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -137,7 +140,7 @@ async def authorize(
         f"{conf.ORY_AUTHORIZATION_ENDPOINT}?"
         f"client_id={conf.ORY_CLIENT_ID}&"
         f"response_type=code&"
-        f"redirect_uri={par_request['redirect_uri']}&"
+        f"redirect_uri={conf.CALLBACK_URL}&"
         f"scope={par_request['scope']}&"
         f"code_challenge={par_request['code_challenge']}&"
         f"code_challenge_method=S256&"
@@ -147,6 +150,41 @@ async def authorize(
     logger.info(f"Redirecting to {authorization_url}")
     # Redirect the user to the authorization URL
     return Response(status_code=302, headers={"Location": authorization_url})
+
+
+@app.get("/api/v1/callback")
+async def callback(request: Request):
+    """
+    Callback proxy endpoint
+
+    Hydra redirects here after login/consent. We look up the client's
+    original callback URL from Redis (keyed by state) and forward the
+    user there with all query parameters preserved.
+    """
+    params = dict(request.query_params)
+    state = params.get("state")
+    if not state:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing state parameter",
+        )
+
+    original_url = store.get_callback_url(state)
+    if not original_url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Callback URL not found or expired for this state",
+        )
+
+    parsed = urlparse(original_url)
+    existing_params = parse_qs(parsed.query, keep_blank_values=True)
+    # Flatten single-value lists from parse_qs
+    merged = {k: v[0] if len(v) == 1 else v for k, v in existing_params.items()}
+    merged.update(params)
+    new_query = urlencode(merged, doseq=True)
+    redirect_url = urlunparse(parsed._replace(query=new_query))
+
+    return Response(status_code=302, headers={"Location": redirect_url})
 
 
 async def parsed_client_cert(
@@ -196,7 +234,7 @@ async def token(
         payload = {
             "grant_type": grant_type,
             "code": code,
-            "redirect_uri": redirect_uri,
+            "redirect_uri": conf.CALLBACK_URL,
             "client_id": conf.ORY_CLIENT_ID,
             "code_verifier": code_verifier,
         }

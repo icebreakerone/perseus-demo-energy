@@ -37,6 +37,9 @@ ORY_AUTHORIZATION_ENDPOINT = (
 REDIRECT_URI = os.environ.get(  #
     "REDIRECT_URI", "https://perseus-demo-accounting.ib1.org/callback"
 )
+CALLBACK_URL = os.environ.get(
+    "CALLBACK_URL", f"{UNPROTECTED_URL}/api/v1/callback"
+)
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")
 

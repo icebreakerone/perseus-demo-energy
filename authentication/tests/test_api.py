@@ -29,10 +29,12 @@ class FakeConf:
         self.ORY_CLIENT_SECRET = "123abc"
         self.ORY_URL = "https://test-oauth.io"
         self.ORY_CLIENT_ID = "abc-123"
+        self.ORY_AUTHORIZATION_ENDPOINT = f"{self.ORY_URL}/oauth2/auth"
         self.JWKS_URL = f"{self.ORY_URL}/.well-known/jwks.json"
         self.JWT_SIGNING_KEY = f"{ROOT_DIR}/fixtures/server-signing-private-key.pem"
         self.ORY_TOKEN_ENDPOINT = f"{self.ORY_URL}/oauth2/token"
         self.REDIRECT_URI = "https://test-accounting.org/callback"
+        self.CALLBACK_URL = "https://perseus-demo-authentication.ib1.org/api/v1/callback"
         self.REDIS_HOST = "redis"
         self.PROVIDER_ROLE = TEST_ROLE
 
@@ -61,10 +63,12 @@ def jwt_signing_jwks():
 
 
 # Mock the redis server, as pushed_authorization_request() uses it
-# @responses.activate
-@patch("api.par.redis_connection")
+@patch("api.store.redis_connection")
+@patch("api.main.store.store_callback_url")
 @patch("api.main.auth.create_state_token")
-def test_pushed_authorization_request(mock_create_state_token, mock_redis_connection):
+def test_pushed_authorization_request(
+    mock_create_state_token, mock_store_callback_url, mock_redis_connection
+):
     cert_urlencoded = client_certificate()
     mock_redis = MagicMock()
     mock_redis.set.return_value = True
@@ -84,9 +88,13 @@ def test_pushed_authorization_request(mock_create_state_token, mock_redis_connec
 
     assert response.status_code == 201
     assert "request_uri" in response.json()
+    mock_store_callback_url.assert_called_once_with(
+        "mock_state_token", "https://mobile.example.com/cb"
+    )
 
 
-@patch("api.par.get_request")
+@patch("api.main.conf", FakeConf())
+@patch("api.store.get_request")
 def test_authorization_code(mock_get_request):
     cert_urlencoded = client_certificate(roles=[TEST_ROLE])
     redirect = "http://anywhere.com"
@@ -108,6 +116,8 @@ def test_authorization_code(mock_get_request):
     )
     assert response.status_code == 302
     assert "Location" in response.headers
+    location = response.headers["Location"]
+    assert f"redirect_uri={FakeConf().CALLBACK_URL}" in location
 
 
 @patch("api.main.conf", FakeConf())
@@ -240,3 +250,44 @@ def test_revoke_token_hydra_error(mock_get_session, mock_revoke_permission):
 
     assert response.status_code == 400
     assert "Invalid token" in response.json()["detail"]
+
+
+@patch("api.main.store.get_callback_url")
+def test_callback_redirects_to_stored_url(mock_get_callback_url):
+    """Test callback endpoint redirects to the original stored URL."""
+    mock_get_callback_url.return_value = "https://mobile.example.com/cb"
+    response = client.get(
+        "/api/v1/callback",
+        params={"code": "auth_code_123", "state": "test_state", "scope": "profile"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    location = response.headers["Location"]
+    assert "mobile.example.com/cb" in location
+    assert "code=auth_code_123" in location
+    assert "state=test_state" in location
+    assert "scope=profile" in location
+
+
+def test_callback_missing_state():
+    """Test callback endpoint returns 400 when state is missing."""
+    response = client.get(
+        "/api/v1/callback",
+        params={"code": "auth_code_123"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "Missing state" in response.json()["detail"]
+
+
+@patch("api.main.store.get_callback_url")
+def test_callback_expired_state(mock_get_callback_url):
+    """Test callback endpoint returns 400 when state has expired."""
+    mock_get_callback_url.return_value = None
+    response = client.get(
+        "/api/v1/callback",
+        params={"code": "auth_code_123", "state": "expired_state"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 400
+    assert "not found or expired" in response.json()["detail"]
