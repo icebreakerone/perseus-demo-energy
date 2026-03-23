@@ -30,3 +30,14 @@ def get_request(token: str) -> dict | None:
     except json.decoder.JSONDecodeError:
         return None
     return data
+
+
+def store_callback_url(state: str, url: str):
+    connection = redis_connection()
+    connection.set(f"callback:{state}", url)
+    connection.expire(f"callback:{state}", 600)  # 10 minutes
+
+
+def get_callback_url(state: str) -> str | None:
+    connection = redis_connection()
+    return connection.get(f"callback:{state}")

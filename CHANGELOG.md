@@ -14,7 +14,6 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Meter listing endpoint /datasources requires mtls and token authentication
-- Missing authentication on datasource listing endpoint
 
 ### Changed
 
