@@ -22,6 +22,7 @@ from . import models
 from . import conf
 from . import store
 from . import auth
+from . import openapi
 from . import permissions
 from . import evidence
 from . import messaging
@@ -58,7 +59,10 @@ async def docs() -> dict:
 
 
 @app.post(
-    "/api/v1/par", response_model=models.PushedAuthorizationResponse, status_code=201
+    "/api/v1/par",
+    response_model=models.PushedAuthorizationResponse,
+    status_code=201,
+    openapi_extra={"security": [{"mtls": []}]},
 )
 async def pushed_authorization_request(
     response_type: Annotated[str, Form()],
@@ -209,7 +213,11 @@ async def parsed_client_cert(
     return client_cert
 
 
-@app.post("/api/v1/authorize/token", response_model=models.TokenResponse)
+@app.post(
+    "/api/v1/authorize/token",
+    response_model=models.TokenResponse,
+    openapi_extra={"security": [{"mtls": []}]},
+)
 async def token(
     grant_type: Annotated[str, Form()],
     redirect_uri: Annotated[str | None, Form()] = None,
@@ -280,7 +288,11 @@ async def token(
     )
 
 
-@app.post("/api/v1/permissions", dependencies=[Depends(parsed_client_cert)])
+@app.post(
+    "/api/v1/permissions",
+    dependencies=[Depends(parsed_client_cert)],
+    openapi_extra={"security": [{"mtls": []}]},
+)
 async def get_permissions(
     token: str = Form(...),
 ):
@@ -302,7 +314,10 @@ async def get_permissions(
     return {"permissions": permissions_data}
 
 
-@app.post("/api/v1/authorize/revoke")
+@app.post(
+    "/api/v1/authorize/revoke",
+    openapi_extra={"security": [{"mtls": []}]},
+)
 async def revoke_token(
     token: str = Form(...),
     token_type_hint: str = Form(None),
@@ -397,11 +412,13 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title="Perseus Demo Authentication Server",
         version="1.0.0",
-        description="Perseus Demo Authentication Server",
+        description=openapi.API_DESCRIPTION,
         routes=app.routes,
     )
     # Set the OpenAPI URL to the root domain
     openapi_schema["servers"] = [{"url": conf.API_DOMAIN}]
+    # Inject the FAPI security schemes (mTLS + OAuth2) that FastAPI cannot infer
+    openapi.add_fapi_security_schemes(openapi_schema)
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 

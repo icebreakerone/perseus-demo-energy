@@ -106,7 +106,7 @@ class Permission(BaseModel):
                 {
                     "oauthIssuer": "https://api.example.com/issuer",
                     "client": "https://directory.core.pilot.trust.ib1.org/a/jk8hds78",  # Application URI
-                    "license": "https://registry.core.pilot.trust.ib1.org/scheme/electricity/license/energy-consumption-data/2024-12-05",
+                    "license": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus/license/energy-consumption-edp-cap/2026-03-12",
                     "account": "6qIO3KZx0Q",
                     "lastGranted": "2024-03-31T23:30Z",
                     "expires": "2025-03-31T23:30Z",

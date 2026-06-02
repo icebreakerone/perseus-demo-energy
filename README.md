@@ -66,7 +66,6 @@ The Resource API provides the following endpoints:
 
 - **`GET /datasources/{id}/{measure}`** - Retrieves meter data for a specific data source and measure. Requires both mTLS client certificate authentication and a bearer token (certificate-bound access token). Validates the client certificate has the correct provider role, verifies the token signature and certificate binding, and returns meter consumption data along with a provenance record. Accepts query parameters `from` and `to` to specify the date range for the data.
 
-
 ## Development
 
 ### Environment variables
@@ -145,7 +144,7 @@ The remaining files in scripts/generated directory will be the key and certifica
 The included docker compose file will bring up both APIs. It uses nginx to proxy requests to uvicorn, with nginx configuration to pass through client certificates to the backend, using the same header as used by AWS ALB (`x-amzn-mtls-clientcert`).
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 ## Pushed Authorization Request (PAR)

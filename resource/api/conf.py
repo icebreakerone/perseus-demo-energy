@@ -18,19 +18,25 @@ SIGNING_BUNDLE = os.environ.get(
     "SIGNING_BUNDLE", "/certs/signing-issued-intermediate-bundle.pem"
 )
 API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")
-PROVIDER_ROLE = os.environ.get(
-    "PROVIDER_ROLE",
-    "https://registry.core.sandbox.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider",
-)
-TRUST_FRAMEWORK_URL = os.environ.get(
-    "TRUST_FRAMEWORK_URL", "https://registry.core.sandbox.trust.ib1.org/trust-framework"
-)
-
-# Base URL for the Perseus scheme in the Trust Registry.
-# This controls whether we talk to sandbox, pilot, or production.
-# Defaults to sandbox, but can be overridden per environment, e.g.:
-#   SCHEME_BASE_URL=https://registry.core.pilot.trust.ib1.org/scheme/perseus
+# SCHEME_BASE_URL is the single source of truth for the Perseus scheme in the Trust
+# Registry, controlling which environment (sandbox/development/pilot/core) is
+# referenced. Env-overridable; the sandbox default is used for local/docker/test.
 SCHEME_BASE_URL = os.environ.get(
     "SCHEME_BASE_URL",
     "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
+)
+# Registry root = SCHEME_BASE_URL minus the trailing "/scheme/<name>".
+REGISTRY_BASE_URL = SCHEME_BASE_URL.rsplit("/scheme/", 1)[0]
+
+PROVIDER_ROLE = os.environ.get(
+    "PROVIDER_ROLE",
+    f"{SCHEME_BASE_URL}/role/carbon-accounting-provider",
+)
+TRUST_FRAMEWORK_URL = os.environ.get(
+    "TRUST_FRAMEWORK_URL",
+    f"{REGISTRY_BASE_URL}/trust-framework",
+)
+# Canonical Registry License URL for the energy-consumption data this EDP shares.
+ENERGY_DATA_LICENSE_URL = (
+    f"{SCHEME_BASE_URL}/license/energy-consumption-edp-cap/2026-03-12"
 )

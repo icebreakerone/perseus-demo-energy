@@ -24,6 +24,8 @@ contexts: dict[str, Context] = {
         "mtls_certificate": "fd59453d-a782-4728-a78c-ee8c37a3717e",
         "certificate": "535b09e0-4f69-41ad-853a-316754f81e6b",
         "hosted_zone_name": HOSTED_ZONE_NAME,
+        # TODO confirm exact host: dev -> development registry.
+        "scheme_base_url": "https://registry.core.development.trust.ib1.org/scheme/perseus",
     },
     "prod": {
         "environment_name": "prod",
@@ -33,6 +35,8 @@ contexts: dict[str, Context] = {
         "certificate": "50752488-303e-4757-85d3-fea66ae0a2d0",
         "mtls_certificate": "dc498c29-daa3-4eab-bd0e-dcce2d4de2c2",
         "hosted_zone_name": HOSTED_ZONE_NAME,
+        # TODO confirm exact host: prod -> core registry.
+        "scheme_base_url": "https://registry.core.trust.ib1.org/scheme/perseus",
     },
 }
 
@@ -104,6 +108,8 @@ fastapi_lambda = FastAPILambdaConstruct(
             else contexts[deployment_context]["hosted_zone_name"]
         ),
         "ENV": contexts[deployment_context]["environment_name"],
+        # PROVIDER_ROLE and TRUST_FRAMEWORK_URL derive from SCHEME_BASE_URL in conf.py.
+        "SCHEME_BASE_URL": contexts[deployment_context]["scheme_base_url"],
         "SIGNING_KEY": f"/copilot/perseus-demo-energy/{deployment_context}/secrets/signing-key",
         "SIGNING_ROOT_CA_CERTIFICATE": "s3://perseus-demo-energy-certificate-store/signing-root-ca.pem",
         "SIGNING_BUNDLE": "s3://perseus-demo-energy-certificate-store/signing-issued-bundle.pem",

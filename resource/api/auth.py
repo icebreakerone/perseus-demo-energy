@@ -108,7 +108,7 @@ def check_token(
         [ ] has not expired,
         [ ] has not been revoked,
         [ ] has a client_id that matches the MTLS client certificate, and
-        [ ] has a scope which matches the required licence.
+        [ ] has a scope which matches the required license.
     If check succeeds, return a dict suitable to use as headers
     including Date and x-fapi-interaction-id, as well as the check token result
     """
