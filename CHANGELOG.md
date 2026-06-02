@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v3.0.0] - 2026-06-02
+
+### Added
+
+- OpenAPI security schemes documenting the FAPI authentication: mTLS (`mutualTLS`) and the OAuth2 authorization-code flow on the authentication server, and mTLS plus a certificate-bound bearer token on the resource server, with per-endpoint security requirements
+- Citations to the IB1 Trust Framework specifications (member-identity certificates, OAuth profile, provenance records) in the API documentation
+- `SCHEME_BASE_URL` as a single source of truth for registry/scheme URLs in the authentication app (previously only present in the resource app)
+
+### Changed
+
+- Registry/scheme configuration is now environment-aware: `PROVIDER_ROLE`, `TRUST_FRAMEWORK_URL`, and the OAuth scope derive from `SCHEME_BASE_URL`, wired through CDK per deployment environment (dev → development, prod → core)
+- API docs describe token-to-certificate binding as `client_id` matching the certificate Directory URL, in line with the OAuth profile (rather than `cnf`/`x5t#S256`)
+- Removed the `cnf.x5t#S256` certificate-thumbprint token binding; access tokens are now bound to the client solely via `client_id` matching the certificate Directory URL
+- Removed all `x-fapi-interaction-id` handling (request parameter and response header), as `x-fapi-*` headers are not part of the IB1 OAuth profile
+- Removed the non-standard `transaction` field from provenance transfer steps
+- `messaging.py` derives the trust-framework URL from configuration instead of a hardcoded host
+
+### Fixed
+
+- Corrected provenance records to American `license` spelling, matching the machine-readable registry (previously British `licence`)
+- Corrected the OAuth scope to a valid registry license URL (the previous `energy-consumption-data/2024-12-05` does not exist in the registry)
+
+### Breaking
+
+- Access tokens no longer carry the `cnf.x5t#S256` claim, and the resource server no longer enforces certificate-thumbprint binding (client_id binding only)
+- Protected responses no longer return the `x-fapi-interaction-id` header
+- Provenance transfer steps no longer include the `transaction` field
+- Provenance record field names changed: `licences` → `licenses`, `licence` → `license`, `originLicence` → `originLicense`, altering the signed-record structure
+- OAuth scope / license value changed to `…/scheme/perseus/license/energy-consumption-edp-cap/2026-03-12` (from the previous `energy-consumption-data/2024-12-05` and `scheme/electricity` variants)
+
 ## [v2.0.0] - 2026-02-19
 
 ### Added

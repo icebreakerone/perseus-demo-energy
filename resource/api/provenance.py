@@ -25,7 +25,6 @@ def create_provenance_records(
     permission_expires: datetime.datetime,
     service_url: str,
     account: str,
-    fapi_id: str,
     cap_member: str,
 ) -> bytes:
 
@@ -102,7 +101,6 @@ def create_provenance_records(
                 "to": _date_to_iso(to_date),
             },
             "permissions": [edp_permission_id],
-            "transaction": fapi_id,
         }
     )
 

@@ -9,7 +9,6 @@ import jwt
 from jwt import algorithms
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import hashes
 from fastapi import (
     HTTPException,
 )
@@ -60,17 +59,6 @@ def create_state_token(context: dict | None = None) -> str:
     return jwt.encode(payload, private_key, algorithm="ES256")
 
 
-def get_thumbprint(cert: x509.Certificate) -> str:
-    """
-    Returns the thumbprint of a certificate
-    """
-    thumbprint = str(
-        base64.urlsafe_b64encode(cert.fingerprint(hashes.SHA256())).replace(b"=", b""),
-        "utf-8",
-    )
-    return thumbprint
-
-
 def decode_with_jwks(token: str, jwks_url: str) -> dict:
     """
     Validate a token using jwks_url
@@ -96,7 +84,6 @@ def create_enhanced_access_token(
     logger.info("Creating enhanced access token")
     claims = decode_with_jwks(external_token, external_oauth_url)
     logger.info(f"Claims: {claims}")
-    claims["cnf"] = {"x5t#S256": get_thumbprint(client_certificate)}
     claims["iss"] = conf.ISSUER_URL
     client_id = directory.extensions.decode_application(client_certificate)
     claims["client_id"] = client_id

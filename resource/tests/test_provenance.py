@@ -59,7 +59,6 @@ def test_create_provenance_records(
     permission_expires = datetime.datetime(2023, 12, 31, 12, 0, 0)
     service_url = "https://example.com/service"
     account = "account123"
-    fapi_id = "fapi123"
     cap_member = "cap_member123"
 
     # Call the function
@@ -70,7 +69,6 @@ def test_create_provenance_records(
         permission_expires,
         service_url,
         account,
-        fapi_id,
         cap_member,
     )
 

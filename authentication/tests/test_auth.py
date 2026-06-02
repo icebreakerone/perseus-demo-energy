@@ -16,7 +16,6 @@ from api.auth import (
     create_jwks,
     create_enhanced_access_token,
     encode_jwt,
-    get_thumbprint,
 )
 from tempfile import NamedTemporaryFile
 from api.exceptions import (
@@ -133,6 +132,8 @@ def test_create_enhanced_access_token(mock_get_key, mock_decode_with_jwks):
     decoded_enhanced_token = jwt.decode(
         encoded_token, TEST_PUBLIC_KEY, algorithms=["ES256"]
     )
-    assert "cnf" in decoded_enhanced_token
-    assert "x5t#S256" in decoded_enhanced_token["cnf"]
-    assert decoded_enhanced_token["cnf"]["x5t#S256"] == get_thumbprint(test_certificate)
+    # Token is bound to the client by client_id, not a cnf/x5t#S256 thumbprint.
+    assert "cnf" not in decoded_enhanced_token
+    assert decoded_enhanced_token[
+        "client_id"
+    ] == directory.extensions.decode_application(test_certificate)
