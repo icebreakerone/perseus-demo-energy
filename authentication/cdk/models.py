@@ -8,3 +8,4 @@ class Context(TypedDict):
     subdomain: str
     certificate: str
     hosted_zone_name: str
+    scheme_base_url: str

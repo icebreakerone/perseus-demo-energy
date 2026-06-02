@@ -14,6 +14,7 @@ from mangum import Mangum
 from . import models
 from . import auth
 from . import conf
+from . import openapi
 from . import provenance
 from .exceptions import CertificateError, AccessTokenValidatorError
 from .logger import get_logger
@@ -31,7 +32,11 @@ def require_mtls_and_token(
     request: Request,
     token: HTTPAuthorizationCredentials = Depends(security),
     x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
-    x_fapi_interaction_id: Annotated[str | None, Header()] = None,
+    # Hidden from the OpenAPI docs: x-fapi-* headers are not part of the IB1 OAuth
+    # profile. Slated for removal in remove_fapi_interaction_id_plan.md.
+    x_fapi_interaction_id: Annotated[
+        str | None, Header(include_in_schema=False)
+    ] = None,
 ) -> tuple[dict, dict, object]:
     """
     Dependency function that validates MTLS certificate and bearer token.
@@ -169,11 +174,15 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title="Perseus Demo EDP",
         version="1.0.0",
-        description="Perseus Demo EDP",
+        description=openapi.API_DESCRIPTION,
         routes=app.routes,
     )
     # Set the OpenAPI URL to the root domain
     openapi_schema["servers"] = [{"url": conf.API_DOMAIN}]
+    # Inject the FAPI security schemes (mTLS + certificate-bound token) and
+    # rewrite the auto-generated bearer requirement to the combined mTLS+token one.
+    openapi.add_fapi_security_schemes(openapi_schema)
+    openapi.apply_protected_security(openapi_schema)
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 

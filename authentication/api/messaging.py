@@ -11,15 +11,20 @@ from typing import Optional
 import requests
 from rdflib import Graph, Namespace, URIRef
 
+from . import conf
 from . import models
 from .keystores import get_mtls_cert_paths
 from .logger import get_logger
 
 logger = get_logger()
 
-# RDF namespaces
+# RDF namespaces.
+# The ib1 vocabulary namespace and the revoke message subject are canonical,
+# environment-independent identifiers (the subject host deliberately omits the env
+# segment), so they stay fixed. Only the trust-framework URL is environment-specific
+# and so derives from the shared config.
 IB1 = Namespace("https://registry.core.trust.ib1.org/ns/ib1#")
-TRUST_FRAMEWORK_URL = "https://registry.core.trust.ib1.org/trust-framework"
+TRUST_FRAMEWORK_URL = conf.TRUST_FRAMEWORK_URL
 REVOKE_MESSAGE_SUBJECT = "https://registry.trust.ib1.org/message/revoke"
 
 

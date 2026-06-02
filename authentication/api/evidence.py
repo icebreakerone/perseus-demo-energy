@@ -5,7 +5,7 @@ Permissions data: {
   permissions: {
     oauthIssuer: 'https://localhost:8000',
     client: 'https://registry.core.pilot.trust.ib1.org/application/edp-demo',
-    license: 'https://registry.core.pilot.trust.ib1.org/scheme/perseus/license/energy-consumption-data/2024-12-05',
+    license: 'https://registry.core.sandbox.trust.ib1.org/scheme/perseus/license/energy-consumption-edp-cap/2026-03-12',
     account: 'd6fd6e1c-a10e-40d8-aa2b-9606f3d34d3c',
     lastGranted: '2025-04-28T10:23:02Z',
     expires: '2025-04-28T11:23:02Z',
