@@ -270,7 +270,7 @@ async def token(
         raise HTTPException(status_code=response.status_code, detail=response.text)
     result = response.json()
     logger.info(f"Token result: {result}")
-    # Add in our required client certificate thumbprint
+    # Bind the token to the client by setting client_id from the certificate
     enhanced_token = auth.create_enhanced_access_token(
         result["access_token"],
         client_cert,

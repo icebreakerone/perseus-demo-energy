@@ -1,17 +1,12 @@
-import uuid
-from typing import Optional, Tuple
+from typing import Tuple
 import email.utils
 import time
-import base64
 import ssl
 
-from cryptography.hazmat.primitives import hashes
 import jwt.algorithms
 import jwt
 
-from cryptography import x509
 from .exceptions import (
-    AccessTokenCertificateError,
     AccessTokenAudienceError,
     AccessTokenTimeError,
     AccessTokenDecodingError,
@@ -22,55 +17,6 @@ from ib1 import directory
 from .logger import get_logger
 
 logger = get_logger()
-
-
-def check_certificate(cert: x509.Certificate, decoded_token: dict) -> bool:
-    """
-    Validates the certificate against the thumbprint provided in the decoded token.
-
-    Args:
-        cert (x509.Certificate): The client certificate to be checked.
-        decoded_token (dict): The decoded JWT token containing the certificate thumbprint.
-
-    Raises:
-        AccessTokenCertificateError: If the token does not contain a certificate binding or if the
-                                     thumbprint in the token does not match the presented client certificate.
-
-    Returns:
-        bool: True if the certificate is valid and matches the thumbprint in the token.
-    """
-
-    if "cnf" in decoded_token:
-        # thumbprint from token
-        try:
-            sha256 = decoded_token["cnf"]["x5t#S256"]
-        except KeyError:
-            logger.warning("No x5t#S256 claim in token response, unable to proceed!")
-            raise AccessTokenCertificateError(
-                "Token does not contain a certificate binding"
-            )
-        # thumbprint from presented client certificate
-        fingerprint = str(
-            base64.urlsafe_b64encode(cert.fingerprint(hashes.SHA256())).replace(
-                b"=", b""
-            ),
-            "utf-8",
-        )
-        if fingerprint != sha256:
-            logger.warning(
-                f"Token thumbprint {sha256} does not match "
-                f"presented client cert thumbprint {fingerprint}"
-            )
-            raise AccessTokenCertificateError(
-                "Token certificate binding does not match presented client cert"
-            )
-    else:
-        # No CNF claim in the token
-        logger.warning("No cnf claim in token response, unable to proceed!")
-        raise AccessTokenCertificateError(
-            "Token does not contain a certificate binding"
-        )
-    return True
 
 
 def decode_with_jwks(token: str, jwks_url: str, verify: bytes | None = None) -> dict:
@@ -100,7 +46,6 @@ def decode_with_jwks(token: str, jwks_url: str, verify: bytes | None = None) -> 
 def check_token(
     client_certificate: str,
     token: str,
-    x_fapi_interaction_id: Optional[str] = None,
 ) -> Tuple[dict, dict]:
     """
     Check token is valid if:
@@ -110,7 +55,7 @@ def check_token(
         [ ] has a client_id that matches the MTLS client certificate, and
         [ ] has a scope which matches the required license.
     If check succeeds, return a dict suitable to use as headers
-    including Date and x-fapi-interaction-id, as well as the check token result
+    including Date, as well as the check token result
     """
 
     # Deny access to non-MTLS connections
@@ -129,16 +74,7 @@ def check_token(
         raise AccessTokenTimeError("Token expired")
     if decoded["iat"] > int(time.time()):
         raise AccessTokenTimeError("Token issued in the future")
-    check_certificate(cert, decoded)
     headers = {}
     # FAPI requires that the resource server set the date header in the response
     headers["Date"] = email.utils.formatdate()
-
-    # Get FAPI interaction ID if set, or create a new one otherwise
-    if x_fapi_interaction_id is None:
-        x_fapi_interaction_id = str(uuid.uuid4())
-        logger.debug(f"issuing new interaction ID = {x_fapi_interaction_id}")
-    else:
-        logger.debug(f"using existing interaction ID = {x_fapi_interaction_id}")
-    headers["x-fapi-interaction-id"] = x_fapi_interaction_id
     return decoded, headers

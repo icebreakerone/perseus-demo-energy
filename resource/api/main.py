@@ -32,11 +32,6 @@ def require_mtls_and_token(
     request: Request,
     token: HTTPAuthorizationCredentials = Depends(security),
     x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
-    # Hidden from the OpenAPI docs: x-fapi-* headers are not part of the IB1 OAuth
-    # profile. Slated for removal in remove_fapi_interaction_id_plan.md.
-    x_fapi_interaction_id: Annotated[
-        str | None, Header(include_in_schema=False)
-    ] = None,
 ) -> tuple[dict, dict, object]:
     """
     Dependency function that validates MTLS certificate and bearer token.
@@ -84,7 +79,6 @@ def require_mtls_and_token(
             decoded, headers = auth.check_token(
                 cert_pem,
                 token.credentials,
-                x_fapi_interaction_id,
             )
             logger.info("Token validated successfully for sub %s", decoded.get("sub"))
         except AccessTokenValidatorError as e:
@@ -142,7 +136,7 @@ def consumption(
 ):
     if id != DEMO_METER_ID:
         raise HTTPException(status_code=404, detail="Meter not found")
-    decoded, headers, cert = auth_result
+    decoded, _, cert = auth_result
     # Create a new provenance record
     permission_granted = datetime.datetime.now(datetime.timezone.utc)
     permission_expires = datetime.datetime.now(
@@ -155,7 +149,6 @@ def consumption(
         permission_granted=permission_granted,
         account=decoded["sub"],
         service_url=f"https://{conf.API_DOMAIN}/datasources/{id}/{measure}",
-        fapi_id=headers["x-fapi-interaction-id"],
         cap_member=directory.extensions.decode_application(cert),
     )
     with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:

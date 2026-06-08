@@ -24,8 +24,5 @@
     "iat": 1701358195,
     "iss": "https://auth.directory.sandbox.trust.icebreakerone.org",
     "scope": "directory:software",
-    "cnf": {
-        "x5t#S256": "XCK75zLZH5zm2_bnNfBNxW7UGcvXshgASoJ01T6uVO8"
-    },
     "token_type": "Bearer"
 }

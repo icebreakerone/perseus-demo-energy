@@ -84,11 +84,9 @@ def test_missing_kid(mock_jwks):
 @patch("api.auth.decode_with_jwks")
 @patch("api.auth.directory.parse_cert")
 @patch("api.auth.directory.extensions.decode_application")
-@patch("api.auth.check_certificate")
 @patch("api.auth.conf")
 def test_check_token_valid(
     mock_auth_conf,
-    mock_check_certificate,
     mock_decode_application,
     mock_parse_cert,
     mock_decode_with_jwks,
@@ -101,11 +99,6 @@ def test_check_token_valid(
 
     assert decoded == mock_decoded_token
     assert "Date" in headers
-    assert "x-fapi-interaction-id" in headers
-
-    mock_check_certificate.assert_called_once_with(
-        "mocked-parsed-cert", mock_decoded_token
-    )
 
 
 @patch("api.auth.decode_with_jwks")

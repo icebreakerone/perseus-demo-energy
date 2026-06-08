@@ -48,10 +48,6 @@ class AccessTokenAudienceError(AccessTokenValidatorError):
     pass
 
 
-class AccessTokenCertificateError(AccessTokenValidatorError):
-    pass
-
-
 class PermissionStorageError(Exception):
     pass
 

@@ -52,9 +52,5 @@ class AccessTokenAudienceError(AccessTokenValidatorError):
     pass
 
 
-class AccessTokenCertificateError(AccessTokenValidatorError):
-    pass
-
-
 class AccessTokenDecodingError(AccessTokenValidatorError):
     pass

@@ -66,7 +66,7 @@ def test_datasources(
     )
     mock_check_token.return_value = (
         {"sub": "account123"},
-        {"x-fapi-interaction-id": "123"},
+        {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
     )
     pem, _, _, _ = client_certificate(
         roles=[conf.PROVIDER_ROLE],
@@ -110,7 +110,7 @@ def test_consumption(
     )
     mock_check_token.return_value = (
         {"sub": "account123"},
-        {"x-fapi-interaction-id": "123"},
+        {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
     )
     mock_ib1_directory_get_key.return_value = get_private_key()
     pem, _, _, _ = client_certificate(
@@ -140,6 +140,5 @@ def test_consumption(
         permission_granted=mocker.ANY,
         account="account123",
         service_url=mocker.ANY,
-        fapi_id="123",
         cap_member=mocker.ANY,
     )

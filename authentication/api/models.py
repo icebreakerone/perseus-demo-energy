@@ -76,10 +76,6 @@ class TokenResponse(BaseModel):
     model_config = {"json_schema_extra": {"examples": [examples.TOKEN_RESPONSE]}}
 
 
-class Cnf(BaseModel):
-    x5t_S256: str = Field(alias="x5t#S256")
-
-
 class Permission(BaseModel):
     """
     A permission as stored in the DynamoDB table, representing a granted permission
