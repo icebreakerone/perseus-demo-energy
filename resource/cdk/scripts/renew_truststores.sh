@@ -6,7 +6,13 @@ function usage() {
   cat <<'EOF'
 Usage: renew_truststores [environment ...]
 
-Without arguments the script updates both dev and prod trust stores. Specify one
+Refreshes the ELB trust stores from the shared CA bundle in S3. Both ALBs
+(authentication and resource) snapshot the same bundle.pem but are independent
+trust store resources, so each must be refreshed:
+  - PerseusAuthenticationTrust-<env>
+  - PerseusResourceTrust-<env>
+
+Without arguments the script updates both dev and prod environments. Specify one
 or more environment names to limit the update (e.g. "renew_truststores dev").
 The AWS region defaults to eu-west-2 unless AWS_REGION or AWS_DEFAULT_REGION is
 set.
@@ -33,9 +39,10 @@ fi
 for env in "${envs[@]}"; do
   bucket="perseus-resource-truststore-${env}"
   key="bundle.pem"
-  trust_store_name="PerseusAuthenticationTrust-${env}"
+  # Both ALBs snapshot the same bundle but are independent trust store resources.
+  trust_store_names=("PerseusAuthenticationTrust-${env}" "PerseusResourceTrust-${env}")
 
-  echo "\n=== Updating trust store for environment: ${env} ==="
+  echo "\n=== Updating trust stores for environment: ${env} ==="
   echo "Region: ${REGION}"
   echo "Source bucket: ${bucket}/${key}"
 
@@ -47,30 +54,33 @@ for env in "${envs[@]}"; do
     --output text || true)
 
   if [[ -z "${version_id}" || "${version_id}" == "None" ]]; then
-    echo "!! Could not determine the latest version for ${bucket}/${key}. Skipping." >&2
+    echo "!! Could not determine the latest version for ${bucket}/${key}. Skipping ${env}." >&2
     continue
   fi
 
-  trust_store_arn=$(aws elbv2 describe-trust-stores \
-    --region "${REGION}" \
-    --query "TrustStores[?Name=='${trust_store_name}'].TrustStoreArn | [0]" \
-    --output text || true)
-
-  if [[ -z "${trust_store_arn}" || "${trust_store_arn}" == "None" ]]; then
-    echo "!! Trust store ${trust_store_name} not found in region ${REGION}. Skipping." >&2
-    continue
-  fi
-
-  echo "Found trust store ARN: ${trust_store_arn}"
   echo "Using object version: ${version_id}"
 
-  aws elbv2 modify-trust-store \
-    --region "${REGION}" \
-    --trust-store-arn "${trust_store_arn}" \
-    --ca-certificates-bundle-s3-bucket "${bucket}" \
-    --ca-certificates-bundle-s3-key "${key}" \
-    --ca-certificates-bundle-s3-object-version "${version_id}"
+  for trust_store_name in "${trust_store_names[@]}"; do
+    trust_store_arn=$(aws elbv2 describe-trust-stores \
+      --region "${REGION}" \
+      --query "TrustStores[?Name=='${trust_store_name}'].TrustStoreArn | [0]" \
+      --output text || true)
 
-  echo "Trust store ${trust_store_name} updated successfully."
+    if [[ -z "${trust_store_arn}" || "${trust_store_arn}" == "None" ]]; then
+      echo "!! Trust store ${trust_store_name} not found in region ${REGION}. Skipping." >&2
+      continue
+    fi
+
+    echo "-> ${trust_store_name} (${trust_store_arn})"
+
+    aws elbv2 modify-trust-store \
+      --region "${REGION}" \
+      --trust-store-arn "${trust_store_arn}" \
+      --ca-certificates-bundle-s3-bucket "${bucket}" \
+      --ca-certificates-bundle-s3-key "${key}" \
+      --ca-certificates-bundle-s3-object-version "${version_id}"
+
+    echo "Trust store ${trust_store_name} updated successfully."
+  done
 
 done
