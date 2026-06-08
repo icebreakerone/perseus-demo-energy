@@ -14,6 +14,7 @@ from mangum import Mangum
 from . import models
 from . import auth
 from . import conf
+from . import openapi
 from . import provenance
 from .exceptions import CertificateError, AccessTokenValidatorError
 from .logger import get_logger
@@ -31,7 +32,6 @@ def require_mtls_and_token(
     request: Request,
     token: HTTPAuthorizationCredentials = Depends(security),
     x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
-    x_fapi_interaction_id: Annotated[str | None, Header()] = None,
 ) -> tuple[dict, dict, object]:
     """
     Dependency function that validates MTLS certificate and bearer token.
@@ -79,7 +79,6 @@ def require_mtls_and_token(
             decoded, headers = auth.check_token(
                 cert_pem,
                 token.credentials,
-                x_fapi_interaction_id,
             )
             logger.info("Token validated successfully for sub %s", decoded.get("sub"))
         except AccessTokenValidatorError as e:
@@ -137,7 +136,7 @@ def consumption(
 ):
     if id != DEMO_METER_ID:
         raise HTTPException(status_code=404, detail="Meter not found")
-    decoded, headers, cert = auth_result
+    decoded, _, cert = auth_result
     # Create a new provenance record
     permission_granted = datetime.datetime.now(datetime.timezone.utc)
     permission_expires = datetime.datetime.now(
@@ -150,7 +149,6 @@ def consumption(
         permission_granted=permission_granted,
         account=decoded["sub"],
         service_url=f"https://{conf.API_DOMAIN}/datasources/{id}/{measure}",
-        fapi_id=headers["x-fapi-interaction-id"],
         cap_member=directory.extensions.decode_application(cert),
     )
     with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:
@@ -169,11 +167,15 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title="Perseus Demo EDP",
         version="1.0.0",
-        description="Perseus Demo EDP",
+        description=openapi.API_DESCRIPTION,
         routes=app.routes,
     )
     # Set the OpenAPI URL to the root domain
     openapi_schema["servers"] = [{"url": conf.API_DOMAIN}]
+    # Inject the FAPI security schemes (mTLS + certificate-bound token) and
+    # rewrite the auto-generated bearer requirement to the combined mTLS+token one.
+    openapi.add_fapi_security_schemes(openapi_schema)
+    openapi.apply_protected_security(openapi_schema)
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 

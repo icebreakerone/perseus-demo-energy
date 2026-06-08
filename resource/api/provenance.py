@@ -25,7 +25,6 @@ def create_provenance_records(
     permission_expires: datetime.datetime,
     service_url: str,
     account: str,
-    fapi_id: str,
     cap_member: str,
 ) -> bytes:
 
@@ -58,11 +57,7 @@ def create_provenance_records(
             "scheme": conf.SCHEME_BASE_URL,
             "timestamp": f"{permission_granted.isoformat()[0:-7]}Z",
             "account": account,
-            "allows": {
-                "licences": [
-                    f"{conf.SCHEME_BASE_URL}/licence/energy-consumption-data/2024-12-05"
-                ]
-            },
+            "allows": {"licenses": [conf.ENERGY_DATA_LICENSE_URL]},
             "expires": f"{permission_expires.isoformat()[0:-7]}Z",
         }
     )
@@ -72,7 +67,7 @@ def create_provenance_records(
             "scheme": conf.SCHEME_BASE_URL,
             "sourceType": f"{conf.SCHEME_BASE_URL}/source-type/Meter",
             "origin": "https://www.smartdcc.co.uk/",
-            "originLicence": "https://smartenergycodecompany.co.uk/documents/sec/consolidated-sec/",
+            "originLicense": "https://smartenergycodecompany.co.uk/documents/sec/consolidated-sec/",
             "external": True,
             "permissions": [edp_permission_id],
             "perseus:scheme": {
@@ -97,7 +92,7 @@ def create_provenance_records(
             "of": origin_id,
             "to": cap_member,
             "standard": f"{conf.SCHEME_BASE_URL}/standard/energy-consumption-data/2024-12-05",
-            "licence": f"{conf.SCHEME_BASE_URL}/licence/energy-consumption-data/2024-12-05",
+            "license": conf.ENERGY_DATA_LICENSE_URL,
             "service": service_url,
             "path": "/readings",
             "parameters": {
@@ -106,7 +101,6 @@ def create_provenance_records(
                 "to": _date_to_iso(to_date),
             },
             "permissions": [edp_permission_id],
-            "transaction": fapi_id,
         }
     )
 

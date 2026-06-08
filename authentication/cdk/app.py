@@ -30,6 +30,8 @@ contexts: dict[str, Context] = {
         "subdomain": "preprod",
         "certificate": "54953fe2-52bf-4568-8242-4ab0115bac18",
         "hosted_zone_name": HOSTED_ZONE_NAME,
+        # TODO confirm exact host: dev -> development registry.
+        "scheme_base_url": "https://registry.core.development.trust.ib1.org/scheme/perseus",
     },
     "prod": {
         "environment_name": "prod",
@@ -38,6 +40,8 @@ contexts: dict[str, Context] = {
         "subdomain": "",
         "certificate": "d4547c2b-3c08-4f5d-b709-663e27ea0ebf",
         "hosted_zone_name": HOSTED_ZONE_NAME,
+        # TODO confirm exact host: prod -> core registry.
+        "scheme_base_url": "https://registry.core.trust.ib1.org/scheme/perseus",
     },
 }
 
@@ -128,7 +132,8 @@ fastapi_service = AuthenticationAPIServiceConstruct(
         "ISSUER_URL": f"https://{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}",
         "ORY_CLIENT_SECRET_PARAM": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/client_secret",
         "DYNAMODB_TABLE": dynamodb.table.table_name,
-        "PROVIDER_ROLE": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus/role/carbon-accounting-provider",
+        # PROVIDER_ROLE and TRUST_FRAMEWORK_URL derive from SCHEME_BASE_URL in conf.py.
+        "SCHEME_BASE_URL": contexts[deployment_context]["scheme_base_url"],
         "MTLS_CLIENT_KEY": f"s3://{certificates_bucket.bucket.bucket_name}/client-key.pem",
         "MTLS_CLIENT_BUNDLE": f"s3://{certificates_bucket.bucket.bucket_name}/client-bundle.pem",
     },
