@@ -35,8 +35,10 @@ contexts: dict[str, Context] = {
         "certificate": "50752488-303e-4757-85d3-fea66ae0a2d0",
         "mtls_certificate": "dc498c29-daa3-4eab-bd0e-dcce2d4de2c2",
         "hosted_zone_name": HOSTED_ZONE_NAME,
-        # TODO confirm exact host: prod -> core registry.
-        "scheme_base_url": "https://registry.core.trust.ib1.org/scheme/perseus",
+        # The prod demo apps run against the sandbox trust framework: they are
+        # for testing and never point at a real prod registry. Only members'
+        # real energy/auth endpoints run in prod.
+        "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
 }
 
