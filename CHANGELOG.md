@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 - Removed all `x-fapi-interaction-id` handling (request parameter and response header), as `x-fapi-*` headers are not part of the IB1 OAuth profile
 - Removed the non-standard `transaction` field from provenance transfer steps
 - `messaging.py` derives the trust-framework URL from configuration instead of a hardcoded host
+- Removed the unused S3, SSM and CloudWatch Logs VPC endpoints from the resource VPC: the Lambda runs outside the VPC, so nothing could route through them and the two interface endpoints billed ~$16/month per environment
 
 ### Fixed
 
