@@ -13,25 +13,7 @@ class CertificateNotFoundError(ConfigurationError):
 
 
 class FrameworkAuthError(Exception):
-    """Base class for certificate and token exceptions"""
-
-
-class CertificateError(FrameworkAuthError):
-    """
-    Base class for errors related to the client certificate
-    """
-
-
-class CertificateMissingError(CertificateError):
-    pass
-
-
-class CertificateRoleError(CertificateError):
-    pass
-
-
-class CertificateRoleMissingError(CertificateRoleError):
-    pass
+    """Base class for access token exceptions"""
 
 
 class AccessTokenValidatorError(FrameworkAuthError):

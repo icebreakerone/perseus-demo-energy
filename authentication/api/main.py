@@ -26,7 +26,7 @@ from . import openapi
 from . import permissions
 from . import evidence
 from . import messaging
-from .exceptions import PermissionRevocationError
+from .exceptions import AccessTokenDecodingError, PermissionRevocationError
 from .logger import get_logger
 
 logger = get_logger()
@@ -58,6 +58,35 @@ async def docs() -> dict:
     return {"docs": "/api-docs"}
 
 
+def parse_client_cert(client_certificate: str) -> x509.Certificate:
+    """
+    Parse a client certificate, rejecting the request if it cannot be read
+    """
+    try:
+        return directory.parse_cert(client_certificate)
+    except directory.CertificateInvalidError as e:
+        logger.warning(f"Client certificate could not be parsed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        )
+
+
+def client_id_from_cert(client_cert: x509.Certificate) -> str:
+    """
+    Read the application ID from a client certificate, rejecting the request if
+    the certificate does not carry one
+    """
+    try:
+        return directory.extensions.decode_application(client_cert)
+    except directory.CertificateExtensionError as e:
+        logger.warning(f"Client certificate is missing application information: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        )
+
+
 @app.post(
     "/api/v1/par",
     response_model=models.PushedAuthorizationResponse,
@@ -86,8 +115,8 @@ async def pushed_authorization_request(
             detail="Client certificate required",
         )
 
-    client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
-    client_id = directory.extensions.decode_application(client_cert)
+    client_cert = parse_client_cert(x_amzn_mtls_clientcert_leaf)
+    client_id = client_id_from_cert(client_cert)
     # Get args as dict
     parameters = {
         "response_type": response_type,
@@ -199,13 +228,14 @@ async def parsed_client_cert(
     """
     if x_amzn_mtls_clientcert_leaf is None:
         raise HTTPException(status_code=401, detail="No client certificate provided")
-    client_cert = directory.parse_cert(x_amzn_mtls_clientcert_leaf)
+    client_cert = parse_client_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
             conf.PROVIDER_ROLE,
             client_cert,
         )
-    except directory.CertificateRoleError as e:
+    except (directory.CertificateRoleError, directory.CertificateExtensionError) as e:
+        logger.warning(f"Client certificate role check failed: {e}")
         raise HTTPException(
             status_code=401,
             detail=str(e),
@@ -271,11 +301,24 @@ async def token(
     result = response.json()
     logger.info(f"Token result: {result}")
     # Bind the token to the client by setting client_id from the certificate
-    enhanced_token = auth.create_enhanced_access_token(
-        result["access_token"],
-        client_cert,
-        f"{conf.ORY_URL}/.well-known/jwks.json",
-    )
+    try:
+        enhanced_token = auth.create_enhanced_access_token(
+            result["access_token"],
+            client_cert,
+            f"{conf.ORY_URL}/.well-known/jwks.json",
+        )
+    except AccessTokenDecodingError as e:
+        logger.error(f"Could not decode the access token from Ory Hydra: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Invalid access token received from the authorization server",
+        )
+    except directory.CertificateExtensionError as e:
+        logger.warning(f"Client certificate is missing application information: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        )
     encoded_token = auth.encode_jwt(
         enhanced_token,
     )

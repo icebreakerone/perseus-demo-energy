@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from api.main import app, conf
 from api import auth
 from api.logger import get_logger
-from tests import client_certificate, CLIENT_ID, TEST_ROLE
+from tests import client_certificate, CLIENT_ID, SCHEME_URL, TEST_ROLE
 
 logger = get_logger()
 client = TestClient(app)
@@ -291,3 +291,63 @@ def test_callback_expired_state(mock_get_callback_url):
     )
     assert response.status_code == 400
     assert "not found or expired" in response.json()["detail"]
+
+
+def test_pushed_authorization_request_malformed_certificate():
+    """PAR rejects an unparseable client certificate with 401."""
+    response = client.post(
+        "/api/v1/par",
+        data={
+            "client_id": CLIENT_ID,
+            "redirect_uri": "https://mobile.example.com/cb",
+            "code_challenge": "W78hCS0q72DfIHa...kgZkEJuAFaT4",
+            "scope": "profile",
+            "response_type": "code",
+        },
+        headers={"x-amzn-mtls-clientcert-leaf": "not-a-certificate"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid certificate string"
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+def test_token_wrong_role():
+    """The token endpoint rejects a certificate without the provider role with 401."""
+    cert_urlencoded = client_certificate(roles=[f"{SCHEME_URL}/role/some-other-role"])
+
+    response = client.post(
+        "/api/v1/authorize/token",
+        data={
+            "grant_type": "authorization_code",
+            "code": "mock_code",
+            "code_verifier": "mock_verifier",
+            "redirect_uri": "https://mobile.example.com/cb",
+        },
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 401
+    assert "does not include role" in response.json()["detail"]
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+def test_token_certificate_without_roles():
+    """The token endpoint rejects a certificate with no role extension with 401."""
+    cert_urlencoded = client_certificate()
+
+    response = client.post(
+        "/api/v1/authorize/token",
+        data={
+            "grant_type": "authorization_code",
+            "code": "mock_code",
+            "code_verifier": "mock_verifier",
+            "redirect_uri": "https://mobile.example.com/cb",
+        },
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 401
+    assert "does not include role information" in response.json()["detail"]

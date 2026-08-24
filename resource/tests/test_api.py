@@ -142,3 +142,83 @@ def test_consumption(
         service_url=mocker.ANY,
         cap_member=mocker.ANY,
     )
+
+
+def test_consumption_wrong_role(api_consumption_url):
+    """
+    A certificate with a valid signature but the wrong role is rejected with 401
+    """
+    pem, _, _, _ = client_certificate(
+        roles=[f"{conf.SCHEME_BASE_URL}/role/some-other-role"],
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
+    )
+
+    response = client.get(
+        api_consumption_url,
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
+        },
+    )
+
+    assert response.status_code == 401
+    assert "does not include role" in response.json()["detail"]
+
+
+def test_consumption_certificate_without_roles(api_consumption_url):
+    """
+    A certificate carrying no role extension is rejected with 401
+    """
+    pem, _, _, _ = client_certificate(
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
+    )
+
+    response = client.get(
+        api_consumption_url,
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
+        },
+    )
+
+    assert response.status_code == 401
+    assert "does not include role information" in response.json()["detail"]
+
+
+def test_consumption_certificate_without_application(api_consumption_url):
+    """
+    A certificate carrying no application information is rejected with 401
+    """
+    pem, _, _, _ = client_certificate(
+        roles=[conf.PROVIDER_ROLE],
+        member="https://directory.ib1.org/member/123456",
+    )
+
+    response = client.get(
+        api_consumption_url,
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
+        },
+    )
+
+    assert response.status_code == 401
+    assert "does not include application information" in response.json()["detail"]
+
+
+def test_consumption_malformed_certificate(api_consumption_url):
+    """
+    An unparseable certificate is rejected with 401
+    """
+    response = client.get(
+        api_consumption_url,
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": "not-a-certificate",
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid certificate string"

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- Certificate errors return `401` instead of `500`: the resource API caught a local exception class unrelated to the `ib1.directory` hierarchy that `require_role` raises, so a valid certificate with the wrong role returned `500`; malformed certificates and certificates missing the role or application extension are now also rejected with `401` in both apps
+- An access token returned by Ory Hydra that cannot be decoded gives `502` from the token endpoint rather than an unhandled `500`
+
 ## [v3.0.0] - 2026-06-09
 
 ### Added

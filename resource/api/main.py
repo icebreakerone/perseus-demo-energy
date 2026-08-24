@@ -16,7 +16,7 @@ from . import auth
 from . import conf
 from . import openapi
 from . import provenance
-from .exceptions import CertificateError, AccessTokenValidatorError
+from .exceptions import AccessTokenValidatorError
 from .logger import get_logger
 
 
@@ -58,16 +58,31 @@ def require_mtls_and_token(
             detail="Client certificate required",
         )
 
-    cert = directory.parse_cert(cert_pem)
-    logger.info(
-        "Parsed certificate subject: %s", directory.extensions.decode_application(cert)
-    )
+    try:
+        cert = directory.parse_cert(cert_pem)
+        logger.info(
+            "Parsed certificate subject: %s",
+            directory.extensions.decode_application(cert),
+        )
+    except directory.CertificateInvalidError as e:
+        logger.warning("Client certificate could not be parsed: %s", e)
+        raise HTTPException(
+            status_code=401,
+            detail=str(e),
+        )
+    except directory.CertificateExtensionError as e:
+        logger.warning("Client certificate is missing required extensions: %s", e)
+        raise HTTPException(
+            status_code=401,
+            detail=str(e),
+        )
     try:
         directory.require_role(
             conf.PROVIDER_ROLE,
             cert,
         )
-    except CertificateError as e:
+    except (directory.CertificateRoleError, directory.CertificateExtensionError) as e:
+        logger.warning("Client certificate role check failed: %s", e)
         raise HTTPException(
             status_code=401,
             detail=str(e),
