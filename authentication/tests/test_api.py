@@ -351,3 +351,40 @@ def test_token_certificate_without_roles():
 
     assert response.status_code == 401
     assert "does not include role information" in response.json()["detail"]
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.permissions.get_permission_by_token")
+def test_revoke_token_does_not_echo_the_token(mock_get_permission_by_token):
+    """An unknown token is not echoed back in the revocation error response."""
+    mock_get_permission_by_token.return_value = None
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+
+    response = client.post(
+        "/api/v1/authorize/revoke",
+        data={"token": MOCK_REFRESH_TOKEN},
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Permission not found"
+    assert MOCK_REFRESH_TOKEN not in response.text
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.main.permissions.get_permission_by_token")
+def test_permissions_does_not_echo_the_token(mock_get_permission_by_token):
+    """An unknown token is not echoed back in the permissions error response."""
+    mock_get_permission_by_token.return_value = None
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+
+    response = client.post(
+        "/api/v1/permissions",
+        data={"token": MOCK_REFRESH_TOKEN},
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 404
+    assert MOCK_REFRESH_TOKEN not in response.text

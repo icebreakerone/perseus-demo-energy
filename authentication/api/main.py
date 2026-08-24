@@ -349,7 +349,9 @@ async def get_permissions(
     # Get permissions from Redis
     permissions_data = permissions.get_permission_by_token(token)
     if permissions_data is None:
-        logger.error(f"No permissions found for {token}")
+        logger.warning(
+            f"No permissions found for token {permissions.token_reference(token)}"
+        )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No permissions found for token",

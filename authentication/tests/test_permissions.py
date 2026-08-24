@@ -71,7 +71,9 @@ def test_revoke_permission_not_found(mock_get_permission_by_token):
         revoke_permission(refresh_token)
 
     assert "Permission not found" in str(exc_info.value)
-    assert refresh_token in str(exc_info.value)
+    # The caller supplied the token, echoing it back adds nothing and puts the
+    # credential into logs and error responses
+    assert refresh_token not in str(exc_info.value)
     mock_get_permission_by_token.assert_called_once_with(refresh_token)
 
 
@@ -99,5 +101,20 @@ def test_revoke_permission_write_error(mock_get_permission_by_token, mock_write_
     with pytest.raises(PermissionRevocationError) as exc_info:
         revoke_permission(refresh_token)
 
-    assert "Error revoking permission" in str(exc_info.value)
-    assert "Database error" in str(exc_info.value)
+    assert "Could not revoke permission" in str(exc_info.value)
+    # The underlying failure goes to the logs, not to the caller
+    assert "Database error" not in str(exc_info.value)
+    assert refresh_token not in str(exc_info.value)
+
+
+def test_token_reference_does_not_expose_the_token():
+    """The log reference for a token is short, stable, and not reversible."""
+    from api.permissions import token_reference
+
+    token = "ory_rt_a_real_looking_refresh_token"
+    reference = token_reference(token)
+
+    assert token not in reference
+    assert len(reference) == 12
+    assert reference == token_reference(token)
+    assert reference != token_reference(token + "x")
