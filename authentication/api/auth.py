@@ -67,7 +67,11 @@ def decode_with_jwks(token: str, jwks_url: str) -> dict:
     jwks_client = jwt.PyJWKClient(jwks_url, headers={"User-Agent": "ib1/1.0"})
 
     header = jwt.get_unverified_header(token)
-    key = jwks_client.get_signing_key(header["kid"]).key
+    try:
+        key = jwks_client.get_signing_key(header["kid"]).key
+    except jwt.exceptions.PyJWKClientError as e:
+        # An unreachable JWKS endpoint, or a kid that has been rotated away
+        raise AccessTokenDecodingError(f"Could not fetch the signing key: {e}")
     try:
         payload = jwt.decode(token, key, [header["alg"]])
     except jwt.ExpiredSignatureError:
@@ -83,7 +87,6 @@ def create_enhanced_access_token(
 ) -> dict:
     logger.info("Creating enhanced access token")
     claims = decode_with_jwks(external_token, external_oauth_url)
-    logger.info(f"Claims: {claims}")
     claims["iss"] = conf.ISSUER_URL
     client_id = directory.extensions.decode_application(client_certificate)
     claims["client_id"] = client_id

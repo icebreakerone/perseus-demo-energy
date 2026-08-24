@@ -4,8 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- The PAR, token, revocation and permissions endpoints return errors in the RFC 6749 section 5.2 shape, `{"error": ..., "error_description": ...}`, instead of FastAPI's `{"detail": "..."}`. Ory Hydra's non-standard `error_hint` is included where it is forwarded. The `422` validation shape and the `/authorize` and `/callback` endpoints are unchanged for now
+- Errors from Ory Hydra are parsed and mapped rather than passed through. Only `error_description` and `error_hint` are forwarded, and only for errors the caller can act on. `error_debug`, which Ory populates with internal detail, is never forwarded, and an unparseable body is dropped rather than relayed
+- The status returned for an upstream failure is chosen from Hydra's `error` code rather than its HTTP status. `invalid_client` and `unauthorized_client` describe the client authenticated at Hydra, which is this service, so they now return `502` rather than telling the caller their own authentication failed
+- Both calls to Ory Hydra now set a timeout, `ORY_TIMEOUT`, defaulting to 10 seconds
+
 ### Fixed
 
+- An unreachable Ory Hydra returns `502`, and a timeout `504`, instead of an unhandled `500`
+- An unreachable JWKS endpoint, or a key ID that has been rotated away, returns `502` instead of an unhandled `500` in the authentication app
+- The token endpoint no longer logs the access token, the refresh token or the full token claims. A short reference is logged instead so a request can still be traced
 - Certificate errors return `401` instead of `500`: the resource API caught a local exception class unrelated to the `ib1.directory` hierarchy that `require_role` raises, so a valid certificate with the wrong role returned `500`; malformed certificates and certificates missing the role or application extension are now also rejected with `401` in both apps
 - An access token returned by Ory Hydra that cannot be decoded gives `502` from the token endpoint rather than an unhandled `500`
 

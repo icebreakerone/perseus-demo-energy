@@ -1,15 +1,25 @@
+import json
 import os
 from unittest.mock import patch, MagicMock
 import time
 
 import pytest
+import requests
 import responses
 from fastapi.testclient import TestClient
 
 from api.main import app, conf
 from api import auth
 from api.logger import get_logger
-from tests import client_certificate, CLIENT_ID, SCHEME_URL, TEST_ROLE
+from tests import (
+    client_certificate,
+    CLIENT_ID,
+    HYDRA_INVALID_CLIENT,
+    HYDRA_INVALID_GRANT,
+    HYDRA_UNSUPPORTED_TOKEN_TYPE,
+    SCHEME_URL,
+    TEST_ROLE,
+)
 
 logger = get_logger()
 client = TestClient(app)
@@ -37,6 +47,39 @@ class FakeConf:
         self.CALLBACK_URL = "https://perseus-demo-authentication.ib1.org/api/v1/callback"
         self.REDIS_HOST = "redis"
         self.PROVIDER_ROLE = TEST_ROLE
+        self.ORY_TIMEOUT = 10.0
+
+
+def hydra_error(body, status_code):
+    """A mocked Hydra response carrying a realistic error body."""
+    mock_response = MagicMock()
+    mock_response.status_code = status_code
+    mock_response.text = json.dumps(body)
+    mock_response.json.return_value = body
+    return mock_response
+
+
+TOKEN_REQUEST_DATA = {
+    "grant_type": "authorization_code",
+    "redirect_uri": "https://client.app/callback",
+    "code_verifier": "mock_verifier",
+    "code": "mock_code",
+}
+
+
+@pytest.fixture
+def log_lines():
+    """
+    Capture loguru output. loguru does not feed pytest's caplog, so the sink has
+    to be added by hand.
+    """
+    from api.logger import get_logger
+
+    captured: list = []
+    log = get_logger()
+    sink_id = log.add(captured.append, format="{message}")
+    yield captured
+    log.remove(sink_id)
 
 
 @pytest.fixture
@@ -122,6 +165,7 @@ def test_authorization_code(mock_get_request):
 
 @patch("api.main.conf", FakeConf())
 @patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
 @patch("api.auth.decode_with_jwks")
 @patch("api.main.permissions")
 @responses.activate
@@ -163,9 +207,10 @@ def test_token_success(mock_permissions, mock_decode_with_jwks, mock_auth):
 
 @patch("api.main.conf", FakeConf())
 @patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
 @patch("api.main.messaging.send_revocation_message")
 @patch("api.main.permissions.revoke_permission")
-@patch("api.main.auth.get_session")
+@patch("api.hydra.get_session")
 @responses.activate
 def test_revoke_token_success(
     mock_get_session, mock_revoke_permission, mock_send_message
@@ -197,6 +242,7 @@ def test_revoke_token_success(
     mock_session.post.assert_called_once_with(
         f"{FakeConf().ORY_URL}/oauth2/revoke",
         data={"token": MOCK_REFRESH_TOKEN, "token_type_hint": "refresh_token"},
+        timeout=10.0,
     )
 
 
@@ -221,22 +267,20 @@ def test_revoke_token_permission_error(mock_revoke_permission):
     )
 
     assert response.status_code == 400
-    assert "Permission not found" in response.json()["detail"]
+    assert response.json()["error"] == "invalid_grant"
+    assert "Permission not found" in response.json()["error_description"]
 
 
 @patch("api.main.conf", FakeConf())
 @patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
 @patch("api.main.permissions.revoke_permission")
-@patch("api.main.auth.get_session")
-@responses.activate
-def test_revoke_token_hydra_error(mock_get_session, mock_revoke_permission):
-    """Test token revocation when Hydra returns an error."""
+@patch("api.hydra.get_session")
+def test_revoke_token_hydra_caller_error(mock_get_session, mock_revoke_permission):
+    """A caller-actionable revocation error keeps Hydra's own wording."""
     cert_urlencoded = client_certificate(roles=[TEST_ROLE])
     mock_session = MagicMock()
-    mock_response = MagicMock()
-    mock_response.status_code = 400
-    mock_response.text = "Invalid token"
-    mock_session.post.return_value = mock_response
+    mock_session.post.return_value = hydra_error(HYDRA_UNSUPPORTED_TOKEN_TYPE, 400)
     mock_get_session.return_value = mock_session
     mock_revoke_permission.return_value = {}
 
@@ -249,7 +293,38 @@ def test_revoke_token_hydra_error(mock_get_session, mock_revoke_permission):
     )
 
     assert response.status_code == 400
-    assert "Invalid token" in response.json()["detail"]
+    body = response.json()
+    assert body["error"] == "unsupported_token_type"
+    assert "does not support the revocation" in body["error_description"]
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@patch("api.main.permissions.revoke_permission")
+@patch("api.hydra.get_session")
+def test_revoke_token_hydra_rejects_our_credentials(
+    mock_get_session, mock_revoke_permission
+):
+    """invalid_client is our misconfiguration, so nothing upstream is forwarded."""
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    mock_session = MagicMock()
+    mock_session.post.return_value = hydra_error(HYDRA_INVALID_CLIENT, 401)
+    mock_get_session.return_value = mock_session
+    mock_revoke_permission.return_value = {}
+
+    response = client.post(
+        "/api/v1/authorize/revoke",
+        data={
+            "token": MOCK_REFRESH_TOKEN,
+        },
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["error"] == "server_error"
+    assert "sql: no rows" not in response.text
+    assert "does not exist" not in response.text
 
 
 @patch("api.main.store.get_callback_url")
@@ -308,7 +383,8 @@ def test_pushed_authorization_request_malformed_certificate():
     )
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid certificate string"
+    assert response.json()["error"] == "invalid_client"
+    assert response.json()["error_description"] == "Invalid certificate string"
 
 
 @patch("api.main.conf", FakeConf())
@@ -329,7 +405,8 @@ def test_token_wrong_role():
     )
 
     assert response.status_code == 401
-    assert "does not include role" in response.json()["detail"]
+    assert response.json()["error"] == "invalid_client"
+    assert "does not include role" in response.json()["error_description"]
 
 
 @patch("api.main.conf", FakeConf())
@@ -350,7 +427,8 @@ def test_token_certificate_without_roles():
     )
 
     assert response.status_code == 401
-    assert "does not include role information" in response.json()["detail"]
+    assert response.json()["error"] == "invalid_client"
+    assert "does not include role information" in response.json()["error_description"]
 
 
 @patch("api.main.conf", FakeConf())
@@ -368,7 +446,7 @@ def test_revoke_token_does_not_echo_the_token(mock_get_permission_by_token):
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Permission not found"
+    assert response.json()["error_description"] == "Permission not found"
     assert MOCK_REFRESH_TOKEN not in response.text
 
 
@@ -388,3 +466,169 @@ def test_permissions_does_not_echo_the_token(mock_get_permission_by_token):
 
     assert response.status_code == 404
     assert MOCK_REFRESH_TOKEN not in response.text
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@responses.activate
+def test_token_hydra_caller_error():
+    """A caller-actionable token error keeps Hydra's description and hint."""
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    responses.add(
+        responses.POST,
+        f"{FakeConf().ORY_URL}/oauth2/token",
+        json=HYDRA_INVALID_GRANT,
+        status=400,
+    )
+
+    response = client.post(
+        "/api/v1/authorize/token",
+        data=TOKEN_REQUEST_DATA,
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 400
+    body = response.json()
+    assert body["error"] == "invalid_grant"
+    assert "authorization grant" in body["error_description"]
+    assert body["error_hint"] == HYDRA_INVALID_GRANT["error_hint"]
+    assert "status_code" not in body
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@responses.activate
+def test_token_hydra_rejects_our_credentials():
+    """Hydra refusing our client credentials is not the caller's fault."""
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    responses.add(
+        responses.POST,
+        f"{FakeConf().ORY_URL}/oauth2/token",
+        json=HYDRA_INVALID_CLIENT,
+        status=401,
+    )
+
+    response = client.post(
+        "/api/v1/authorize/token",
+        data=TOKEN_REQUEST_DATA,
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["error"] == "server_error"
+    assert "sql: no rows" not in response.text
+    assert "does not exist" not in response.text
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@responses.activate
+def test_token_hydra_unparseable_body():
+    """An HTML page from a proxy in front of Ory is dropped, not forwarded."""
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    responses.add(
+        responses.POST,
+        f"{FakeConf().ORY_URL}/oauth2/token",
+        body="<html><title>502 Bad Gateway</title></html>",
+        status=502,
+    )
+
+    response = client.post(
+        "/api/v1/authorize/token",
+        data=TOKEN_REQUEST_DATA,
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["error"] == "server_error"
+    assert "Bad Gateway" not in response.text
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@responses.activate
+def test_token_hydra_timeout():
+    """A timeout is a 504, not the unhandled 500 it used to be."""
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    responses.add(
+        responses.POST,
+        f"{FakeConf().ORY_URL}/oauth2/token",
+        body=requests.exceptions.ConnectTimeout(),
+    )
+
+    response = client.post(
+        "/api/v1/authorize/token",
+        data=TOKEN_REQUEST_DATA,
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 504
+    assert response.json()["error"] == "server_error"
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@responses.activate
+def test_token_hydra_unreachable():
+    """A connection failure is a 502, not the unhandled 500 it used to be."""
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    responses.add(
+        responses.POST,
+        f"{FakeConf().ORY_URL}/oauth2/token",
+        body=requests.exceptions.ConnectionError(),
+    )
+
+    response = client.post(
+        "/api/v1/authorize/token",
+        data=TOKEN_REQUEST_DATA,
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["error"] == "server_error"
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@patch("api.auth.decode_with_jwks")
+@patch("api.main.permissions.store_permission")
+@responses.activate
+def test_token_success_does_not_log_credentials(
+    mock_store_permission, mock_decode_with_jwks, log_lines
+):
+    """The tokens Hydra issues must not reach the logs."""
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    mock_decode_with_jwks.return_value = {
+        "client_id": CLIENT_ID,
+        "exp": int(time.time()) + 3600,
+        "iat": int(time.time()),
+        "sub": "mock_user",
+        "iss": FakeConf().ISSUER_URL,
+        "scp": ["https://directory.ib1.org/roles/test"],
+        "ext": {},
+    }
+    responses.add(
+        responses.POST,
+        f"{FakeConf().ORY_URL}/oauth2/token",
+        json={"access_token": MOCK_TOKEN, "refresh_token": MOCK_REFRESH_TOKEN},
+        status=200,
+    )
+
+    response = client.post(
+        "/api/v1/authorize/token",
+        data=TOKEN_REQUEST_DATA,
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 200
+    logged = "\n".join(log_lines)
+    assert MOCK_TOKEN not in logged
+    assert MOCK_REFRESH_TOKEN not in logged
+    # A reference is logged instead, so a support request can still be traced
+    assert "Issued token for" in logged

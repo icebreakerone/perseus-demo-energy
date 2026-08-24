@@ -16,7 +16,7 @@ from fastapi import (
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from ib1 import directory
 from . import models
 from . import conf
@@ -26,7 +26,12 @@ from . import openapi
 from . import permissions
 from . import evidence
 from . import messaging
-from .exceptions import AccessTokenDecodingError, PermissionRevocationError
+from . import hydra
+from .exceptions import (
+    AccessTokenDecodingError,
+    OAuthError,
+    PermissionRevocationError,
+)
 from .logger import get_logger
 
 logger = get_logger()
@@ -53,6 +58,31 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=f"{ROOT_DIR}/static"), name="static")
 
 
+# Documented on the four endpoints that answer in the RFC 6749 error shape
+OAUTH_ERROR_RESPONSES: dict = {
+    400: {"model": models.OAuthErrorResponse, "description": "OAuth2 error"},
+    401: {
+        "model": models.OAuthErrorResponse,
+        "description": "Client authentication failed",
+    },
+    502: {
+        "model": models.OAuthErrorResponse,
+        "description": "Authorization server error",
+    },
+}
+
+
+@app.exception_handler(OAuthError)
+async def oauth_error_handler(request: Request, exc: OAuthError) -> JSONResponse:
+    """
+    Render OAuth2 errors in the RFC 6749 section 5.2 shape.
+
+    FastAPI's HTTPException cannot produce this, it always renders
+    {"detail": ...}.
+    """
+    return JSONResponse(status_code=exc.status_code, content=exc.body())
+
+
 @app.get("/")
 async def docs() -> dict:
     return {"docs": "/api-docs"}
@@ -66,10 +96,7 @@ def parse_client_cert(client_certificate: str) -> x509.Certificate:
         return directory.parse_cert(client_certificate)
     except directory.CertificateInvalidError as e:
         logger.warning(f"Client certificate could not be parsed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-        )
+        raise OAuthError(status.HTTP_401_UNAUTHORIZED, "invalid_client", str(e))
 
 
 def client_id_from_cert(client_cert: x509.Certificate) -> str:
@@ -81,16 +108,14 @@ def client_id_from_cert(client_cert: x509.Certificate) -> str:
         return directory.extensions.decode_application(client_cert)
     except directory.CertificateExtensionError as e:
         logger.warning(f"Client certificate is missing application information: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-        )
+        raise OAuthError(status.HTTP_401_UNAUTHORIZED, "invalid_client", str(e))
 
 
 @app.post(
     "/api/v1/par",
     response_model=models.PushedAuthorizationResponse,
     status_code=201,
+    responses=OAUTH_ERROR_RESPONSES,
     openapi_extra={"security": [{"mtls": []}]},
 )
 async def pushed_authorization_request(
@@ -110,9 +135,10 @@ async def pushed_authorization_request(
     """
     # Client authentication by mtls
     if not x_amzn_mtls_clientcert_leaf:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Client certificate required",
+        raise OAuthError(
+            status.HTTP_401_UNAUTHORIZED,
+            "invalid_client",
+            "Client certificate required",
         )
 
     client_cert = parse_client_cert(x_amzn_mtls_clientcert_leaf)
@@ -227,7 +253,7 @@ async def parsed_client_cert(
     Parse the client certificate from the request header
     """
     if x_amzn_mtls_clientcert_leaf is None:
-        raise HTTPException(status_code=401, detail="No client certificate provided")
+        raise OAuthError(401, "invalid_client", "Client certificate required")
     client_cert = parse_client_cert(x_amzn_mtls_clientcert_leaf)
     try:
         directory.require_role(
@@ -236,16 +262,14 @@ async def parsed_client_cert(
         )
     except (directory.CertificateRoleError, directory.CertificateExtensionError) as e:
         logger.warning(f"Client certificate role check failed: {e}")
-        raise HTTPException(
-            status_code=401,
-            detail=str(e),
-        )
+        raise OAuthError(401, "invalid_client", str(e))
     return client_cert
 
 
 @app.post(
     "/api/v1/authorize/token",
     response_model=models.TokenResponse,
+    responses=OAUTH_ERROR_RESPONSES,
     openapi_extra={"security": [{"mtls": []}]},
 )
 async def token(
@@ -267,7 +291,7 @@ async def token(
     if grant_type == "authorization_code":
         logger.info("Authorization code flow")
         if not code or not code_verifier or not redirect_uri:
-            raise HTTPException(status_code=400, detail="Missing required parameters")
+            raise OAuthError(400, "invalid_request", "Missing required parameters")
 
         payload = {
             "grant_type": grant_type,
@@ -279,7 +303,7 @@ async def token(
     elif grant_type == "refresh_token":
         logger.info("Refresh token flow")
         if not refresh_token:
-            raise HTTPException(status_code=400, detail="Missing refresh token")
+            raise OAuthError(400, "invalid_request", "Missing refresh token")
 
         payload = {
             "grant_type": "refresh_token",
@@ -287,19 +311,9 @@ async def token(
             "client_id": conf.ORY_CLIENT_ID,
         }
     else:
-        raise HTTPException(status_code=400, detail="Invalid grant type")
-    session = auth.get_session()
+        raise OAuthError(400, "unsupported_grant_type", "Invalid grant type")
 
-    response = session.post(
-        f"{conf.ORY_TOKEN_ENDPOINT}",
-        data=payload,
-    )
-    logger.info(f"Token response: {response.status_code} {response.text}")
-    if response.status_code != 200:
-        logger.error(response.text)
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    result = response.json()
-    logger.info(f"Token result: {result}")
+    result = hydra.request_token(payload)
     # Bind the token to the client by setting client_id from the certificate
     try:
         enhanced_token = auth.create_enhanced_access_token(
@@ -308,23 +322,32 @@ async def token(
             f"{conf.ORY_URL}/.well-known/jwks.json",
         )
     except AccessTokenDecodingError as e:
-        logger.error(f"Could not decode the access token from Ory Hydra: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Invalid access token received from the authorization server",
+        reference = permissions.token_reference(result.get("access_token", ""))
+        if "expired" in str(e).lower():
+            # A token Hydra has just issued cannot legitimately be expired
+            logger.error(
+                f"Ory Hydra issued an already expired token, ref {reference}. "
+                "Check clock skew between this service and Ory."
+            )
+        else:
+            logger.exception(
+                f"Could not decode the access token from Ory Hydra, ref {reference}"
+            )
+        raise OAuthError(
+            status.HTTP_502_BAD_GATEWAY, "server_error", hydra.UPSTREAM_ERROR
         )
     except directory.CertificateExtensionError as e:
         logger.warning(f"Client certificate is missing application information: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
-        )
+        raise OAuthError(status.HTTP_401_UNAUTHORIZED, "invalid_client", str(e))
     encoded_token = auth.encode_jwt(
         enhanced_token,
     )
-    # permissions.store_permission(
-    logger.info(f"Enhanced token: {enhanced_token}")
     permissions.store_permission(enhanced_token, result.get("refresh_token"))
+    logger.info(
+        f"Issued token for {enhanced_token.get('client_id')}, grant {grant_type}, "
+        f"ref {permissions.token_reference(encoded_token)}, "
+        f"expires {enhanced_token.get('exp')}"
+    )
     return models.TokenResponse(
         access_token=encoded_token,
         refresh_token=result.get("refresh_token"),
@@ -334,6 +357,7 @@ async def token(
 @app.post(
     "/api/v1/permissions",
     dependencies=[Depends(parsed_client_cert)],
+    responses={**OAUTH_ERROR_RESPONSES, 404: {"model": models.OAuthErrorResponse}},
     openapi_extra={"security": [{"mtls": []}]},
 )
 async def get_permissions(
@@ -352,15 +376,19 @@ async def get_permissions(
         logger.warning(
             f"No permissions found for token {permissions.token_reference(token)}"
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No permissions found for token",
+        # Not an OAuth2 condition, so there is no registered code that fits.
+        # invalid_request is the closest, and the status carries the meaning.
+        raise OAuthError(
+            status.HTTP_404_NOT_FOUND,
+            "invalid_request",
+            "No permissions found for token",
         )
     return {"permissions": permissions_data}
 
 
 @app.post(
     "/api/v1/authorize/revoke",
+    responses=OAUTH_ERROR_RESPONSES,
     openapi_extra={"security": [{"mtls": []}]},
 )
 async def revoke_token(
@@ -380,23 +408,16 @@ async def revoke_token(
     """
     # Prepare revocation request to Hydra
     payload = {"token": token, "token_type_hint": token_type_hint}
-    session = auth.get_session()
 
     try:
         revoked_permission = permissions.revoke_permission(token)
     except PermissionRevocationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise OAuthError(400, "invalid_grant", str(e))
 
     if revoked_permission is None:
-        raise HTTPException(status_code=400, detail="Failed to revoke permission")
+        raise OAuthError(400, "invalid_grant", "Failed to revoke permission")
 
-    response = session.post(
-        f"{conf.ORY_URL}/oauth2/revoke",
-        data=payload,
-    )
-
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
+    hydra.revoke_token(payload)
 
     # Send revocation message to the client application
     # For demo purposes we do allow this to fail without impacting the revocation response
@@ -405,9 +426,8 @@ async def revoke_token(
         messaging.send_revocation_message(revoked_permission)
     except Exception as e:
         # Log error but don't fail the revocation request
-        logger.error(
-            f"Failed to send revocation message for client {revoked_permission.client}: {str(e)}",
-            exc_info=True,
+        logger.exception(
+            f"Failed to send revocation message for client {revoked_permission.client}: {str(e)}"
         )
 
     return {"status": "success", "message": "Token revoked"}
