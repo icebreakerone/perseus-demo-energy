@@ -53,3 +53,12 @@ TOKEN_RESPONSE: JsonDict = {
     ),
     "refresh_token": "tXZjYfoK35I-djg9V3n6s58zsrVqRIzTNMXKIS_wkj8",
 }
+
+OAUTH_ERROR: JsonDict = {
+    "error": "invalid_grant",
+    "error_description": (
+        "The provided authorization grant is invalid, expired, revoked, or does "
+        "not match the redirection URI used in the authorization request."
+    ),
+    "error_hint": "The PKCE code challenge did not match the code verifier.",
+}

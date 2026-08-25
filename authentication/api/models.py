@@ -76,6 +76,20 @@ class TokenResponse(BaseModel):
     model_config = {"json_schema_extra": {"examples": [examples.TOKEN_RESPONSE]}}
 
 
+class OAuthErrorResponse(BaseModel):
+    """
+    Error response in the RFC 6749 section 5.2 shape.
+
+    `error_hint` is a non standard field Ory Hydra adds. It is forwarded only
+    for errors the caller can act on.
+    """
+
+    error: str
+    error_description: str | None = None
+    error_hint: str | None = None
+    model_config = {"json_schema_extra": {"examples": [examples.OAUTH_ERROR]}}
+
+
 class Permission(BaseModel):
     """
     A permission as stored in the DynamoDB table, representing a granted permission

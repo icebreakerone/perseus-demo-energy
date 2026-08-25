@@ -72,7 +72,7 @@ def test_invalid_signature(mock_jwks):
 def test_missing_kid(mock_jwks):
     token = jwt.encode({"sub": "123"}, TEST_PRIVATE_KEY, algorithm="ES256")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(AccessTokenDecodingError):
         decode_with_jwks(token, mock_jwks)
 
 
@@ -137,3 +137,50 @@ def test_create_enhanced_access_token(mock_get_key, mock_decode_with_jwks):
     assert decoded_enhanced_token[
         "client_id"
     ] == directory.extensions.decode_application(test_certificate)
+
+
+class NoCredentialsConf:
+    ORY_CLIENT_ID = "abc-123"
+    ORY_CLIENT_SECRET = None
+    ORY_CLIENT_SECRET_PARAM = None
+
+
+@patch("api.auth.conf", NoCredentialsConf())
+def test_get_session_without_credentials():
+    """
+    A missing local credential answers in the same shape as Hydra rejecting one.
+
+    It is a 500 rather than the 502 a rejected credential gives, because the
+    request never reached upstream, but the caller sees server_error either way
+    and is told nothing about our configuration.
+    """
+    from api.auth import get_session
+    from api.exceptions import OAuthError
+
+    with pytest.raises(OAuthError) as exc_info:
+        get_session()
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.error == "server_error"
+    assert exc_info.value.error_description == "Authorization server error"
+    assert "ORY_CLIENT" not in exc_info.value.error_description
+
+
+@patch("api.keystores.get_boto3_client")
+def test_get_key_falls_back_when_boto3_cannot_build_a_client(mock_get_client):
+    """
+    No AWS configuration at all still reaches the local file.
+
+    The client was constructed outside the try, so NoRegionError escaped and
+    the fallback never ran. CI has no region configured, which is where this
+    first showed up.
+    """
+    from botocore.exceptions import NoRegionError
+
+    from api.keystores import get_key
+
+    mock_get_client.side_effect = NoRegionError()
+
+    key = get_key(f"{ROOT_DIR}/fixtures/server-signing-private-key.pem")
+
+    assert isinstance(key, ec.EllipticCurvePrivateKey)

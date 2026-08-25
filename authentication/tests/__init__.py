@@ -73,3 +73,60 @@ def client_certificate(
     cert_pem = certificate.public_bytes(serialization.Encoding.PEM).decode("utf-8")
     # Calculate the thumbprint of the certificate
     return cert_pem
+
+
+# Realistic Ory Hydra (fosite) error bodies. The error_hint, error_debug and
+# nested-error cases are the ones the allowlist exists to stop.
+HYDRA_INVALID_GRANT = {
+    "error": "invalid_grant",
+    "error_description": (
+        "The provided authorization grant (e.g., authorization code, resource owner "
+        "credentials) or refresh token is invalid, expired, revoked, does not match "
+        "the redirection URI used in the authorization request, or was issued to "
+        "another client."
+    ),
+    "error_hint": "The PKCE code challenge did not match the code verifier.",
+    "status_code": 400,
+}
+
+HYDRA_INVALID_CLIENT = {
+    "error": "invalid_client",
+    "error_description": (
+        "Client authentication failed (e.g., unknown client, no client authentication "
+        "included, or unsupported authentication method)."
+    ),
+    "error_hint": "The requested OAuth 2.0 Client does not exist.",
+    "error_debug": "sql: no rows in result set",
+    "status_code": 401,
+}
+
+HYDRA_UNSUPPORTED_TOKEN_TYPE = {
+    "error": "unsupported_token_type",
+    "error_description": (
+        "The authorization server does not support the revocation of the presented "
+        "token type."
+    ),
+}
+
+HYDRA_SERVER_ERROR = {
+    "error": "server_error",
+    "error_description": "The authorization server encountered an unexpected condition.",
+    "error_debug": "runtime error: invalid memory address",
+}
+
+# Ory returns this envelope, where `error` is an object rather than a string,
+# when a request lands on a non OAuth2 path
+HYDRA_HERODOT_404 = {
+    "error": {
+        "code": 404,
+        "status": "Not Found",
+        "request": "e1f0c4d2",
+        "reason": "",
+        "message": "404 page not found",
+    }
+}
+
+PROXY_HTML_502 = (
+    "<html><head><title>502 Bad Gateway</title></head>"
+    "<body><h1>502 Bad Gateway</h1></body></html>"
+)

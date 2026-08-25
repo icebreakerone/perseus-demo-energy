@@ -9,11 +9,7 @@ import jwt
 from jwt import algorithms
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec
-from fastapi import (
-    HTTPException,
-)
-
-from .exceptions import AccessTokenDecodingError
+from .exceptions import AccessTokenDecodingError, OAuthError
 from . import conf
 from .logger import get_logger
 from . import keystores
@@ -36,10 +32,13 @@ def get_session():
     elif conf.ORY_CLIENT_SECRET_PARAM:
         session.auth = (conf.ORY_CLIENT_ID, _get_ory_secret_from_ssm())
     else:
-        raise HTTPException(
-            status_code=500,
-            detail="Client ID and Secret not set",
+        # 500 rather than the 502 Hydra rejecting our credentials gives: the
+        # request never reached upstream. Both are server_error to the caller.
+        logger.error(
+            "No Ory client credentials configured. Set ORY_CLIENT_SECRET or "
+            "ORY_CLIENT_SECRET_PARAM alongside ORY_CLIENT_ID."
         )
+        raise OAuthError(500, "server_error", "Authorization server error")
     return session
 
 
@@ -66,12 +65,20 @@ def decode_with_jwks(token: str, jwks_url: str) -> dict:
     logger.info(f"Decoding token with jwks_url: {jwks_url}")
     jwks_client = jwt.PyJWKClient(jwks_url, headers={"User-Agent": "ib1/1.0"})
 
-    header = jwt.get_unverified_header(token)
-    key = jwks_client.get_signing_key(header["kid"]).key
+    try:
+        header = jwt.get_unverified_header(token)
+        key = jwks_client.get_signing_key(header["kid"]).key
+    except KeyError:
+        raise AccessTokenDecodingError("Token header has no key id")
+    except jwt.exceptions.PyJWKClientError as e:
+        # An unreachable JWKS endpoint, or a kid that has been rotated away
+        raise AccessTokenDecodingError(f"Could not fetch the signing key: {e}")
+    except jwt.InvalidTokenError as e:
+        raise AccessTokenDecodingError(f"Invalid token: {e}")
     try:
         payload = jwt.decode(token, key, [header["alg"]])
     except jwt.ExpiredSignatureError:
-        raise AccessTokenDecodingError("Token has expired!")
+        raise AccessTokenDecodingError("Token expired")
     except jwt.InvalidTokenError as e:
         raise AccessTokenDecodingError(f"Invalid token: {e}")
 
@@ -83,7 +90,6 @@ def create_enhanced_access_token(
 ) -> dict:
     logger.info("Creating enhanced access token")
     claims = decode_with_jwks(external_token, external_oauth_url)
-    logger.info(f"Claims: {claims}")
     claims["iss"] = conf.ISSUER_URL
     client_id = directory.extensions.decode_application(client_certificate)
     claims["client_id"] = client_id

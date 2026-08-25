@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 from typing import Optional
 
 import boto3
@@ -9,6 +10,14 @@ from .exceptions import PermissionStorageError, PermissionRevocationError
 from .logger import get_logger
 
 logger = get_logger()
+
+
+def token_reference(token: str) -> str:
+    """
+    A short, stable reference to a token, so that a log line can be tied to a
+    support request without the credential itself appearing in the logs
+    """
+    return hashlib.sha256(token.encode()).hexdigest()[:12]
 
 
 def get_dynamodb_resource():
@@ -114,16 +123,22 @@ def get_permission_by_token(refresh_token: str) -> models.Permission | None:
     return models.Permission(**items[0])
 
 
-def revoke_permission(refresh_token: str) -> models.Permission | None:
+def revoke_permission(refresh_token: str) -> models.Permission:
     permission = get_permission_by_token(refresh_token)
     if permission is None:
-        raise PermissionRevocationError(f"Permission not found: {refresh_token}")
+        logger.warning(
+            f"No permission found for token {token_reference(refresh_token)}"
+        )
+        raise PermissionRevocationError("Permission not found")
 
     try:
         permission.revoked = datetime.datetime.now(datetime.timezone.utc)
         write_permission(permission)
-    except Exception as e:
-        raise PermissionRevocationError(f"Error revoking permission: {str(e)}")
+    except Exception:
+        logger.exception(
+            f"Error revoking permission for token {token_reference(refresh_token)}"
+        )
+        raise PermissionRevocationError("Could not revoke permission")
     return permission
 
 
@@ -178,6 +193,9 @@ def store_permission(decoded_token: dict, refresh_token: str) -> models.Permissi
     try:
         # Store the permission in the database
         write_permission(permission)
-    except Exception as e:
-        raise PermissionStorageError(f"Error storing permission: {str(e)}")
+    except Exception:
+        logger.exception(
+            f"Error storing permission for token {token_reference(refresh_token)}"
+        )
+        raise PermissionStorageError("Could not store permission")
     return permission
