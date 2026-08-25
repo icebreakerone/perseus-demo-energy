@@ -160,3 +160,22 @@ def test_check_token_issued_in_future(
 
     with pytest.raises(AccessTokenTimeError, match="Token issued in the future"):
         check_token(MOCK_CERTIFICATE, MOCK_TOKEN)
+
+
+def test_expired_signature_uses_the_same_wording(mock_jwks):
+    """
+    An expired token gives one message, whichever check catches it.
+
+    PyJWT rejects it inside decode_with_jwks, and check_token re-checks `exp`
+    afterwards. Both say the same thing, so a caller cannot tell them apart.
+    """
+    jwks_url = "https://mocked-jwks.com/.well-known/jwks.json"
+    token = jwt.encode(
+        {"sub": "123", "exp": int(time.time()) - 10},
+        TEST_PRIVATE_KEY,
+        algorithm="ES256",
+        headers={"kid": "test-key-id"},
+    )
+
+    with pytest.raises(AccessTokenTimeError, match="^Token expired$"):
+        decode_with_jwks(token, jwks_url)

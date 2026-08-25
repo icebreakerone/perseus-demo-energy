@@ -86,7 +86,7 @@ def get_key(key_path: str) -> ec.EllipticCurvePrivateKey:
             with open(key_path, "rb") as key_file:
                 key_pem = key_file.read()
         except FileNotFoundError:
-            raise KeyNotFoundError("jwt signing key not found in SSM or local file.")
+            raise KeyNotFoundError("jwt signing key not found in SSM or local file")
     loaded_key = serialization.load_pem_private_key(
         key_pem, password=None, backend=default_backend()
     )

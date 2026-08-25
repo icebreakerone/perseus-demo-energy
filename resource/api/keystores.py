@@ -50,7 +50,7 @@ def get_key(key_path: str) -> PrivateKeyTypes:
             with open(conf.SIGNING_KEY, "rb") as key_file:
                 key_pem = key_file.read()
         except FileNotFoundError:
-            raise KeyNotFoundError("signing key not found in SSM or local file.")
+            raise KeyNotFoundError("signing key not found in SSM or local file")
     return serialization.load_pem_private_key(
         key_pem, password=None, backend=default_backend()
     )

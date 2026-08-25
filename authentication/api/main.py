@@ -414,9 +414,6 @@ async def revoke_token(
     except PermissionRevocationError as e:
         raise OAuthError(400, "invalid_grant", str(e))
 
-    if revoked_permission is None:
-        raise OAuthError(400, "invalid_grant", "Failed to revoke permission")
-
     hydra.revoke_token(payload)
 
     # Send revocation message to the client application

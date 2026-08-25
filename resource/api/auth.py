@@ -37,7 +37,7 @@ def decode_with_jwks(token: str, jwks_url: str, verify: bytes | None = None) -> 
     try:
         payload = jwt.decode(token, key, [header["alg"]])
     except jwt.ExpiredSignatureError:
-        raise AccessTokenTimeError("Token has expired!")
+        raise AccessTokenTimeError("Token expired")
     except jwt.InvalidTokenError as e:
         raise AccessTokenDecodingError(f"Invalid token: {e}")
     return payload

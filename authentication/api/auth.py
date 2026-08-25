@@ -9,11 +9,7 @@ import jwt
 from jwt import algorithms
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec
-from fastapi import (
-    HTTPException,
-)
-
-from .exceptions import AccessTokenDecodingError
+from .exceptions import AccessTokenDecodingError, OAuthError
 from . import conf
 from .logger import get_logger
 from . import keystores
@@ -36,10 +32,13 @@ def get_session():
     elif conf.ORY_CLIENT_SECRET_PARAM:
         session.auth = (conf.ORY_CLIENT_ID, _get_ory_secret_from_ssm())
     else:
-        raise HTTPException(
-            status_code=500,
-            detail="Client ID and Secret not set",
+        # 500 rather than the 502 Hydra rejecting our credentials gives: the
+        # request never reached upstream. Both are server_error to the caller.
+        logger.error(
+            "No Ory client credentials configured. Set ORY_CLIENT_SECRET or "
+            "ORY_CLIENT_SECRET_PARAM alongside ORY_CLIENT_ID."
         )
+        raise OAuthError(500, "server_error", "Authorization server error")
     return session
 
 
@@ -75,7 +74,7 @@ def decode_with_jwks(token: str, jwks_url: str) -> dict:
     try:
         payload = jwt.decode(token, key, [header["alg"]])
     except jwt.ExpiredSignatureError:
-        raise AccessTokenDecodingError("Token has expired!")
+        raise AccessTokenDecodingError("Token expired")
     except jwt.InvalidTokenError as e:
         raise AccessTokenDecodingError(f"Invalid token: {e}")
 

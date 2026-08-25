@@ -10,6 +10,9 @@ All notable changes to this project will be documented in this file.
 - Errors from Ory Hydra are parsed and mapped rather than passed through. Only `error_description` and `error_hint` are forwarded, and only for errors the caller can act on. `error_debug`, which Ory populates with internal detail, is never forwarded, and an unparseable body is dropped rather than relayed
 - The status returned for an upstream failure is chosen from Hydra's `error` code rather than its HTTP status. `invalid_client` and `unauthorized_client` describe the client authenticated at Hydra, which is this service, so they now return `502` rather than telling the caller their own authentication failed
 - Both calls to Ory Hydra now set a timeout, `ORY_TIMEOUT`, defaulting to 10 seconds
+- One wording for each condition. A missing client certificate is `Client certificate required` in both apps, and an expired token is `Token expired` whichever check catches it. No error message ends in a full stop or an exclamation mark
+- A missing local Ory credential returns `server_error` in the same shape as Hydra rejecting one, rather than `{"detail": "Client ID and Secret not set"}`. It stays a `500` against the `502` for a rejected credential, since the request never reached upstream, and the names of the unset variables go to the logs rather than to the caller
+- Removed the unreachable `Failed to revoke permission` response. `revoke_permission` either returns a permission or raises
 
 ### Fixed
 

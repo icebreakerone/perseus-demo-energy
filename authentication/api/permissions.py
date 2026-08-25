@@ -123,7 +123,7 @@ def get_permission_by_token(refresh_token: str) -> models.Permission | None:
     return models.Permission(**items[0])
 
 
-def revoke_permission(refresh_token: str) -> models.Permission | None:
+def revoke_permission(refresh_token: str) -> models.Permission:
     permission = get_permission_by_token(refresh_token)
     if permission is None:
         logger.warning(
