@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 - The token endpoint no longer logs the access token, the refresh token or the full token claims. A short reference is logged instead so a request can still be traced
 - Unhandled failures return `server_error` with a `correlation_id` that also appears in the log line carrying the traceback, instead of a bare `500 Internal Server Error` with no body. Redis, DynamoDB and SSM failures were all unreportable
 - A bearer token that is not a JWT, or whose header carries no key id, returns `401` instead of `500`. Reading the token header sat outside the try in both apps
+- The signing key falls back to the local file when AWS is not configured at all. The SSM client was built outside the `try`, so a missing region raised before the fallback could run
 - Resource API log lines are interpolated. They used `%s` placeholders with loguru, which formats with `{}`, so the values were dropped and the placeholders logged literally
 - Certificate errors return `401` instead of `500`: the resource API caught a local exception class unrelated to the `ib1.directory` hierarchy that `require_role` raises, so a valid certificate with the wrong role returned `500`; malformed certificates and certificates missing the role or application extension are now also rejected with `401` in both apps
 - An access token returned by Ory Hydra that cannot be decoded gives `502` from the token endpoint rather than an unhandled `500`

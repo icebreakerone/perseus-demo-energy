@@ -164,3 +164,23 @@ def test_get_session_without_credentials():
     assert exc_info.value.error == "server_error"
     assert exc_info.value.error_description == "Authorization server error"
     assert "ORY_CLIENT" not in exc_info.value.error_description
+
+
+@patch("api.keystores.get_boto3_client")
+def test_get_key_falls_back_when_boto3_cannot_build_a_client(mock_get_client):
+    """
+    No AWS configuration at all still reaches the local file.
+
+    The client was constructed outside the try, so NoRegionError escaped and
+    the fallback never ran. CI has no region configured, which is where this
+    first showed up.
+    """
+    from botocore.exceptions import NoRegionError
+
+    from api.keystores import get_key
+
+    mock_get_client.side_effect = NoRegionError()
+
+    key = get_key(f"{ROOT_DIR}/fixtures/server-signing-private-key.pem")
+
+    assert isinstance(key, ec.EllipticCurvePrivateKey)

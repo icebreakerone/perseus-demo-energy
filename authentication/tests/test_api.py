@@ -602,7 +602,7 @@ def test_token_hydra_unreachable():
 @patch("api.main.permissions.store_permission")
 @responses.activate
 def test_token_success_does_not_log_credentials(
-    mock_store_permission, mock_decode_with_jwks, log_lines
+    mock_store_permission, mock_decode_with_jwks, mock_auth, log_lines
 ):
     """The tokens Hydra issues must not reach the logs."""
     cert_urlencoded = client_certificate(roles=[TEST_ROLE])

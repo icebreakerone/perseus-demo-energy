@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import Optional
 
 import boto3  # type: ignore[import-untyped]
+from botocore.exceptions import BotoCoreError, ClientError  # type: ignore[import-untyped]
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
@@ -73,14 +74,14 @@ def get_key(key_path: str) -> ec.EllipticCurvePrivateKey:
 
 
     """
-    ssm_client = get_boto3_client("ssm")
     logger.info(f"Getting {key_path}")
     try:
+        ssm_client = get_boto3_client("ssm")
         param_value = ssm_client.get_parameter(Name=key_path, WithDecryption=True)[
             "Parameter"
         ]["Value"]
         key_pem = param_value.encode("utf-8")
-    except (ssm_client.exceptions.ParameterNotFound, ssm_client.exceptions.ClientError):
+    except (BotoCoreError, ClientError):
         logger.warning("jwt signing key not found in SSM. Trying local file.")
         try:
             with open(key_path, "rb") as key_file:
