@@ -352,7 +352,8 @@ def test_callback_missing_state():
         follow_redirects=False,
     )
     assert response.status_code == 400
-    assert "Missing state" in response.json()["detail"]
+    assert response.json()["error"] == "invalid_request"
+    assert "Missing state" in response.json()["error_description"]
 
 
 @patch("api.main.store.get_callback_url")
@@ -365,7 +366,8 @@ def test_callback_expired_state(mock_get_callback_url):
         follow_redirects=False,
     )
     assert response.status_code == 400
-    assert "not found or expired" in response.json()["detail"]
+    assert response.json()["error"] == "invalid_request"
+    assert "not found or expired" in response.json()["error_description"]
 
 
 def test_pushed_authorization_request_malformed_certificate():
@@ -632,3 +634,83 @@ def test_token_success_does_not_log_credentials(
     assert MOCK_REFRESH_TOKEN not in logged
     # A reference is logged instead, so a support request can still be traced
     assert "Issued token for" in logged
+
+
+# Starlette re-raises unhandled exceptions in tests unless this is off, which
+# would bypass the catch-all handler we want to exercise
+error_client = TestClient(app, raise_server_exceptions=False)
+
+
+def test_validation_error_uses_the_oauth_shape():
+    """A missing form field is invalid_request, not Pydantic's 422 list."""
+    cert_urlencoded = client_certificate()
+
+    response = client.post(
+        "/api/v1/par",
+        data={"scope": "profile"},
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 400
+    body = response.json()
+    assert body["error"] == "invalid_request"
+    # The failing parameters are named, so the Pydantic detail is not missed
+    assert "response_type" in body["error_description"]
+    assert "redirect_uri" in body["error_description"]
+    assert "code_challenge" in body["error_description"]
+    assert "detail" not in body
+
+
+@patch("api.main.store.get_request")
+def test_unhandled_error_is_reportable(mock_get_request):
+    """An infrastructure failure carries an identifier the caller can quote."""
+    mock_get_request.side_effect = RuntimeError("redis is down")
+
+    response = error_client.get(
+        "/api/v1/authorize",
+        params={"request_uri": "urn:ietf:params:oauth:request_uri:abc"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 500
+    body = response.json()
+    assert body["error"] == "server_error"
+    assert len(body["correlation_id"]) == 12
+    # Nothing about the underlying failure reaches the caller
+    assert "redis" not in response.text.lower()
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@responses.activate
+def test_server_side_oauth_error_is_reportable():
+    """A 502 is correlatable too, not only an unhandled exception."""
+    cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    responses.add(
+        responses.POST,
+        f"{FakeConf().ORY_URL}/oauth2/token",
+        json=HYDRA_INVALID_CLIENT,
+        status=401,
+    )
+
+    response = client.post(
+        "/api/v1/authorize/token",
+        data=TOKEN_REQUEST_DATA,
+        headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
+    )
+
+    assert response.status_code == 502
+    assert len(response.json()["correlation_id"]) == 12
+
+
+def test_caller_error_has_no_correlation_id():
+    """A 4xx is the caller's to fix, so there is nothing to report to us."""
+    response = client.get(
+        "/api/v1/callback",
+        params={"code": "auth_code_123"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 400
+    assert "correlation_id" not in response.json()

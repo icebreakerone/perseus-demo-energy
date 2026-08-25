@@ -13,12 +13,18 @@ All notable changes to this project will be documented in this file.
 - One wording for each condition. A missing client certificate is `Client certificate required` in both apps, and an expired token is `Token expired` whichever check catches it. No error message ends in a full stop or an exclamation mark
 - A missing local Ory credential returns `server_error` in the same shape as Hydra rejecting one, rather than `{"detail": "Client ID and Secret not set"}`. It stays a `500` against the `502` for a rejected credential, since the request never reached upstream, and the names of the unset variables go to the logs rather than to the caller
 - Removed the unreachable `Failed to revoke permission` response. `revoke_permission` either returns a permission or raises
+- Every error in both apps now uses one shape. The Authentication API answers `{"error": ..., "error_description": ...}` throughout, and the Resource API the same with RFC 6750 error codes. `HTTPException` is no longer raised anywhere
+- The Resource API sends a `WWW-Authenticate` challenge on every `401`, which the IB1 ops guidelines ask of a Data Provider. A request carrying no bearer token gets a bare `Bearer` challenge with no error code, per RFC 6750 section 3
+- Request validation failures return `400 invalid_request` naming the failing parameters, instead of FastAPI's `422` with Pydantic's `loc`/`msg`/`type` list
 
 ### Fixed
 
 - An unreachable Ory Hydra returns `502`, and a timeout `504`, instead of an unhandled `500`
 - An unreachable JWKS endpoint, or a key ID that has been rotated away, returns `502` instead of an unhandled `500` in the authentication app
 - The token endpoint no longer logs the access token, the refresh token or the full token claims. A short reference is logged instead so a request can still be traced
+- Unhandled failures return `server_error` with a `correlation_id` that also appears in the log line carrying the traceback, instead of a bare `500 Internal Server Error` with no body. Redis, DynamoDB and SSM failures were all unreportable
+- A bearer token that is not a JWT, or whose header carries no key id, returns `401` instead of `500`. Reading the token header sat outside the try in both apps
+- Resource API log lines are interpolated. They used `%s` placeholders with loguru, which formats with `{}`, so the values were dropped and the placeholders logged literally
 - Certificate errors return `401` instead of `500`: the resource API caught a local exception class unrelated to the `ib1.directory` hierarchy that `require_role` raises, so a valid certificate with the wrong role returned `500`; malformed certificates and certificates missing the role or application extension are now also rejected with `401` in both apps
 - An access token returned by Ory Hydra that cannot be decoded gives `502` from the token endpoint rather than an unhandled `500`
 

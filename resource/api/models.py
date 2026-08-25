@@ -2,6 +2,15 @@ import datetime
 from pydantic import BaseModel, Field
 
 
+class ApiErrorResponse(BaseModel):
+    """
+    Error response carrying an RFC 6750 error code.
+    """
+
+    error: str
+    error_description: str | None = None
+
+
 class Consumption(BaseModel):
     value: float
     unitCode: str

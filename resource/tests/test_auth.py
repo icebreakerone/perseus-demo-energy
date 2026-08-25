@@ -77,7 +77,7 @@ def test_invalid_signature(mock_jwks):
 def test_missing_kid(mock_jwks):
     token = jwt.encode({"sub": "123"}, TEST_PRIVATE_KEY, algorithm="ES256")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(AccessTokenDecodingError):
         decode_with_jwks(token, mock_jwks)
 
 

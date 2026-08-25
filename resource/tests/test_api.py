@@ -163,7 +163,8 @@ def test_consumption_wrong_role(api_consumption_url):
     )
 
     assert response.status_code == 401
-    assert "does not include role" in response.json()["detail"]
+    assert response.json()["error"] == "invalid_token"
+    assert "does not include role" in response.json()["error_description"]
 
 
 def test_consumption_certificate_without_roles(api_consumption_url):
@@ -184,7 +185,7 @@ def test_consumption_certificate_without_roles(api_consumption_url):
     )
 
     assert response.status_code == 401
-    assert "does not include role information" in response.json()["detail"]
+    assert "does not include role information" in response.json()["error_description"]
 
 
 def test_consumption_certificate_without_application(api_consumption_url):
@@ -205,7 +206,10 @@ def test_consumption_certificate_without_application(api_consumption_url):
     )
 
     assert response.status_code == 401
-    assert "does not include application information" in response.json()["detail"]
+    assert (
+        "does not include application information"
+        in response.json()["error_description"]
+    )
 
 
 def test_consumption_malformed_certificate(api_consumption_url):
@@ -221,4 +225,154 @@ def test_consumption_malformed_certificate(api_consumption_url):
     )
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Invalid certificate string"
+    assert response.json()["error_description"] == "Invalid certificate string"
+
+
+# Starlette re-raises unhandled exceptions in tests unless this is off
+error_client = TestClient(app, raise_server_exceptions=False)
+
+
+def test_missing_token_sends_a_bare_challenge(api_consumption_url):
+    """
+    RFC 6750 section 3: a request carrying no credentials gets a challenge with
+    no error code, because there is nothing to tell the caller they got wrong.
+    """
+    pem, _, _, _ = client_certificate(
+        roles=[conf.PROVIDER_ROLE],
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
+    )
+
+    response = client.get(
+        api_consumption_url,
+        headers={"x-amzn-mtls-clientcert-leaf": quote(pem)},
+    )
+
+    assert response.status_code == 401
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+    assert response.json()["error_description"] == "No token provided"
+
+
+def test_rejected_certificate_sends_a_challenge(api_consumption_url):
+    """A 401 carries the RFC 6750 challenge the IB1 guidelines ask for."""
+    response = client.get(
+        api_consumption_url,
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": "not-a-certificate",
+        },
+    )
+
+    assert response.status_code == 401
+    challenge = response.headers["WWW-Authenticate"]
+    assert challenge.startswith("Bearer ")
+    assert 'error="invalid_token"' in challenge
+    assert 'error_description="Invalid certificate string"' in challenge
+
+
+def test_not_found_sends_no_challenge(
+    monkeypatch, mock_check_token, mock_ib1_directory_get_key
+):
+    """A 404 is not an authentication failure, so there is nothing to challenge."""
+    monkeypatch.setattr(
+        conf, "SIGNING_ROOT_CA_CERTIFICATE", f"{ROOT_DIR}/fixtures/test-suite-cert.pem"
+    )
+    monkeypatch.setattr(
+        conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-bundle.pem"
+    )
+    mock_check_token.return_value = (
+        {"sub": "account123"},
+        {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
+    )
+    pem, _, _, _ = client_certificate(
+        roles=[conf.PROVIDER_ROLE],
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
+    )
+    today = datetime.date.today().isoformat()
+
+    response = client.get(
+        f"/datasources/not-a-meter/import?from={today}&to={today}",
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error"] == "not_found"
+    assert "WWW-Authenticate" not in response.headers
+
+
+def test_validation_error_uses_the_api_shape(mock_check_token):
+    """A missing date parameter names the parameter rather than returning a 422."""
+    mock_check_token.return_value = (
+        {"sub": "account123"},
+        {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
+    )
+    pem, _, _, _ = client_certificate(
+        roles=[conf.PROVIDER_ROLE],
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
+    )
+
+    response = client.get(
+        f"/datasources/{DEMO_METER_ID}/import",
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
+        },
+    )
+
+    assert response.status_code == 400
+    body = response.json()
+    assert body["error"] == "invalid_request"
+    assert "from" in body["error_description"]
+    assert "to" in body["error_description"]
+
+
+def test_unhandled_error_is_reportable(api_consumption_url, mocker):
+    """An infrastructure failure carries an identifier the caller can quote."""
+    mocker.patch(
+        "api.main.directory.parse_cert", side_effect=RuntimeError("boto is down")
+    )
+
+    response = error_client.get(
+        api_consumption_url,
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": "anything",
+        },
+    )
+
+    assert response.status_code == 500
+    body = response.json()
+    assert body["error"] == "server_error"
+    assert len(body["correlation_id"]) == 12
+    assert "boto" not in response.text.lower()
+
+
+def test_malformed_bearer_token_is_rejected_not_a_server_error(api_consumption_url):
+    """
+    A token that is not a JWT is the caller's mistake.
+
+    Reading the header sat outside the try in decode_with_jwks, so PyJWT's
+    DecodeError escaped as a 500.
+    """
+    pem, _, _, _ = client_certificate(
+        roles=[conf.PROVIDER_ROLE],
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
+    )
+
+    response = client.get(
+        api_consumption_url,
+        headers={
+            "Authorization": "Bearer not-a-jwt",
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
+        },
+    )
+
+    assert response.status_code == 401
+    assert response.json()["error"] == "invalid_token"
+    assert 'error="invalid_token"' in response.headers["WWW-Authenticate"]

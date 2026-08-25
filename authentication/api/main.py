@@ -1,6 +1,7 @@
 from typing import Annotated
 import json
 import os
+import uuid
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
 
 from cryptography import x509
@@ -8,11 +9,11 @@ from fastapi import (
     FastAPI,
     Depends,
     Header,
-    HTTPException,
     Request,
     status,
     Form,
 )
+from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -72,6 +73,13 @@ OAUTH_ERROR_RESPONSES: dict = {
 }
 
 
+def correlation_id() -> str:
+    """
+    An identifier a caller can quote when reporting a server side failure.
+    """
+    return uuid.uuid4().hex[:12]
+
+
 @app.exception_handler(OAuthError)
 async def oauth_error_handler(request: Request, exc: OAuthError) -> JSONResponse:
     """
@@ -80,7 +88,64 @@ async def oauth_error_handler(request: Request, exc: OAuthError) -> JSONResponse
     FastAPI's HTTPException cannot produce this, it always renders
     {"detail": ...}.
     """
-    return JSONResponse(status_code=exc.status_code, content=exc.body())
+    body = exc.body()
+    if exc.status_code >= 500:
+        reference = correlation_id()
+        body["correlation_id"] = reference
+        logger.error(
+            f"{exc.error} on {request.url.path}, correlation {reference}"
+        )
+    return JSONResponse(status_code=exc.status_code, content=body)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """
+    Answer a validation failure in the same shape as every other error.
+
+    FastAPI's default is a 422 carrying Pydantic's loc/msg/type list. RFC 6749
+    calls a malformed request invalid_request and a 400, so the failing
+    parameters are named in the description instead.
+    """
+    parameters = sorted(
+        {
+            ".".join(str(part) for part in error["loc"][1:]) or "body"
+            for error in exc.errors()
+        }
+    )
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": "invalid_request",
+            "error_description": (
+                "Invalid or missing parameters: " + ", ".join(parameters)
+            ),
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """
+    Catch everything else, so infrastructure failures are reportable.
+
+    Redis, DynamoDB and SSM failures all reached the caller as a bare
+    500 Internal Server Error with no body and nothing to quote.
+    """
+    reference = correlation_id()
+    logger.exception(
+        f"Unhandled error on {request.url.path}, correlation {reference}"
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "server_error",
+            "error_description": hydra.UPSTREAM_ERROR,
+            "correlation_id": reference,
+        },
+    )
 
 
 @app.get("/")
@@ -182,17 +247,18 @@ async def authorize(
     request_uri: str,
 ):
     if not request_uri:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Request URI required",
+        raise OAuthError(
+            status.HTTP_400_BAD_REQUEST, "invalid_request", "Request URI required"
         )
     # Retrieve PAR data from Redis
     token = request_uri.split(":")[-1]
     par_request = store.get_request(token)
     if not par_request:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Request URI does not exist or has expired",
+        # RFC 9101 section 6.2 registers invalid_request_uri for exactly this
+        raise OAuthError(
+            status.HTTP_400_BAD_REQUEST,
+            "invalid_request_uri",
+            "Request URI does not exist or has expired",
         )
 
     authorization_url = (
@@ -223,16 +289,16 @@ async def callback(request: Request):
     params = dict(request.query_params)
     state = params.get("state")
     if not state:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Missing state parameter",
+        raise OAuthError(
+            status.HTTP_400_BAD_REQUEST, "invalid_request", "Missing state parameter"
         )
 
     original_url = store.get_callback_url(state)
     if not original_url:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Callback URL not found or expired for this state",
+        raise OAuthError(
+            status.HTTP_400_BAD_REQUEST,
+            "invalid_request",
+            "Callback URL not found or expired for this state",
         )
 
     parsed = urlparse(original_url)

@@ -1,10 +1,13 @@
 import json
 import datetime
+import uuid
 from typing import Annotated
 
 # import x509
 
-from fastapi import FastAPI, HTTPException, Depends, Header, Query
+from fastapi import FastAPI, Depends, Header, Query
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.openapi.utils import get_openapi
 from starlette.requests import Request
@@ -16,7 +19,7 @@ from . import auth
 from . import conf
 from . import openapi
 from . import provenance
-from .exceptions import AccessTokenValidatorError
+from .exceptions import ApiError, AccessTokenValidatorError
 from .logger import get_logger
 
 
@@ -36,7 +39,7 @@ def require_mtls_and_token(
     """
     Dependency function that validates MTLS certificate and bearer token.
     Returns tuple of (cert_pem, decoded_token_dict, headers_dict, cert_object).
-    Raises HTTPException if validation fails.
+    Raises ApiError if validation fails.
     """
     cert_pem = x_amzn_mtls_clientcert_leaf
     if not cert_pem:
@@ -53,40 +56,28 @@ def require_mtls_and_token(
 
     if not cert_pem:
         logger.warning("No client certificate found in request")
-        raise HTTPException(
-            status_code=401,
-            detail="Client certificate required",
-        )
+        raise ApiError(401, "invalid_token", "Client certificate required")
 
     try:
         cert = directory.parse_cert(cert_pem)
         logger.info(
-            "Parsed certificate subject: %s",
-            directory.extensions.decode_application(cert),
+            f"Parsed certificate subject: "
+            f"{directory.extensions.decode_application(cert)}"
         )
     except directory.CertificateInvalidError as e:
-        logger.warning("Client certificate could not be parsed: %s", e)
-        raise HTTPException(
-            status_code=401,
-            detail=str(e),
-        )
+        logger.warning(f"Client certificate could not be parsed: {e}")
+        raise ApiError(401, "invalid_token", str(e))
     except directory.CertificateExtensionError as e:
-        logger.warning("Client certificate is missing required extensions: %s", e)
-        raise HTTPException(
-            status_code=401,
-            detail=str(e),
-        )
+        logger.warning(f"Client certificate is missing required extensions: {e}")
+        raise ApiError(401, "invalid_token", str(e))
     try:
         directory.require_role(
             conf.PROVIDER_ROLE,
             cert,
         )
     except (directory.CertificateRoleError, directory.CertificateExtensionError) as e:
-        logger.warning("Client certificate role check failed: %s", e)
-        raise HTTPException(
-            status_code=401,
-            detail=str(e),
-        )
+        logger.warning(f"Client certificate role check failed: {e}")
+        raise ApiError(401, "invalid_token", str(e))
     if token and token.credentials:
         # TODO don't use instrospection, check the token signature
         # And check the certificate binding
@@ -95,13 +86,17 @@ def require_mtls_and_token(
                 cert_pem,
                 token.credentials,
             )
-            logger.info("Token validated successfully for sub %s", decoded.get("sub"))
+            logger.info(f"Token validated successfully for sub {decoded.get('sub')}")
         except AccessTokenValidatorError as e:
-            logger.warning("Token validation failed: %s", e)
-            raise HTTPException(status_code=401, detail=str(e))
+            logger.warning(f"Token validation failed: {e}")
+            raise ApiError(401, "invalid_token", str(e))
     else:
+        # RFC 6750 section 3: no credentials presented, so the challenge
+        # carries no error code
         logger.warning("No bearer token provided")
-        raise HTTPException(status_code=401, detail="No token provided")
+        raise ApiError(
+            401, "invalid_token", "No token provided", include_code_in_header=False
+        )
 
     return decoded, headers, cert
 
@@ -111,6 +106,79 @@ app = FastAPI(
     title="Perseus Energy Demo Resource API",
     root_path=conf.OPEN_API_ROOT,
 )
+
+API_ERROR_RESPONSES: dict = {
+    400: {"model": models.ApiErrorResponse, "description": "Malformed request"},
+    401: {
+        "model": models.ApiErrorResponse,
+        "description": "Certificate or token rejected",
+    },
+    404: {"model": models.ApiErrorResponse, "description": "Not found"},
+}
+
+
+def correlation_id() -> str:
+    """
+    An identifier a caller can quote when reporting a server side failure.
+    """
+    return uuid.uuid4().hex[:12]
+
+
+@app.exception_handler(ApiError)
+async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
+    """
+    Render errors with an RFC 6750 code, and a challenge on a 401.
+    """
+    headers = {}
+    challenge = exc.header()
+    if challenge:
+        headers["WWW-Authenticate"] = challenge
+    return JSONResponse(
+        status_code=exc.status_code, content=exc.body(), headers=headers
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """
+    Answer a validation failure in the same shape as every other error.
+    """
+    parameters = sorted(
+        {
+            ".".join(str(part) for part in error["loc"][1:]) or "body"
+            for error in exc.errors()
+        }
+    )
+    return JSONResponse(
+        status_code=400,
+        content={
+            "error": "invalid_request",
+            "error_description": (
+                "Invalid or missing parameters: " + ", ".join(parameters)
+            ),
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    """
+    Catch everything else, so infrastructure failures are reportable.
+    """
+    reference = correlation_id()
+    logger.exception(
+        f"Unhandled error on {request.url.path}, correlation {reference}"
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "server_error",
+            "error_description": "Server error",
+            "correlation_id": reference,
+        },
+    )
 
 
 @app.get("/", response_model=dict)
@@ -125,7 +193,11 @@ def root():
     }
 
 
-@app.get("/datasources", response_model=models.Datasources)
+@app.get(
+    "/datasources",
+    response_model=models.Datasources,
+    responses=API_ERROR_RESPONSES,
+)
 def datasources(
     auth_result: tuple[dict, dict, object] = Depends(require_mtls_and_token),
 ) -> dict:
@@ -141,7 +213,11 @@ def datasources(
     }
 
 
-@app.get("/datasources/{id}/{measure}", response_model=models.MeterData)
+@app.get(
+    "/datasources/{id}/{measure}",
+    response_model=models.MeterData,
+    responses=API_ERROR_RESPONSES,
+)
 def consumption(
     id: str,
     measure: str,
@@ -150,7 +226,9 @@ def consumption(
     auth_result: tuple[dict, dict, object] = Depends(require_mtls_and_token),
 ):
     if id != DEMO_METER_ID:
-        raise HTTPException(status_code=404, detail="Meter not found")
+        # Not an RFC 6750 condition, so no registered code fits. The status
+        # carries the meaning and no challenge is sent.
+        raise ApiError(404, "not_found", "Meter not found")
     decoded, _, cert = auth_result
     # Create a new provenance record
     permission_granted = datetime.datetime.now(datetime.timezone.utc)
@@ -168,7 +246,7 @@ def consumption(
     )
     with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:
         data = json.load(f)
-    logger.info("Returning data and provenance for %s", decoded["sub"])
+    logger.info(f"Returning data and provenance for {decoded['sub']}")
     return {
         "data": data,
         "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},
