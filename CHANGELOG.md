@@ -20,6 +20,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- The evidence page returns `404` for an unknown evidence ID, instead of `200` with a "Not found" body
+- Removed `resource/cdk/lambda_code/lambda_authorizer.py`. It was a leftover from an API Gateway deployment since replaced by an ALB, was referenced nowhere, and described an authentication path that does not exist
 - An unreachable Ory Hydra returns `502`, and a timeout `504`, instead of an unhandled `500`
 - An unreachable JWKS endpoint, or a key ID that has been rotated away, returns `502` instead of an unhandled `500` in the authentication app
 - The token endpoint no longer logs the access token, the refresh token or the full token claims. A short reference is logged instead so a request can still be traced

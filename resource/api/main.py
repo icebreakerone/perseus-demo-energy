@@ -55,6 +55,11 @@ def require_mtls_and_token(
         logger.info("Loaded certificate from x_amzn_mtls_clientcert_leaf header")
 
     if not cert_pem:
+        # Defence in depth. In production the ALB listener runs mutual
+        # authentication in "verify" mode, so a certificate-less connection is
+        # refused before it reaches us. This is reachable locally, where nginx
+        # uses ssl_verify_client optional, and would be if the app were ever
+        # exposed without the ALB in front of it.
         logger.warning("No client certificate found in request")
         raise ApiError(401, "invalid_token", "Client certificate required")
 
