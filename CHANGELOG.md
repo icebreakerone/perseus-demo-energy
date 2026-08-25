@@ -15,7 +15,8 @@ All notable changes to this project will be documented in this file.
 - Removed the unreachable `Failed to revoke permission` response. `revoke_permission` either returns a permission or raises
 - Every error in both apps now uses one shape. The Authentication API answers `{"error": ..., "error_description": ...}` throughout, and the Resource API the same with RFC 6750 error codes. `HTTPException` is no longer raised anywhere
 - The Resource API sends a `WWW-Authenticate` challenge on every `401`, which the IB1 ops guidelines ask of a Data Provider. A request carrying no bearer token gets a bare `Bearer` challenge with no error code, per RFC 6750 section 3
-- Request validation failures return `400 invalid_request` naming the failing parameters, instead of FastAPI's `422` with Pydantic's `loc`/`msg`/`type` list
+- Request validation failures return `400 invalid_request` naming each failing parameter and why, instead of FastAPI's `422` with Pydantic's `loc`/`msg`/`type` list
+- `measure` on `/datasources/{id}/{measure}` is validated against the same list `/datasources` advertises as `availableMeasures`. Any value was previously accepted and returned the same sample data. The allowed values now appear in the OpenAPI schema
 
 ### Fixed
 

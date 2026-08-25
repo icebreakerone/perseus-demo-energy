@@ -145,9 +145,10 @@ async def validation_error_handler(
     """
     Answer a validation failure in the same shape as every other error.
     """
-    parameters = sorted(
+    problems = sorted(
         {
-            ".".join(str(part) for part in error["loc"][1:]) or "body"
+            f"{'.'.join(str(part) for part in error['loc'][1:]) or 'body'}: "
+            f"{error['msg']}"
             for error in exc.errors()
         }
     )
@@ -155,9 +156,7 @@ async def validation_error_handler(
         status_code=400,
         content={
             "error": "invalid_request",
-            "error_description": (
-                "Invalid or missing parameters: " + ", ".join(parameters)
-            ),
+            "error_description": "Invalid or missing parameters. " + "; ".join(problems),
         },
     )
 
@@ -207,7 +206,7 @@ def datasources(
                 "id": DEMO_METER_ID,
                 "type": "electricity",
                 "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},
-                "availableMeasures": ["import", "export"],
+                "availableMeasures": list(models.Measure),
             }
         ]
     }
@@ -220,7 +219,7 @@ def datasources(
 )
 def consumption(
     id: str,
-    measure: str,
+    measure: models.Measure,
     from_date: datetime.date = Query(alias="from"),
     to_date: datetime.date = Query(alias="to"),
     auth_result: tuple[dict, dict, object] = Depends(require_mtls_and_token),
@@ -241,7 +240,7 @@ def consumption(
         permission_expires=permission_expires,
         permission_granted=permission_granted,
         account=decoded["sub"],
-        service_url=f"https://{conf.API_DOMAIN}/datasources/{id}/{measure}",
+        service_url=f"https://{conf.API_DOMAIN}/datasources/{id}/{measure.value}",
         cap_member=directory.extensions.decode_application(cert),
     )
     with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:

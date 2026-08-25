@@ -109,9 +109,10 @@ async def validation_error_handler(
     calls a malformed request invalid_request and a 400, so the failing
     parameters are named in the description instead.
     """
-    parameters = sorted(
+    problems = sorted(
         {
-            ".".join(str(part) for part in error["loc"][1:]) or "body"
+            f"{'.'.join(str(part) for part in error['loc'][1:]) or 'body'}: "
+            f"{error['msg']}"
             for error in exc.errors()
         }
     )
@@ -119,9 +120,7 @@ async def validation_error_handler(
         status_code=400,
         content={
             "error": "invalid_request",
-            "error_description": (
-                "Invalid or missing parameters: " + ", ".join(parameters)
-            ),
+            "error_description": "Invalid or missing parameters. " + "; ".join(problems),
         },
     )
 

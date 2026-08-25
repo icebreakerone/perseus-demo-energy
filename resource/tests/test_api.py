@@ -34,7 +34,7 @@ def get_private_key():
 def api_consumption_url():
     from_date = datetime.date.today().isoformat()
     to_date = datetime.date.today().isoformat()
-    return f"/datasources/{DEMO_METER_ID}/anymeasure?from={from_date}&to={to_date}"
+    return f"/datasources/{DEMO_METER_ID}/import?from={from_date}&to={to_date}"
 
 
 def test_consumption_no_token(api_consumption_url):
@@ -376,3 +376,125 @@ def test_malformed_bearer_token_is_rejected_not_a_server_error(api_consumption_u
     assert response.status_code == 401
     assert response.json()["error"] == "invalid_token"
     assert 'error="invalid_token"' in response.headers["WWW-Authenticate"]
+
+
+def test_unknown_measure_is_rejected(mock_check_token):
+    """
+    A measure outside the advertised set is refused, with the set named.
+
+    /datasources advertises availableMeasures, and until now the consumption
+    endpoint accepted anything and returned the same data regardless.
+    """
+    mock_check_token.return_value = (
+        {"sub": "account123"},
+        {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
+    )
+    pem, _, _, _ = client_certificate(
+        roles=[conf.PROVIDER_ROLE],
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
+    )
+    today = datetime.date.today().isoformat()
+
+    response = client.get(
+        f"/datasources/{DEMO_METER_ID}/anymeasure?from={today}&to={today}",
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
+        },
+    )
+
+    assert response.status_code == 400
+    description = response.json()["error_description"]
+    assert "measure" in description
+    # The caller is told what is allowed, which is the point of the enum
+    assert "import" in description
+    assert "export" in description
+
+
+def test_available_measures_match_what_is_accepted(
+    monkeypatch, mock_check_token, mock_ib1_directory_get_key, mocker
+):
+    """
+    The measures /datasources advertises are exactly the ones that work.
+
+    The two used to be unconnected, a literal in one handler and no check in
+    the other.
+    """
+    monkeypatch.setattr(
+        conf, "SIGNING_ROOT_CA_CERTIFICATE", f"{ROOT_DIR}/fixtures/test-suite-cert.pem"
+    )
+    monkeypatch.setattr(
+        conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-bundle.pem"
+    )
+    mock_check_token.return_value = (
+        {"sub": "account123"},
+        {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
+    )
+    mock_ib1_directory_get_key.return_value = get_private_key()
+    mocker.patch("api.provenance.create_provenance_records", return_value={})
+    pem, _, _, _ = client_certificate(
+        roles=[conf.PROVIDER_ROLE],
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
+    )
+    headers = {
+        "Authorization": "Bearer token",
+        "x-amzn-mtls-clientcert-leaf": quote(pem),
+    }
+    today = datetime.date.today().isoformat()
+
+    advertised = client.get("/datasources", headers=headers).json()["data"][0][
+        "availableMeasures"
+    ]
+
+    assert advertised == ["import", "export"]
+    for measure in advertised:
+        response = client.get(
+            f"/datasources/{DEMO_METER_ID}/{measure}?from={today}&to={today}",
+            headers=headers,
+        )
+        assert response.status_code == 200, measure
+
+
+def test_measure_reaches_provenance_as_its_value(
+    monkeypatch, mock_check_token, mock_ib1_directory_get_key, mocker
+):
+    """
+    The service URL carries "import", not "Measure.IMPORT".
+
+    A str Enum formats as its repr in an f-string, and this URL is signed into
+    the provenance record.
+    """
+    monkeypatch.setattr(
+        conf, "SIGNING_ROOT_CA_CERTIFICATE", f"{ROOT_DIR}/fixtures/test-suite-cert.pem"
+    )
+    monkeypatch.setattr(
+        conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-bundle.pem"
+    )
+    mock_check_token.return_value = (
+        {"sub": "account123"},
+        {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
+    )
+    mock_ib1_directory_get_key.return_value = get_private_key()
+    mock_records = mocker.patch(
+        "api.provenance.create_provenance_records", return_value={}
+    )
+    pem, _, _, _ = client_certificate(
+        roles=[conf.PROVIDER_ROLE],
+        member="https://directory.ib1.org/member/123456",
+        add_application=True,
+    )
+    today = datetime.date.today().isoformat()
+
+    client.get(
+        f"/datasources/{DEMO_METER_ID}/export?from={today}&to={today}",
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": quote(pem),
+        },
+    )
+
+    service_url = mock_records.call_args.kwargs["service_url"]
+    assert service_url.endswith("/export")
+    assert "Measure" not in service_url

@@ -1,5 +1,20 @@
 import datetime
+from enum import Enum
+
 from pydantic import BaseModel, Field
+
+
+class Measure(str, Enum):
+    """
+    The measures this data source can return.
+
+    One list serves both purposes: /datasources advertises it, and FastAPI
+    validates the path parameter against it and publishes the allowed values
+    in the OpenAPI schema.
+    """
+
+    IMPORT = "import"
+    EXPORT = "export"
 
 
 class ApiErrorResponse(BaseModel):
@@ -29,7 +44,7 @@ class Datasource(BaseModel):
     id: str
     type: str
     location: dict
-    availableMeasures: list[str]
+    availableMeasures: list[Measure]
 
 
 class Datasources(BaseModel):
