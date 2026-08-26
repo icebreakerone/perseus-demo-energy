@@ -2,11 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [v4.0.0] - 2026-08-26
+
+### Breaking
+
+- Error responses changed shape. Both APIs now answer with `{"error": ..., "error_description": ...}` where they previously answered `{"detail": "..."}`. Anything reading `detail` needs updating
+- Request validation failures return `400` with that shape, not `422` with Pydantic's `loc`/`msg`/`type` list
+- `/datasources/{id}/{measure}` rejects a measure outside `availableMeasures` with `400`. Any value was previously accepted
 
 ### Changed
 
-- The PAR, token, revocation and permissions endpoints return errors in the RFC 6749 section 5.2 shape, `{"error": ..., "error_description": ...}`, instead of FastAPI's `{"detail": "..."}`. Ory Hydra's non-standard `error_hint` is included where it is forwarded. The `422` validation shape and the `/authorize` and `/callback` endpoints are unchanged for now
+- The PAR, token, revocation and permissions endpoints return errors in the RFC 6749 section 5.2 shape, `{"error": ..., "error_description": ...}`, instead of FastAPI's `{"detail": "..."}`. Ory Hydra's non-standard `error_hint` is included where it is forwarded
 - Errors from Ory Hydra are parsed and mapped rather than passed through. Only `error_description` and `error_hint` are forwarded, and only for errors the caller can act on. `error_debug`, which Ory populates with internal detail, is never forwarded, and an unparseable body is dropped rather than relayed
 - The status returned for an upstream failure is chosen from Hydra's `error` code rather than its HTTP status. `invalid_client` and `unauthorized_client` describe the client authenticated at Hydra, which is this service, so they now return `502` rather than telling the caller their own authentication failed
 - Both calls to Ory Hydra now set a timeout, `ORY_TIMEOUT`, defaulting to 10 seconds
@@ -17,6 +23,7 @@ All notable changes to this project will be documented in this file.
 - The Resource API sends a `WWW-Authenticate` challenge on every `401`, which the IB1 ops guidelines ask of a Data Provider. A request carrying no bearer token gets a bare `Bearer` challenge with no error code, per RFC 6750 section 3
 - Request validation failures return `400 invalid_request` naming each failing parameter and why, instead of FastAPI's `422` with Pydantic's `loc`/`msg`/`type` list
 - `measure` on `/datasources/{id}/{measure}` is validated against the same list `/datasources` advertises as `availableMeasures`. Any value was previously accepted and returned the same sample data. The allowed values now appear in the OpenAPI schema
+- Removed the unused S3, SSM and CloudWatch Logs VPC endpoints from the resource VPC: the Lambda runs outside the VPC, so nothing could route through them and the two interface endpoints billed ~$16/month per environment
 
 ### Fixed
 
@@ -50,7 +57,6 @@ All notable changes to this project will be documented in this file.
 - Removed all `x-fapi-interaction-id` handling (request parameter and response header), as `x-fapi-*` headers are not part of the IB1 OAuth profile
 - Removed the non-standard `transaction` field from provenance transfer steps
 - `messaging.py` derives the trust-framework URL from configuration instead of a hardcoded host
-- Removed the unused S3, SSM and CloudWatch Logs VPC endpoints from the resource VPC: the Lambda runs outside the VPC, so nothing could route through them and the two interface endpoints billed ~$16/month per environment
 
 ### Fixed
 
