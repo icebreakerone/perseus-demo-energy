@@ -27,6 +27,11 @@ ORY_TOKEN_ENDPOINT = os.environ.get(
     f"{ORY_URL}/oauth2/token",
 )
 
+# Seconds to wait for Ory Hydra. Deliberately below the API Gateway integration
+# timeout of 30s, so that a slow upstream produces our error rather than a
+# shapeless 504 from the infrastructure.
+ORY_TIMEOUT = float(os.environ.get("ORY_TIMEOUT", "10"))
+
 ORY_AUTHORIZATION_ENDPOINT = (
     os.environ.get(  # User logins are handled on Ory Hydra via a 302 redirect
         "ORY_AUTHORIZATION_ENDPOINT",

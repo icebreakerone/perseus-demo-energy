@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric.types import PrivateKeyTypes
@@ -37,20 +38,20 @@ def get_key(key_path: str) -> PrivateKeyTypes:
 
 
     """
-    ssm_client = get_boto3_client("ssm")
     logger.info(f"Getting {key_path}")
     try:
+        ssm_client = get_boto3_client("ssm")
         param_value = ssm_client.get_parameter(Name=key_path, WithDecryption=True)[
             "Parameter"
         ]["Value"]
         key_pem = param_value.encode("utf-8")
-    except (ssm_client.exceptions.ParameterNotFound, ssm_client.exceptions.ClientError):
+    except (BotoCoreError, ClientError):
         logger.warning("signing key not found in SSM. Trying local file.")
         try:
             with open(conf.SIGNING_KEY, "rb") as key_file:
                 key_pem = key_file.read()
         except FileNotFoundError:
-            raise KeyNotFoundError("signing key not found in SSM or local file.")
+            raise KeyNotFoundError("signing key not found in SSM or local file")
     return serialization.load_pem_private_key(
         key_pem, password=None, backend=default_backend()
     )

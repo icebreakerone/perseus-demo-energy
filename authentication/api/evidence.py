@@ -41,17 +41,14 @@ async def evidence(request: Request, evidence_id: str):
     permission = permissions.get_permission_by_evidence_id(evidence_id)
     if not permission:
         return templates.TemplateResponse(
+            request,
             "error.html",
-            {
-                "message": "Permission not found",
-                "request": request,
-            },
+            {"message": "Permission not found"},
+            status_code=404,
         )
 
     return templates.TemplateResponse(
+        request,
         "evidence.html",
-        {
-            "permission": permission,
-            "request": request,
-        },
+        {"permission": permission},
     )

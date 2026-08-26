@@ -23,26 +23,9 @@ class NetworkConstruct(Construct):
             ],
         )
 
-        # Optional: Add VPC endpoints for AWS services if Lambda needs to access them
-        # These can reduce data transfer costs and improve security
-        # S3 Gateway endpoint (free, no ENI needed)
-        self.vpc.add_gateway_endpoint(
-            f"{environment_name}-S3Endpoint",
-            service=ec2.GatewayVpcEndpointAwsService.S3,
-        )
-
-        # Interface endpoints for services that Lambda might use
-        # (Only needed if Lambda is in VPC, which we're not doing for simplicity)
-        # But adding them for future flexibility and cost optimization
-        self.vpc.add_interface_endpoint(
-            f"{environment_name}-SSMEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.SSM,
-        )
-
-        self.vpc.add_interface_endpoint(
-            f"{environment_name}-CloudWatchLogsEndpoint",
-            service=ec2.InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS,
-        )
+        # No VPC endpoints: the only resource in this VPC is the ALB, and the
+        # Lambda runs outside the VPC, so nothing here calls AWS APIs privately.
+        # Add endpoints back if the Lambda is ever moved into the VPC.
 
         # Security group for ALB (will be created in loadbalancer.py)
         # This is just a placeholder - actual security groups are created in LoadBalancer construct

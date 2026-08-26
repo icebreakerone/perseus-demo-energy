@@ -32,12 +32,19 @@ def decode_with_jwks(token: str, jwks_url: str, verify: bytes | None = None) -> 
     jwks_client = jwt.PyJWKClient(
         jwks_url, headers={"User-Agent": "ib1/1.0"}, ssl_context=context
     )
-    header = jwt.get_unverified_header(token)
-    key = jwks_client.get_signing_key(header["kid"]).key
+    try:
+        header = jwt.get_unverified_header(token)
+        key = jwks_client.get_signing_key(header["kid"]).key
+    except KeyError:
+        raise AccessTokenDecodingError("Token header has no key id")
+    except jwt.exceptions.PyJWKClientError as e:
+        raise AccessTokenDecodingError(f"Could not fetch the signing key: {e}")
+    except jwt.InvalidTokenError as e:
+        raise AccessTokenDecodingError(f"Invalid token: {e}")
     try:
         payload = jwt.decode(token, key, [header["alg"]])
     except jwt.ExpiredSignatureError:
-        raise AccessTokenTimeError("Token has expired!")
+        raise AccessTokenTimeError("Token expired")
     except jwt.InvalidTokenError as e:
         raise AccessTokenDecodingError(f"Invalid token: {e}")
     return payload
