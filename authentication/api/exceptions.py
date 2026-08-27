@@ -60,6 +60,16 @@ class AccessTokenAudienceError(AccessTokenValidatorError):
     pass
 
 
+class LicenseScopeError(Exception):
+    """
+    A token carried no single Registry License URL in its granted scopes.
+
+    Per the IB1 OAuth profile the scope is a Registry License URL. A token
+    without one means the authorization server is misconfigured, not that the
+    caller did anything wrong.
+    """
+
+
 class PermissionStorageError(Exception):
     pass
 

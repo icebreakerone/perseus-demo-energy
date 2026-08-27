@@ -77,9 +77,8 @@ def create_provenance_records(
                 }
             },
             "perseus:assurance": {  # TODO add logic to select correct assurance
-                "dataSource": f"{conf.SCHEME_BASE_URL}/assurance/data-source/SmartMeter",
                 "missingData": f"{conf.SCHEME_BASE_URL}/assurance/missing-data/Missing",
-                "processing": f"{conf.SCHEME_BASE_URL}/assurance/processing/SmartDCCOtherUser",
+                "originMethod": f"{conf.SCHEME_BASE_URL}/assurance/origin-method/SmartDCCOtherUser",
             },
         }
     )
@@ -91,7 +90,7 @@ def create_provenance_records(
             "scheme": conf.SCHEME_BASE_URL,
             "of": origin_id,
             "to": cap_member,
-            "standard": f"{conf.SCHEME_BASE_URL}/standard/energy-consumption-data/2024-12-05",
+            "standard": f"{conf.SCHEME_BASE_URL}/standard/energy-consumption-data/2026-03-12",
             "license": conf.ENERGY_DATA_LICENSE_URL,
             "service": service_url,
             "path": "/readings",

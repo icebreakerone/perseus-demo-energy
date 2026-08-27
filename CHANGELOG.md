@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- The Permission Record's `license` is the Registry License URL selected from the token's granted scopes, rather than whichever scope Ory Hydra happened to return first. Records previously named a license that does not resolve in the Registry, and disagreed with the provenance record for the same transaction
+- Provenance transfer steps name `standard/energy-consumption-data/2026-03-12`. The retired `2024-12-05` segment does not resolve in the Registry; it was missed when the license was migrated in v3.0.0
+- Provenance origin steps use the assurance vocabularies the Registry actually publishes. `originMethod` under `assurance/origin-method/` replaces `processing` under `assurance/processing/`, and `dataSource` is removed. Neither previous URL resolved, and the source type is already carried by `sourceType`
+- A token carrying no Registry License URL among its scopes is rejected rather than storing a non-license value as the permission's license. An empty or absent `scp` previously raised `IndexError`/`KeyError`
+- The Ory client setup in the README lists the Registry License URL as the scope rather than `profile`, and a single `Code` response type rather than `Code and ID Token`
+
+### Breaking
+
+- Provenance record structure changed. Origin steps carry `perseus:assurance.originMethod` in place of `perseus:assurance.processing`, and no longer carry `perseus:assurance.dataSource`. This alters the signed record structure
+- Clients must request the current license scope, `…/scheme/perseus/license/energy-consumption-edp-cap/2026-03-12`, and the OAuth client registration must list it. A client registered only for the superseded `energy-consumption-data/2024-12-05` fails with `invalid_scope`
+
 ## [v4.0.0] - 2026-08-26
 
 ### Breaking

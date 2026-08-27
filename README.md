@@ -159,9 +159,15 @@ Please contact [tf-ops@icebreakerone.org](mailto:tf-ops@icebreakerone.org) for t
 
 - Authentication method set to None
 - Grant types authorization Code and Refresh Token
-- Response types Code and ID Token
+- Response type Code
 - Access Token Type jwt
-- Scopes profile and offline_access
+- Scopes `offline_access` and the Registry License URL that this deployment issues,
+  which is `SCHEME_BASE_URL` followed by
+  `/license/energy-consumption-edp-cap/2026-03-12`. Per the
+  [IB1 OAuth profile](https://specification.trust.ib1.org/oauth-with-member-identity-certificates/1.0/#oauth-profile)
+  the scope *is* a Registry License URL, so it changes whenever the Registry publishes a
+  new version of the license, and a client registered for a superseded version will
+  reject the scope this server advertises
 - Redirect urls to match your production and/or development and local redirect URLs
 
 ![Authentication Method None](docs/authentication-method-none.png)
