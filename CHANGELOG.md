@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- preprod points at the sandbox Registry. The `dev` CDK context, which preprod deploys, set `SCHEME_BASE_URL` to `registry.core.development.trust.ib1.org`, a host that does not resolve, so `PROVIDER_ROLE`, `TRUST_FRAMEWORK_URL` and both license URLs were derived from a Registry that does not exist and no client's scope could match
 - The Permission Record's `license` is the Registry License URL selected from the token's granted scopes, rather than whichever scope Ory Hydra happened to return first. Records previously named a license that does not resolve in the Registry, and disagreed with the provenance record for the same transaction
 - Provenance transfer steps name `standard/energy-consumption-data/2026-03-12`, the `ib1:SchemeCatalogRequirements` document that also pins the license the same step records. The retired `2024-12-05` version does not resolve in the Registry, and was missed when the license moved to `energy-consumption-edp-cap/2026-03-12` in v3.0.0
 - Provenance origin steps use the assurance vocabularies the Registry actually publishes. `originMethod` under `assurance/origin-method/` replaces `processing` under `assurance/processing/`, and `dataSource` is removed. Neither previous URL resolved, and the source type is already carried by `sourceType`
