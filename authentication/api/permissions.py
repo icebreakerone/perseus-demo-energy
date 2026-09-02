@@ -6,7 +6,11 @@ import boto3
 
 from . import models
 from . import conf
-from .exceptions import PermissionStorageError, PermissionRevocationError
+from .exceptions import (
+    LicenseScopeError,
+    PermissionStorageError,
+    PermissionRevocationError,
+)
 from .logger import get_logger
 
 logger = get_logger()
@@ -159,6 +163,26 @@ def get_permission_by_evidence_id(evidence_id: str) -> models.Permission | None:
     return models.Permission(**items[0])
 
 
+def license_from_scopes(scopes: list[str]) -> str:
+    """
+    Select the Registry License URL from the scopes granted on a token.
+
+    Per the IB1 OAuth profile the scope is a Registry License URL, but a token
+    also carries scopes that are not licenses, `offline_access` being the one
+    this demo relies on. Selecting by prefix rather than taking the first scope
+    keeps the Permission Record correct whatever order the authorization server
+    returns them in.
+    """
+    prefix = f"{conf.SCHEME_BASE_URL}/license/"
+    licenses = [scope for scope in scopes if scope.startswith(prefix)]
+    if len(licenses) != 1:
+        raise LicenseScopeError(
+            f"Expected exactly one granted scope beginning {prefix}, "
+            f"found {len(licenses)}"
+        )
+    return licenses[0]
+
+
 def token_to_permission(
     decoded_token: dict,
     refresh_token: str,
@@ -166,7 +190,7 @@ def token_to_permission(
     return models.Permission(
         oauthIssuer=decoded_token["iss"],
         client=decoded_token["client_id"],
-        license=decoded_token["scp"][0],
+        license=license_from_scopes(decoded_token.get("scp", [])),
         account=decoded_token["sub"],
         lastGranted=datetime.datetime.fromtimestamp(decoded_token["iat"]),
         expires=datetime.datetime.fromtimestamp(decoded_token["exp"]),

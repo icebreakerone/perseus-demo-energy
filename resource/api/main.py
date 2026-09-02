@@ -247,6 +247,9 @@ def consumption(
         account=decoded["sub"],
         service_url=f"https://{conf.API_DOMAIN}/datasources/{id}/{measure.value}",
         cap_member=directory.extensions.decode_application(cert),
+        # The record must name the license the user consented to, which is the
+        # one granted on this token, not whichever this server prefers.
+        license_url=auth.license_from_scopes(decoded.get("scp", [])),
     )
     with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:
         data = json.load(f)

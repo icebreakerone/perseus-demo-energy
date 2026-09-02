@@ -59,6 +59,15 @@ class CertificateNotFoundError(ConfigurationError):
     pass
 
 
+class LicenseScopeError(Exception):
+    """
+    A token carried no single Registry License URL in its granted scopes.
+
+    Per the IB1 OAuth profile the scope is a Registry License URL. A token
+    without one means the authorization server is misconfigured.
+    """
+
+
 class FrameworkAuthError(Exception):
     """Base class for access token exceptions"""
 
