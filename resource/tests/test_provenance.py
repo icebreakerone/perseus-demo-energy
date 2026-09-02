@@ -1,5 +1,6 @@
 import datetime
 import re
+import sys
 import pytest
 from unittest.mock import MagicMock
 from api import conf
@@ -238,3 +239,37 @@ def test_does_not_log_the_signing_key(
     logged = "\n".join(log_lines)
     assert secret.decode() not in logged
     assert "Private key" not in logged
+
+
+def test_tracebacks_do_not_carry_frame_locals():
+    """
+    The signing key must not reach the logs by the back door either.
+
+    Removing the explicit log line is not enough on its own. loguru defaults
+    `diagnose` to True, which annotates every frame of a traceback with its
+    local variables, so any unhandled exception raised below get_key would have
+    printed the key anyway.
+
+    This drives the ExceptionFormatter belonging to the handler configured in
+    api/logger.py. A test sink would carry its own `diagnose` setting and so
+    would prove nothing about the one that runs in production.
+    """
+    from api.logger import get_logger
+
+    secret = "SIGNING-KEY-MUST-NOT-BE-LOGGED"
+
+    def fails_holding_the_key(private_key):
+        raise RuntimeError("signing failed")
+
+    try:
+        fails_holding_the_key(secret)
+    except RuntimeError:
+        handler = list(get_logger()._core.handlers.values())[0]
+        formatted = "".join(
+            handler._exception_formatter.format_exception(*sys.exc_info())
+        )
+
+    assert secret not in formatted
+    # The traceback itself is still there, only the values are gone
+    assert "fails_holding_the_key" in formatted
+    assert "signing failed" in formatted

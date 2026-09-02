@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from unittest.mock import patch, MagicMock
 import time
 
@@ -634,6 +635,38 @@ def test_token_success_does_not_log_credentials(
     assert MOCK_REFRESH_TOKEN not in logged
     # A reference is logged instead, so a support request can still be traced
     assert "Issued token for" in logged
+
+
+def test_tracebacks_do_not_carry_frame_locals():
+    """
+    An unhandled exception must not put credentials in the logs.
+
+    loguru defaults `diagnose` to True, which annotates every frame of a
+    traceback with its local variables. In the token endpoint those locals hold
+    the access and refresh tokens Hydra just issued, and in the resource app
+    they hold the signing key, so any unhandled exception leaked them.
+
+    This drives the ExceptionFormatter belonging to the handler configured in
+    api/logger.py. Adding a test sink would not do, it would carry its own
+    `diagnose` setting and prove nothing about the one that runs in production.
+    """
+    secret = "eyJhbGciOiJSUzI1NiIs-ACCESS-TOKEN-MUST-NOT-BE-LOGGED"
+
+    def fails_holding_a_token(access_token):
+        raise RuntimeError("storage is down")
+
+    try:
+        fails_holding_a_token(secret)
+    except RuntimeError:
+        handler = list(get_logger()._core.handlers.values())[0]
+        formatted = "".join(
+            handler._exception_formatter.format_exception(*sys.exc_info())
+        )
+
+    assert secret not in formatted
+    # The traceback itself is still there, only the values are gone
+    assert "fails_holding_a_token" in formatted
+    assert "storage is down" in formatted
 
 
 # Starlette re-raises unhandled exceptions in tests unless this is off, which
