@@ -65,7 +65,7 @@ def test_datasources(
         conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-bundle.pem"
     )
     mock_check_token.return_value = (
-        {"sub": "account123"},
+        {"sub": "account123", "scp": [conf.ENERGY_CONSUMPTION_LICENSE_URL]},
         {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
     )
     pem, _, _, _ = client_certificate(
@@ -109,7 +109,7 @@ def test_consumption(
         conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-bundle.pem"
     )
     mock_check_token.return_value = (
-        {"sub": "account123"},
+        {"sub": "account123", "scp": [conf.ENERGY_CONSUMPTION_LICENSE_URL]},
         {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
     )
     mock_ib1_directory_get_key.return_value = get_private_key()
@@ -141,6 +141,9 @@ def test_consumption(
         account="account123",
         service_url=mocker.ANY,
         cap_member=mocker.ANY,
+        # Asserted rather than ANY: the record must name the license granted on
+        # the token, so this is the point the two could silently diverge.
+        license_url=conf.ENERGY_CONSUMPTION_LICENSE_URL,
     )
 
 
@@ -281,7 +284,7 @@ def test_not_found_sends_no_challenge(
         conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-bundle.pem"
     )
     mock_check_token.return_value = (
-        {"sub": "account123"},
+        {"sub": "account123", "scp": [conf.ENERGY_CONSUMPTION_LICENSE_URL]},
         {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
     )
     pem, _, _, _ = client_certificate(
@@ -307,7 +310,7 @@ def test_not_found_sends_no_challenge(
 def test_validation_error_uses_the_api_shape(mock_check_token):
     """A missing date parameter names the parameter rather than returning a 422."""
     mock_check_token.return_value = (
-        {"sub": "account123"},
+        {"sub": "account123", "scp": [conf.ENERGY_CONSUMPTION_LICENSE_URL]},
         {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
     )
     pem, _, _, _ = client_certificate(
@@ -386,7 +389,7 @@ def test_unknown_measure_is_rejected(mock_check_token):
     endpoint accepted anything and returned the same data regardless.
     """
     mock_check_token.return_value = (
-        {"sub": "account123"},
+        {"sub": "account123", "scp": [conf.ENERGY_CONSUMPTION_LICENSE_URL]},
         {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
     )
     pem, _, _, _ = client_certificate(
@@ -428,7 +431,7 @@ def test_available_measures_match_what_is_accepted(
         conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-bundle.pem"
     )
     mock_check_token.return_value = (
-        {"sub": "account123"},
+        {"sub": "account123", "scp": [conf.ENERGY_CONSUMPTION_LICENSE_URL]},
         {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
     )
     mock_ib1_directory_get_key.return_value = get_private_key()
@@ -473,7 +476,7 @@ def test_measure_reaches_provenance_as_its_value(
         conf, "SIGNING_BUNDLE", f"{ROOT_DIR}/fixtures/test-suite-bundle.pem"
     )
     mock_check_token.return_value = (
-        {"sub": "account123"},
+        {"sub": "account123", "scp": [conf.ENERGY_CONSUMPTION_LICENSE_URL]},
         {"Date": "Mon, 01 Jan 2024 00:00:00 GMT"},
     )
     mock_ib1_directory_get_key.return_value = get_private_key()

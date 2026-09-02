@@ -10,6 +10,7 @@ from .exceptions import (
     AccessTokenAudienceError,
     AccessTokenTimeError,
     AccessTokenDecodingError,
+    LicenseScopeError,
 )
 from . import conf
 from ib1 import directory
@@ -17,6 +18,26 @@ from ib1 import directory
 from .logger import get_logger
 
 logger = get_logger()
+
+
+def license_from_scopes(scopes: list[str]) -> str:
+    """
+    Select the Registry License URL from the scopes granted on a token.
+
+    Per the IB1 OAuth profile the scope is a Registry License URL, but a token
+    also carries scopes that are not licenses, `offline_access` being the one
+    this demo relies on. Selecting by what the scope is rather than by its
+    position means the provenance record names the license the user actually
+    consented to, whatever order the authorization server returns them in.
+    """
+    prefix = f"{conf.SCHEME_BASE_URL}/license/"
+    licenses = [scope for scope in scopes if scope.startswith(prefix)]
+    if len(licenses) != 1:
+        raise LicenseScopeError(
+            f"Expected exactly one granted scope beginning {prefix}, "
+            f"found {len(licenses)}"
+        )
+    return licenses[0]
 
 
 def decode_with_jwks(token: str, jwks_url: str, verify: bytes | None = None) -> dict:
