@@ -15,6 +15,9 @@ app = App()
 
 deployment_context = app.node.try_get_context("deployment_context") or "dev"
 HOSTED_ZONE_NAME = "perseus-demo-energy.ib1.org"
+# The demo apps run against the sandbox trust framework in every environment.
+# They are for testing and never point at a real prod registry, only members'
+# own energy and auth endpoints run in prod. preprod deploys the "dev" context.
 contexts: dict[str, Context] = {
     "dev": {
         "environment_name": "dev",
@@ -24,8 +27,7 @@ contexts: dict[str, Context] = {
         "mtls_certificate": "fd59453d-a782-4728-a78c-ee8c37a3717e",
         "certificate": "535b09e0-4f69-41ad-853a-316754f81e6b",
         "hosted_zone_name": HOSTED_ZONE_NAME,
-        # TODO confirm exact host: dev -> development registry.
-        "scheme_base_url": "https://registry.core.development.trust.ib1.org/scheme/perseus",
+        "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
     "prod": {
         "environment_name": "prod",
@@ -35,9 +37,6 @@ contexts: dict[str, Context] = {
         "certificate": "50752488-303e-4757-85d3-fea66ae0a2d0",
         "mtls_certificate": "dc498c29-daa3-4eab-bd0e-dcce2d4de2c2",
         "hosted_zone_name": HOSTED_ZONE_NAME,
-        # The prod demo apps run against the sandbox trust framework: they are
-        # for testing and never point at a real prod registry. Only members'
-        # real energy/auth endpoints run in prod.
         "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
 }
