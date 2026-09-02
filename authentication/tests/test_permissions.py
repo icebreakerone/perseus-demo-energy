@@ -12,7 +12,8 @@ from api.exceptions import PermissionRevocationError, LicenseScopeError
 from api import conf
 from api import models
 
-LICENSE = f"{conf.SCHEME_BASE_URL}/license/energy-consumption-edp-cap/2026-03-12"
+LICENSE = conf.ENERGY_CONSUMPTION_LICENSE_URL
+PASS_THROUGH_LICENSE = conf.ENERGY_CONSUMPTION_EMISSIONS_LICENSE_URL
 
 
 def test_token_to_permission():
@@ -57,6 +58,17 @@ def test_license_from_scopes_ignores_non_license_scopes():
         LICENSE,
     ]
     assert license_from_scopes(scopes) == LICENSE
+
+
+def test_license_from_scopes_accepts_the_pass_through_license():
+    """
+    Both licences are valid for the energy consumption data API, the Scheme
+    Catalog Requirements carry ib1:requireOneOrMoreOf on dcterms:license.
+    """
+    assert (
+        license_from_scopes([PASS_THROUGH_LICENSE, "offline_access"])
+        == PASS_THROUGH_LICENSE
+    )
 
 
 def test_license_from_scopes_rejects_no_license():

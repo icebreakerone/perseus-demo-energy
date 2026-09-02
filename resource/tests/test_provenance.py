@@ -72,6 +72,7 @@ def test_create_provenance_records(
         service_url,
         account,
         cap_member,
+        conf.ENERGY_CONSUMPTION_LICENSE_URL,
     )
 
     # Assertions
@@ -84,6 +85,12 @@ def test_create_provenance_records(
     mock_record_instance.add_step.assert_called()
     mock_record_instance.sign.assert_called()
     mock_record_instance.encoded.assert_called()
+
+
+# Deliberately the pass through license, not the first in
+# conf.ENERGY_DATA_LICENSE_URLS, so these tests fail if the record ever goes back
+# to naming a fixed value rather than what was granted.
+GRANTED_LICENSE = conf.ENERGY_CONSUMPTION_EMISSIONS_LICENSE_URL
 
 
 def _steps(mock_record_instance) -> dict:
@@ -120,6 +127,7 @@ def provenance_steps(
         "https://example.com/service",
         "account123",
         "cap_member123",
+        GRANTED_LICENSE,
     )
     return _steps(mock_record_instance)
 
@@ -136,10 +144,8 @@ def test_transfer_step_names_the_current_standard(provenance_steps):
 
 def test_transfer_and_permission_steps_agree_on_the_license(provenance_steps):
     """The license consented to and the license transferred under are the same."""
-    assert provenance_steps["transfer"]["license"] == conf.ENERGY_DATA_LICENSE_URL
-    assert provenance_steps["permission"]["allows"]["licenses"] == [
-        conf.ENERGY_DATA_LICENSE_URL
-    ]
+    assert provenance_steps["transfer"]["license"] == GRANTED_LICENSE
+    assert provenance_steps["permission"]["allows"]["licenses"] == [GRANTED_LICENSE]
 
 
 def test_origin_step_assurance_uses_published_vocabularies(provenance_steps):
@@ -175,3 +181,60 @@ def test_no_step_carries_a_retired_registry_version(provenance_steps):
     )
     assert versioned, "expected at least one versioned Scheme URL in the record"
     assert set(versioned) == {"2026-03-12"}
+
+
+@pytest.fixture
+def log_lines():
+    """
+    Capture loguru output. loguru does not feed pytest's caplog, so the sink has
+    to be added by hand. Mirrors the fixture in the authentication app.
+    """
+    from api.logger import get_logger
+
+    captured: list = []
+    log = get_logger()
+    sink_id = log.add(captured.append, format="{message}")
+    yield captured
+    log.remove(sink_id)
+
+
+def test_does_not_log_the_signing_key(
+    log_lines,
+    mock_get_certificate,
+    mock_get_key,
+    mock_record,
+    mock_signer_in_memory,
+    mock_certificates_provider_self_contained_record,
+    mock_x509_load_pem_x509_certificates,
+):
+    """
+    The EDP signing key must not reach the logs.
+
+    It was logged at INFO on every call, so it went to CloudWatch in plaintext.
+    The authentication app has taken this position since token_reference() was
+    added; this is the resource side equivalent.
+    """
+    secret = b"SIGNING-KEY-MUST-NOT-BE-LOGGED"
+    mock_get_certificate.return_value = b"mock_certificate"
+    mock_get_key.return_value = secret
+    mock_certificates_provider_self_contained_record.return_value = MagicMock()
+    mock_x509_load_pem_x509_certificates.return_value = [MagicMock()]
+    mock_signer_in_memory.return_value = MagicMock()
+    mock_record_instance = mock_record.return_value
+    mock_record_instance.sign.return_value = mock_record_instance
+    mock_record_instance.encoded.return_value = b"mock_encoded_data"
+
+    create_provenance_records(
+        datetime.date(2023, 1, 1),
+        datetime.date(2023, 1, 31),
+        datetime.datetime(2023, 1, 1, 12, 0, 0),
+        datetime.datetime(2023, 12, 31, 12, 0, 0),
+        "https://example.com/service",
+        "account123",
+        "cap_member123",
+        GRANTED_LICENSE,
+    )
+
+    logged = "\n".join(log_lines)
+    assert secret.decode() not in logged
+    assert "Private key" not in logged

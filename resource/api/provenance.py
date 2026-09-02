@@ -9,9 +9,6 @@ from ib1.provenance.certificates import (
 )
 from . import conf
 from .keystores import get_key, get_certificate
-from .logger import get_logger
-
-logging = get_logger()
 
 
 def _date_to_iso(date: datetime.date) -> str:
@@ -26,23 +23,16 @@ def create_provenance_records(
     service_url: str,
     account: str,
     cap_member: str,
+    license_url: str,
 ) -> bytes:
 
     certificate_provider = CertificatesProviderSelfContainedRecord(
         get_certificate(conf.SIGNING_ROOT_CA_CERTIFICATE)
     )
-    logging.info(f"Creating provenance records for account: {account}")
-    logging.info(f"Certs: {certificate_provider}")
-    logging.info(f"Root CA: {conf.SIGNING_ROOT_CA_CERTIFICATE}")
-    logging.info(get_certificate(conf.SIGNING_ROOT_CA_CERTIFICATE))
     signer_edp_certs = x509.load_pem_x509_certificates(
         get_certificate(conf.SIGNING_BUNDLE)
     )
-    logging.info(f"Bundle certs: {conf.SIGNING_BUNDLE}")
-    logging.info(f"Certificate type {type(get_certificate(conf.SIGNING_BUNDLE))}")
     private_key = get_key(conf.SIGNING_KEY)
-    logging.info(f"Private key: {private_key}")
-    logging.info(f"Key type: {type(private_key)}")
     signer_edp = SignerInMemory(
         certificate_provider,
         signer_edp_certs,  # list containing certificate and issuer chain
@@ -57,7 +47,7 @@ def create_provenance_records(
             "scheme": conf.SCHEME_BASE_URL,
             "timestamp": f"{permission_granted.isoformat()[0:-7]}Z",
             "account": account,
-            "allows": {"licenses": [conf.ENERGY_DATA_LICENSE_URL]},
+            "allows": {"licenses": [license_url]},
             "expires": f"{permission_expires.isoformat()[0:-7]}Z",
         }
     )
@@ -91,7 +81,7 @@ def create_provenance_records(
             "of": origin_id,
             "to": cap_member,
             "standard": f"{conf.SCHEME_BASE_URL}/standard/energy-consumption-data/2026-03-12",
-            "license": conf.ENERGY_DATA_LICENSE_URL,
+            "license": license_url,
             "service": service_url,
             "path": "/readings",
             "parameters": {

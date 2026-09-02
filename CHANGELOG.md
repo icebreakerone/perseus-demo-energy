@@ -10,13 +10,17 @@ All notable changes to this project will be documented in this file.
 - Provenance transfer steps name `standard/energy-consumption-data/2026-03-12`, the `ib1:SchemeCatalogRequirements` document that also pins the license the same step records. The retired `2024-12-05` version does not resolve in the Registry, and was missed when the license moved to `energy-consumption-edp-cap/2026-03-12` in v3.0.0
 - Provenance origin steps use the assurance vocabularies the Registry actually publishes. `originMethod` under `assurance/origin-method/` replaces `processing` under `assurance/processing/`, and `dataSource` is removed. Neither previous URL resolved, and the source type is already carried by `sourceType`
 - A token carrying no Registry License URL among its scopes is rejected rather than storing a non-license value as the permission's license. An empty or absent `scp` previously raised `IndexError`/`KeyError`
-- The Ory client setup in the README lists the Registry License URL as the scope rather than `profile`, and a single `Code` response type rather than `Code and ID Token`
+- The Ory client setup in the README lists both Registry License URLs as the scopes rather than `profile`, and a single `Code` response type rather than `Code and ID Token`
+- The energy consumption data is offered under two Registry Licenses, `energy-consumption-edp-cap/2026-03-12` and `energy-consumption-emissions-edp-cap-fsp/2026-03-12`. The Scheme Catalog Requirements carry `ib1:requireOneOrMoreOf` on `dcterms:license`, so a Data Service may be offered under either. Both are advertised as OAuth scopes, and a client requests one of them
+- Provenance records name the license granted on the token rather than a fixed constant. With two valid licenses a constant could assert a license the user did not consent to, and it would have been the FSP leg, the part carrying the extra `ib1:additionalCondition`, that went missing
+- **The EDP signing private key is no longer written to the logs.** `resource/api/provenance.py` logged it at INFO on every call, so it reached CloudWatch in plaintext. That whole debug block is removed, and a test now fails if it comes back. Treat any key used by a deployed build as compromised and rotate it
 
 ### Breaking
 
 - Provenance record structure changed. Origin steps carry `perseus:assurance.originMethod` in place of `perseus:assurance.processing`, and no longer carry `perseus:assurance.dataSource`. This alters the signed record structure
 - The token endpoint rejects a token whose granted scopes carry no Registry License URL under this deployment's `SCHEME_BASE_URL`. Any scope was previously accepted, and the first one was stored as the permission's `license`. A deployment whose OAuth client grants only `profile` and `offline_access`, or only a license from a different Registry environment, must have its client registration updated before this release
 - The Permission Record's `license` changes value for existing integrations, from whichever scope was granted first to the Registry License URL. Anything matching on the old value needs updating
+- `create_provenance_records` takes a required `license_url` argument. Any caller outside this repository needs updating
 
 ## [v4.0.0] - 2026-08-26
 

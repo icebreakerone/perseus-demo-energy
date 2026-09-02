@@ -161,13 +161,18 @@ Please contact [tf-ops@icebreakerone.org](mailto:tf-ops@icebreakerone.org) for t
 - Grant types authorization Code and Refresh Token
 - Response type Code
 - Access Token Type jwt
-- Scopes `offline_access` and the Registry License URL that this deployment issues,
-  which is `SCHEME_BASE_URL` followed by
-  `/license/energy-consumption-edp-cap/2026-03-12`. Per the
+- Scopes `offline_access` and both Registry License URLs this deployment offers the
+  energy consumption data under, each being `SCHEME_BASE_URL` followed by
+  `/license/energy-consumption-edp-cap/2026-03-12` and
+  `/license/energy-consumption-emissions-edp-cap-fsp/2026-03-12`. A client requests one
+  of them, not both. The second is for the case where a single permission also covers
+  the CAP sharing the resulting emissions data with the consumer's chosen FSP, and the
+  Scheme Catalog Requirements allow either by carrying `ib1:requireOneOrMoreOf` on
+  `dcterms:license`. Per the
   [IB1 OAuth profile](https://specification.trust.ib1.org/oauth-with-member-identity-certificates/1.0/#oauth-profile)
   the scope *is* a Registry License URL, so it changes whenever the Registry publishes a
-  new version of the license, and a client registered for a superseded version will
-  reject the scope this server advertises
+  new version of a license, and a client registered only for a superseded version will
+  reject the scopes this server advertises
 - Redirect urls to match your production and/or development and local redirect URLs
 
 ![Authentication Method None](docs/authentication-method-none.png)

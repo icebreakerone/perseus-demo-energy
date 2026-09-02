@@ -32,11 +32,18 @@ OAUTH_SPEC = (
     "oauth-with-member-identity-certificates/1.0/#oauth-profile"
 )
 
-# Per the OAuth profile, each scope is a Registry License URL. This server issues the
-# energy-consumption license; it derives from conf.SCHEME_BASE_URL so the published
-# scope stays consistent with the deployed environment.
+# Per the OAuth profile, each scope is a Registry License URL. Both derive from
+# conf.SCHEME_BASE_URL so the published scopes stay consistent with the deployed
+# environment. A client requests one of them, not both.
 OAUTH2_SCOPES: dict[str, str] = {
-    conf.ENERGY_DATA_LICENSE_URL: "Energy consumption data shared from EDP to CAP",
+    conf.ENERGY_CONSUMPTION_LICENSE_URL: (
+        "Energy consumption data shared from EDP to CAP"
+    ),
+    conf.ENERGY_CONSUMPTION_EMISSIONS_LICENSE_URL: (
+        "Energy consumption data shared from EDP to CAP, where the same permission "
+        "also covers the CAP sharing the resulting emissions data with the consumer's "
+        "chosen FSP"
+    ),
 }
 
 API_DESCRIPTION = f"""\
