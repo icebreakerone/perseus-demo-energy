@@ -1,3 +1,27 @@
+#!/usr/bin/env bash
+#
+# Offline fallback: generate a complete self-signed PKI for local development.
+#
+# Prefer ./scripts/refresh-certs.sh, which issues client and signing
+# certificates from the real sandbox directory service. Use this script only
+# when you have no directory account or no network.
+#
+# The certificates it produces chain to a client CA that exists nowhere but
+# this machine, so a client holding a real directory certificate cannot connect
+# to nginx afterwards, and vice versa. scripts/generated/MANIFEST.txt records
+# which of the two scripts ran last.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+if ! command -v ib1-directory >/dev/null; then
+  echo "ib1-directory is not installed. Install it with:" >&2
+  echo "  pipx install ../../ib1-directory/" >&2
+  exit 1
+fi
+
 
 
 # Create jwt signing key
@@ -6,7 +30,6 @@ openssl genpkey -algorithm EC \
     -out jwt-signing-key.pem
 
 # Create all three CAs
-pipx install --force ../../ib1-directory/
 ib1-directory create-ca -u server -f Core
 ib1-directory create-ca -u client -f Core
 ib1-directory create-ca -u signing -f Core
@@ -60,9 +83,19 @@ cat cap-demo-client-cert.pem client-issuer-cert.pem  > cap-demo-client-bundle.pe
 
 # client bundle to verify (intermediate + root)
 cat client-issuer-cert.pem client-ca-cert.pem > client-verify-bundle.pem
-# Move them to a nested folder
+# Move them to a nested folder. Named explicitly rather than *.pem, so a stray
+# PEM left in this directory is not swept into the generated set.
 mkdir -p generated
-mv *.pem generated
+mv jwt-signing-key.pem \
+  server-ca-cert.pem server-ca-key.pem server-issuer-cert.pem server-issuer-key.pem \
+  client-ca-cert.pem client-ca-key.pem client-issuer-cert.pem client-issuer-key.pem \
+  signing-ca-cert.pem signing-ca-key.pem signing-issuer-cert.pem signing-issuer-key.pem \
+  localhost-cert.pem localhost-key.pem localhost-bundle.pem \
+  cap-demo-client-cert.pem cap-demo-client-key.pem cap-demo-client-bundle.pem \
+  edp-demo-signing-cert.pem edp-demo-signing-key.pem edp-demo-signing-bundle.pem \
+  server-complete-bundle.pem signing-issued-intermediate-bundle.pem \
+  server-bundle.pem client-verify-bundle.pem \
+  generated
 # nginx requires server-complete-bundle and server-key, as well as client-verify-bundle for mtls 
 #mv those keys to ../certs
 mkdir -p ../certs
@@ -90,3 +123,11 @@ mv generated/server-bundle.pem \
     generated/cap-demo-client-bundle.pem \
     generated/cap-demo-client-key.pem \
     generated/client
+
+# Record which script produced the current certificates, so it is always clear
+# whether nginx is trusting the real directory client CA or this local one.
+cat > generated/MANIFEST.txt <<EOF
+source=offline
+refreshed=$(date -u +%Y-%m-%dT%H:%MZ)
+note=Self-signed CAs. Real directory certificates will not work against this stack.
+EOF
