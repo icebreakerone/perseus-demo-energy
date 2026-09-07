@@ -17,6 +17,26 @@ class Measure(str, Enum):
     EXPORT = "export"
 
 
+class EnergyType(str, Enum):
+    """
+    The kinds of data source the scheme defines. Lower case, as the registry's
+    consumption-data API declares them.
+    """
+
+    ELECTRICITY = "electricity"
+    GAS = "gas"
+
+
+class UnitCode(str, Enum):
+    """
+    CEFACT unit codes the registry API permits. MTQ, cubic metres, is gas only.
+    """
+
+    KWH = "KWH"
+    WHR = "WHR"
+    MTQ = "MTQ"
+
+
 class ApiErrorResponse(BaseModel):
     """
     Error response carrying an RFC 6750 error code.
@@ -27,12 +47,12 @@ class ApiErrorResponse(BaseModel):
 
 
 class Consumption(BaseModel):
-    value: float
-    unitCode: str
+    value: float = Field(ge=0)
+    unitCode: UnitCode
 
 
 class Reading(BaseModel):
-    type: str
+    type: EnergyType
     from_date: datetime.datetime = Field(alias="from")
     to_date: datetime.datetime = Field(alias="to")
     takenAt: datetime.datetime
@@ -42,7 +62,7 @@ class Reading(BaseModel):
 
 class Datasource(BaseModel):
     id: str
-    type: str
+    type: EnergyType
     location: dict
     availableMeasures: list[Measure]
 
@@ -61,10 +81,10 @@ class MeterData(BaseModel):
                 {
                     "data": [
                         {
-                            "type": "Electricity",
+                            "type": "electricity",
                             "from": "2023-10-18T00:00:00Z",
                             "to": "2023-10-18T00:30:00Z",
-                            "takenAt": "2023-10-19T00:00:00Z",
+                            "takenAt": "2023-10-18T01:00:00Z",
                             "energy": {"value": 123.45, "unitCode": "WHR"},
                             "cumulative": {"value": 1234.5, "unitCode": "WHR"},
                         },
