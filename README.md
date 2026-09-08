@@ -99,49 +99,67 @@ pipenv run uvicorn api.main:app --reload
 
 **nb** the recommended way to run the apps is using the docker compose environment, as the apps require a redis instance and the resource app requires the authentication app to be running.
 
-### Creating self signed certificates for development
+### Certificates for local development
 
-The ib1 directory issues three kinds of certificates, client, server and signing. The client and server certificates are used for mTLS and the signing certificates are used to sign provenance records.
+Each part of the stack is a different Perseus scheme participant, so its certificates are issued to a different application in the directory:
 
-To generate a complete set of self-signed certificates for testing, run the following command:
+| Component | Scheme role | Certificates |
+| --------- | ----------- | ------------ |
+| resource API | energy data provider | signing, to sign provenance records |
+| cap-demo | carbon accounting provider | client for mTLS, and signing for its provenance record |
+| authentication API | the authorization server | none from the directory |
+
+`scripts/refresh-certs.sh` refreshes all of them with one command. Client and signing certificates are issued by the real sandbox directory service, so local testing uses the same identities, roles and CA chains as production. Only the localhost server certificate is generated locally, because the directory does not issue certificates for localhost.
+
+Copy `scripts/refresh-certs.env.example` to `scripts/refresh-certs.env` and fill in the blanks, then log in and run the script:
 
 ```bash
-cd scripts
-./setup.sh
+directory login
+./scripts/refresh-certs.sh --restart
 ```
 
-The script will generate the required certificates, keys and bundles and move them to the correct file locations for the docker compose dev environment.
+Run `./scripts/refresh-certs.sh --list-apps` to see your organisations and their applications, and `--help` for the other options. The script prints the files to copy into cap-demo and the configuration to change there. It does not write to the cap-demo repository.
+
+nginx reads its certificates once at startup, so the containers must be restarted after a refresh. `--restart` does that.
+
+If you have no directory account or no network, `scripts/setup-offline.sh` generates a completely self-signed set instead. Certificates from that script chain to a CA that exists only on your machine, so a client holding a real directory certificate cannot connect to nginx afterwards. `scripts/generated/MANIFEST.txt` records which of the two scripts ran last.
 
 #### Outline of certificates used
 
 **nginx**
 
-- certs/client-verify-bundle.pem: The client CA root certificate and intermediate to verify incoming mtls requests
+- certs/client-verify-bundle.pem: The client CA intermediate and root certificate, to verify incoming mtls requests
 - certs/localhost-key.pem: Key for the localhost tls certificate
 - certs/server-complete-bundle.pem: A chain of localhost certificate, intermediate and CA for tls
 
 **Authentication**
 
-- authentication/certs/jwt-signing-key.pem: Key for signing jwt tokens. This is not a directory certificate.
+- authentication/certs/client-bundle.pem, authentication/certs/client-key.pem: Client certificate for outbound mTLS, used to deliver revocation messages to applications. Issued to the same EDP application as the signing certificate, because the authentication API acts for the energy data provider. Set `MTLS_CLIENT_BUNDLE` and `MTLS_CLIENT_KEY` in `authentication/.env` to use them.
+- authentication/certs/jwt-signing-key.pem: Key for signing jwt tokens. This is not a directory certificate. It is preserved across refreshes, because replacing it invalidates every access token already issued. Pass `--rotate-jwt-key` to replace it.
 
 **Resource**
 
-- resource/signing-issued-intermediate-bundle.pem: A chain of issued certificate and intermediate used in creating provenance records
-- resource/edp-demo-signing-key.pem: Provenance record signing key
-- resource/edp-demo-signing-cert.pem: Provenance record signing certificate
-- resource/signing-ca-cert.pem: Root CA certificate for the signing CA used in provenance
+- resource/certs/signing-issued-intermediate-bundle.pem: A chain of issued certificate and intermediate used in creating provenance records
+- resource/certs/edp-demo-signing-key.pem: Provenance record signing key
+- resource/certs/edp-demo-signing-cert.pem: Provenance record signing certificate
+- resource/certs/signing-ca-cert.pem: Root CA certificate for the signing CA used in provenance
+
+**cap-demo**
+
+`scripts/cap-demo-handoff/` holds the material a client application needs. Copy it into your cap-demo checkout, following the instructions the script prints.
+
+- cap-demo-bundle.pem: Client mtls certificate and intermediate
+- cap-demo-key.pem: Client private key
+- cap-signing-bundle.pem, cap-signing-key.pem, signing-root-ca.pem: For signing and verifying provenance records
+- server-bundle.pem: Root CA and intermediate to validate the localhost server certificate
 
 **Others**
 
-The remaining files in scripts/generated directory will be the key and certificate for each of the three CAs with matching intermediates. Files in cerscriptsts/generated/client can be used by a client application (such as the demo cap) to make mtls secured connections and verify the server certificate.
-
-- certs/client/edp-demo-client-bundle.pem: Client mtls certificate
-- ccerts/client/edp-demo-client-key.pem: Client private key
-- certs/client/server-bundle.pem: Root CA and intermediate certificate to validate the server certificate
+`scripts/generated/` keeps the raw material from the last run, including both CA downloads and the local server CA key, plus `MANIFEST.txt` and `issued-certs.json` recording what was issued. The previous run is kept in `scripts/generated.prev/`.
 
 ### Running the local docker environment
 
-The included docker compose file will bring up both APIs. It uses nginx to proxy requests to uvicorn, with nginx configuration to pass through client certificates to the backend, using the same header as used by AWS ALB (`x-amzn-mtls-clientcert`).
+The included docker compose file will bring up both APIs. It uses nginx to proxy requests to uvicorn, with nginx configuration to pass through client certificates to the backend, using the same header as used by AWS ALB (`x-amzn-mtls-clientcert-leaf`).
 
 ```bash
 docker compose up

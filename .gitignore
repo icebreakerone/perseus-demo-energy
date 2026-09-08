@@ -26,3 +26,10 @@ cdk.context.json
 *.ipynb
 docker/*
 cdk.out
+
+# refresh-certs.sh: local config, staged output and archived material
+scripts/refresh-certs.env
+scripts/cap-demo-handoff/
+scripts/generated/
+scripts/generated.prev/
+certs-backup/
