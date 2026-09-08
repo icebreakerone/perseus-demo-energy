@@ -4,7 +4,7 @@
 !api/
 !data/
 !certs/
-# The Low Carbon London archive cache is 48MB of raw source material that
-# scripts/extract_lcl_data.py reads to build data/consumption_year.json. The
-# fixture ships; the cache it was built from does not.
+# Raw source material the scripts in scripts/ read to build the fixtures: 48MB of
+# Low Carbon London archive members, and the weather response the gas profile is
+# shaped by. The fixtures ship; what they were built from does not.
 data/.lcl-cache/

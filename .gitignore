@@ -34,5 +34,6 @@ scripts/generated/
 scripts/generated.prev/
 certs-backup/
 
-# Cached Low Carbon London archive members (see resource/scripts/extract_lcl_data.py)
+# Cached source material for the fixture scripts: Low Carbon London archive
+# members, and the weather series the gas profile is shaped by.
 resource/data/.lcl-cache/

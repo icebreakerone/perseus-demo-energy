@@ -1,15 +1,21 @@
 """
 Meter readings for a requested window.
 
-The demo serves one real household's year of half-hourly readings, taken from the
-UK Power Networks Low Carbon London trial and extracted by
-`scripts/extract_lcl_data.py`. A caller asking for last February gets that
-household's February: real consumption, with the heating season in it.
+The demo serves one premises with two meters. Electricity is a real household's year
+of half-hourly readings from the UK Power Networks Low Carbon London trial, extracted
+by `scripts/extract_lcl_data.py`. Gas is synthesised by `scripts/synthesise_gas_data.py`,
+because no public dataset carries half-hourly domestic gas volumes.
 
-Because the fixture is a single year and callers ask for windows in the present,
+The household was chosen for being gas heated: its electricity is appliances and
+lighting, lifting mildly in winter with the lights, which leaves room for a boiler
+alongside it. An electrically heated meter would have the more dramatic electricity
+curve, but pairing one with a gas profile would heat the same house twice and hand a
+CAP a premises that cannot exist.
+
+Because each fixture is a single year and callers ask for windows in the present,
 readings are date-shifted onto the requested window (see `_fixture_index`). Swap
-`load_fixture` for a different source — generated profiles, a real meter feed —
-and nothing above this module changes.
+`load_fixture` for a different source — generated profiles, a real meter feed — and
+nothing above this module changes.
 """
 
 from __future__ import annotations
@@ -17,13 +23,13 @@ from __future__ import annotations
 import datetime
 import functools
 import json
-from typing import Iterator
+from typing import Iterator, NamedTuple
 
 from . import conf
 from . import models
 
-# The fixture is a ring of consecutive half hours. Nothing here assumes which year
-# it came from, only that it is a whole number of days long.
+# The fixtures are rings of consecutive half hours. Nothing here assumes which year
+# they came from, only that they are a whole number of days long.
 INTERVAL = datetime.timedelta(minutes=30)
 INTERVALS_PER_DAY = 24 * 60 // 30
 
@@ -34,33 +40,54 @@ INTERVALS_PER_DAY = 24 * 60 // 30
 MAX_WINDOW = datetime.timedelta(days=396)
 
 
+class Source(NamedTuple):
+    """Where one energy type's readings live, and what the API reports them in."""
+
+    filename: str
+    unit: models.UnitCode
+    # Fixtures are stored in the unit their source published: kWh for the metered
+    # electricity, cubic metres for the gas. The API reports watt hours and cubic
+    # metres, so only electricity is scaled.
+    scale: float
+
+
+SOURCES: dict[models.EnergyType, Source] = {
+    models.EnergyType.ELECTRICITY: Source(
+        "consumption_year.json", models.UnitCode.WHR, 1000.0
+    ),
+    models.EnergyType.GAS: Source("gas_year.json", models.UnitCode.MTQ, 1.0),
+}
+
+
 class FixtureError(Exception):
-    """The fixture is missing or unusable."""
+    """A fixture is missing or unusable."""
 
 
-@functools.lru_cache(maxsize=1)
-def load_fixture() -> tuple[datetime.datetime, tuple[float, ...]]:
+@functools.lru_cache(maxsize=len(models.EnergyType))
+def load_fixture(
+    energy_type: models.EnergyType = models.EnergyType.ELECTRICITY,
+) -> tuple[datetime.datetime, tuple[float, ...]]:
     """
-    Read the consumption fixture, returning the instant it starts and its readings
-    in kWh. Cached: the Lambda holds it between invocations.
+    Read one energy type's fixture, returning the instant it starts and its readings
+    in the unit it was stored in. Cached: the Lambda holds them between invocations.
     """
-    path = f"{conf.ROOT_DIR}/data/consumption_year.json"
+    path = f"{conf.ROOT_DIR}/data/{SOURCES[energy_type].filename}"
     try:
         with open(path) as handle:
             fixture = json.load(handle)
     except FileNotFoundError:
         raise FixtureError(
-            f"No consumption fixture at {path}. Generate one with "
-            "scripts/extract_lcl_data.py"
+            f"No {energy_type.value} fixture at {path}. Generate one with the scripts "
+            "in resource/scripts"
         )
 
     readings = fixture.get("readings")
     if not readings:
-        raise FixtureError(f"Consumption fixture at {path} has no readings")
+        raise FixtureError(f"Fixture at {path} has no readings")
     if len(readings) % INTERVALS_PER_DAY:
         raise FixtureError(
-            f"Consumption fixture at {path} holds {len(readings)} readings, which is "
-            "not a whole number of days, so shifting it would move the time of day"
+            f"Fixture at {path} holds {len(readings)} readings, which is not a whole "
+            "number of days, so shifting it would move the time of day"
         )
 
     start = datetime.datetime.fromisoformat(
@@ -71,13 +98,17 @@ def load_fixture() -> tuple[datetime.datetime, tuple[float, ...]]:
 
 def _fixture_index(when: datetime.datetime, start: datetime.datetime, size: int) -> int:
     """
-    Map a requested half hour onto a reading in the fixture.
+    Map a requested half hour onto a reading in a fixture.
 
-    A plain modulo over the ring. Because the fixture is a whole number of days,
-    time of day is preserved exactly: 09:30 on the requested day reads the fixture's
-    09:30. Because it is very nearly a whole year, so is the position in the year,
-    drifting only by the odd leap day. That is what keeps a January request cold and
-    a July request warm, which is the whole point of using a year of real data.
+    A plain modulo over the ring. Because a fixture is a whole number of days, time of
+    day is preserved exactly: 09:30 on the requested day reads the fixture's 09:30.
+    Because it is very nearly a whole year, so is the position in the year, drifting
+    only by the odd leap day. That is what keeps a January request cold and a July
+    request warm, which is the whole point of using a year of real weather.
+
+    Both fixtures cover the same year at the same resolution, so both shift by the
+    same offset and the premises stays internally consistent: the day the gas works
+    hardest is the day the electricity saw that same January.
 
     Day of the week is not preserved: 365 is not a multiple of 7, so weekday phase
     slips by a day per year. Seasonal shape drives a carbon calculation and weekday
@@ -119,27 +150,19 @@ def readings(
 
     Export is always zero. We do not have exports in our sample data set
     """
-    start, values = load_fixture()
-
-    if energy_type is models.EnergyType.GAS:
-        source = gas_readings(from_date, to_date)
-        unit = models.UnitCode.MTQ
-    else:
-        source = None
-        unit = models.UnitCode.WHR
+    source = SOURCES[energy_type]
+    start, values = load_fixture(energy_type)
 
     exporting = measure is models.Measure.EXPORT
     result: list[dict] = []
     cumulative = 0.0
 
-    for index, (period_start, period_end) in enumerate(_windows(from_date, to_date)):
+    for period_start, period_end in _windows(from_date, to_date):
         if exporting:
             value = 0.0
-        elif source is not None:
-            value = source[index]
         else:
-            # Fixture is kWh; the API reports electricity in watt hours.
-            value = values[_fixture_index(period_start, start, len(values))] * 1000
+            index = _fixture_index(period_start, start, len(values))
+            value = values[index] * source.scale
 
         value = round(value, 4)
         cumulative = round(cumulative + value, 4)
@@ -151,18 +174,9 @@ def readings(
                 # A meter reports an interval once it has closed. The spec requires
                 # takenAt to fall after `to`, so it lands one interval later.
                 "takenAt": period_end + INTERVAL,
-                "energy": {"value": value, "unitCode": unit.value},
-                "cumulative": {"value": cumulative, "unitCode": unit.value},
+                "energy": {"value": value, "unitCode": source.unit.value},
+                "cumulative": {"value": cumulative, "unitCode": source.unit.value},
             }
         )
 
     return result
-
-
-def gas_readings(
-    from_date: datetime.datetime, to_date: datetime.datetime
-) -> list[float]:
-    """
-    Placeholder until the gas profile lands. Returns one value per half hour.
-    """
-    return [0.0 for _ in _windows(from_date, to_date)]

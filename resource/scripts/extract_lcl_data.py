@@ -9,10 +9,14 @@ Low Carbon London is real metered data: 5,567 London households, half-hourly kWh
 November 2011 to February 2014, collected by UK Power Networks. Licensed CC-BY 4.0,
 so the extracted readings can be redistributed with attribution.
 
-The default household, MAC000003, is the one the original 100-reading fixture came
-from, and it has a complete calendar 2013 with a pronounced seasonal swing (winter
-days average around 2.5x summer days), which is what makes a carbon calculation over
-the year look like anything.
+The default household, MAC000009, is gas heated: its electricity is appliances and
+lighting on a flat baseload, lifting mildly in winter with the lights. That is the
+point of choosing it. The demo pairs this meter with a synthesised gas profile, and a
+home cannot be heated twice.
+
+MAC000003, the meter the original 100-reading fixture came from, is Economy 7 electric
+storage heating: a 2.5x winter swing, but 69% of its year drawn between midnight and
+07:00 and no room for a gas boiler beside it. --survey tells the two apart.
 
 Only the members of the archive that are actually needed get downloaded. The archive
 is 795MB but supports HTTP range requests, and each of its 168 members is about 4.7MB
@@ -20,8 +24,8 @@ compressed, so finding a household in the first member costs 4.7MB rather than 7
 
 Usage:
 
-    python extract_lcl_data.py                        # MAC000003, 2013, default output
-    python extract_lcl_data.py --household MAC000024 --year 2013
+    python extract_lcl_data.py                        # MAC000009, 2013, default output
+    python extract_lcl_data.py --household MAC000003 --year 2013
     python extract_lcl_data.py --survey               # report candidate households
 
 Re-running is safe: downloaded members are cached, and the output file is rewritten
@@ -133,7 +137,9 @@ def _zip64_values(extra: bytes) -> list[int]:
         if header_id == 1:
             count = size // 8
             return list(
-                struct.unpack("<" + "Q" * count, extra[offset + 4 : offset + 4 + count * 8])
+                struct.unpack(
+                    "<" + "Q" * count, extra[offset + 4 : offset + 4 + count * 8]
+                )
             )
         offset += 4 + size
     return []
@@ -167,7 +173,9 @@ def list_members(url: str, size: int) -> list[tuple[str, int, int]]:
 
     members: list[tuple[str, int, int]] = []
     offset = 0
-    while offset < len(directory) - 4 and directory[offset : offset + 4] == b"PK\x01\x02":
+    while (
+        offset < len(directory) - 4 and directory[offset : offset + 4] == b"PK\x01\x02"
+    ):
         header = struct.unpack("<IHHHHHHIIIHHHHHII", directory[offset : offset + 46])
         method = header[4]
         compressed_size, uncompressed_size = header[8], header[9]
@@ -317,8 +325,9 @@ def build_year(
 
 def seasonality(values: list[float], year: int) -> float:
     """
-    Ratio of mean winter daily consumption to mean summer daily consumption. A meter
-    worth demonstrating a carbon calculation on sits well above 1.0.
+    Ratio of mean winter daily consumption to mean summer daily consumption. A gas
+    heated home sits around 1.2 to 1.6, the lift coming from lighting rather than
+    heat. Much above 2.0 means the heating itself is electric.
     """
     start = datetime.datetime(year, 1, 1)
     months: dict[int, list[float]] = defaultdict(list)
@@ -326,11 +335,39 @@ def seasonality(values: list[float], year: int) -> float:
         months[(start + index * HALF_HOUR).month].append(value)
 
     def mean_daily(wanted: tuple[int, ...]) -> float:
-        totals = [statistics.fmean(months[m]) * SLOTS_PER_DAY for m in wanted if months[m]]
+        totals = [
+            statistics.fmean(months[m]) * SLOTS_PER_DAY for m in wanted if months[m]
+        ]
         return statistics.fmean(totals) if totals else 0.0
 
     summer = mean_daily((6, 7, 8))
     return mean_daily((12, 1, 2)) / summer if summer else 0.0
+
+
+def _electrically_heated(ratio: float, night: float) -> bool:
+    """Both marks together: the storage heaters and the window they charge in."""
+    return ratio > 2.0 and night > 0.6
+
+
+def overnight_share(values: list[float], year: int) -> float:
+    """
+    Fraction of the year's energy drawn between midnight and 07:00.
+
+    Economy 7 storage heaters charge in exactly that window and stop dead at 07:00, so
+    a share above about 0.6 marks an electrically heated home. Those are the households
+    to avoid here: their winter shape is real, but pairing one with a synthesised gas
+    profile would heat the same house twice.
+    """
+    total = sum(values)
+    if not total:
+        return 0.0
+    start = datetime.datetime(year, 1, 1)
+    night = sum(
+        value
+        for index, value in enumerate(values)
+        if (start + index * HALF_HOUR).hour < 7
+    )
+    return night / total
 
 
 # ---------------------------------------------------------------------------
@@ -382,7 +419,9 @@ def scan(url: str, size: int, cache: Path, limit: int, wanted: str | None, year:
 
 def command_survey(args) -> int:
     size = archive_size(args.url)
-    collected = scan(args.url, size, Path(args.cache), args.max_members, None, args.year)
+    collected = scan(
+        args.url, size, Path(args.cache), args.max_members, None, args.year
+    )
     if not collected:
         print(f"No households had readings in {args.year}", file=sys.stderr)
         return 1
@@ -397,17 +436,34 @@ def command_survey(args) -> int:
             continue
         values, _ = build_year(readings, args.year)
         rows.append(
-            (household, sum(values), sum(values) / 365, seasonality(values, args.year))
+            (
+                household,
+                sum(values),
+                sum(values) / 365,
+                seasonality(values, args.year),
+                overnight_share(values, args.year),
+            )
         )
 
-    rows.sort(key=lambda row: row[3], reverse=True)
+    # Electric heating last, so the households that can carry a gas profile read first.
+    rows.sort(key=lambda row: (_electrically_heated(row[3], row[4]), row[0]))
     print(f"\n{len(rows)} households with a complete {args.year}\n")
-    print(f"{'household':12s} {'annual kWh':>11s} {'mean daily':>11s} {'winter/summer':>14s}")
-    for household, annual, daily, ratio in rows:
-        print(f"{household:12s} {annual:11.1f} {daily:11.2f} {ratio:14.2f}")
     print(
-        "\nA ratio above about 2.0 gives a visible seasonal shape in a carbon "
-        "calculation.\n"
+        f"{'household':12s} {'annual kWh':>11s} {'mean daily':>11s} "
+        f"{'winter/summer':>14s} {'overnight':>10s}  heating"
+    )
+    for household, annual, daily, ratio, night in rows:
+        heating = (
+            "electric (E7)" if _electrically_heated(ratio, night) else "not electric"
+        )
+        print(
+            f"{household:12s} {annual:11.1f} {daily:11.2f} {ratio:14.2f} "
+            f"{night:9.1%}  {heating}"
+        )
+    print(
+        "\nOvernight is midnight to 07:00. A household drawing most of its year in that "
+        "window, with a winter/summer ratio well above 2, runs Economy 7 storage "
+        "heaters. Pair gas with a 'not electric' household instead.\n"
     )
     return 0
 
@@ -492,13 +548,17 @@ def main() -> int:
     )
     parser.add_argument(
         "--household",
-        default="MAC000003",
-        help="LCL household id (default: MAC000003, the original fixture's meter)",
+        default="MAC000009",
+        help="LCL household id (default: MAC000009, the demo's gas heated meter)",
     )
-    parser.add_argument("--year", type=int, default=2013, help="Calendar year to extract")
+    parser.add_argument(
+        "--year", type=int, default=2013, help="Calendar year to extract"
+    )
     parser.add_argument(
         "--output",
-        default=str(Path(__file__).resolve().parents[1] / "data" / "consumption_year.json"),
+        default=str(
+            Path(__file__).resolve().parents[1] / "data" / "consumption_year.json"
+        ),
         help="Where to write the fixture",
     )
     parser.add_argument("--url", default=ARCHIVE_URL, help="Override the archive URL")

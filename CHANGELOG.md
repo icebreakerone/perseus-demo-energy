@@ -6,11 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- The resource API serves a year of real half-hourly electricity readings, taken from one household in the UK Power Networks Low Carbon London trial and extracted by `resource/scripts/extract_lcl_data.py`. Readings are date shifted onto the requested window, so a request for last February returns that household's February, with the heating season in it. A carbon calculation driven by this data sees real seasonal shape, roughly three times the consumption per half hour in January as in July, where the previous fixture was flat
-- Responses are gzipped. A year of half-hourly readings is around 4.2MB of JSON, past the 1MB an ALB will carry back from a Lambda, and compresses to about 265KB
+- The resource API serves a year of real half-hourly electricity readings, taken from one household in the UK Power Networks Low Carbon London trial and extracted by `resource/scripts/extract_lcl_data.py`. Readings are date shifted onto the requested window, so a request for last February returns that household's February. A carbon calculation driven by this data sees a real load shape rather than the flat fixture it replaces: real evening peaks, real day to day variation, and a winter that runs about a third above summer
+- The household is MAC000003 no longer. That meter is on Economy 7 storage heating, drawing 69% of its year between midnight and 07:00 and 2.5 times as much in winter as in summer. Its electricity *is* its heating, which leaves no room for a gas meter beside it. MAC000009 is gas heated, close to Ofgem's medium electricity consumption value at 3,015 kWh a year, and can carry a boiler. `--survey` now reports the overnight share that tells the two apart
+- A gas data source on the same premises, at `/datasources/G018011012261305588165/import`, reporting volumes in `MTQ` as the registry's consumption-data API requires. It advertises `import` only, and a request for `export` is refused: no gas meter measures it
+- The gas readings are **synthetic**, and the fixture says so in its own metadata. No public dataset carries half-hourly domestic gas volumes, so `resource/scripts/synthesise_gas_data.py` constructs them from Ofgem's medium gas consumption value of 11,500 kWh a year, split 78% space heating, 18% hot water and 4% cooking, spread across the year by heating degree days against the real daily temperatures the premises' postcode district saw in the same year the electricity comes from, and across the day by when a boiler actually fires. The result swings about six times harder between January and July than the electricity does, which is where most of a gas heated home's carbon variation lives. It should not be presented as data from a metered household
+- Responses are gzipped. A year of half-hourly readings is around 4.2MB of JSON, past the 1MB an ALB will carry back from a Lambda, and compresses to about 254KB
 
 ### Changed
 
+- `/datasources` advertises two meters for the one premises, electricity and gas, where it previously advertised one. A client that assumed a single entry needs updating
 - `/datasources/{id}/{measure}` returns the readings covering the window asked for. It previously returned the same 100 fixed readings from 2012 whatever `from` and `to` were set to
 - `to` is optional and means now, as the registry's consumption-data API declares. It was previously required
 - Both edges of the window snap back to the half hour containing them, so a request from 09:47 returns the 09:30 reading rather than losing it
