@@ -470,3 +470,26 @@ def test_the_gas_fixture_declares_itself_synthetic():
     assert "SYNTHETIC" in fixture["_comment"]
     assert fixture["method"]["annualEnergyBasisUrl"]
     assert "creativecommons.org" in fixture["weather"]["licence"]
+
+
+def test_the_gas_fixture_cites_every_figure_it_rests_on():
+    """
+    The readings are constructed, so the construction has to be checkable. Every number
+    the profile is built from carries the URL that justifies it, and the citations
+    travel with the fixture rather than living only in the script that wrote it.
+    """
+    with open(f"{conf.ROOT_DIR}/data/gas_year.json") as handle:
+        method = json.load(handle)["method"]
+
+    urls = [value for key, value in method.items() if key.endswith("Url")]
+    urls.append(method["shares"]["sourceUrl"])
+
+    assert len(urls) >= 7
+    assert all(url.startswith("https://") for url in urls)
+
+    # The end use shares have to account for the whole year, or the annual total the
+    # TDCV fixes is quietly wrong.
+    shares = method["shares"]
+    assert sum(
+        shares[key] for key in ("spaceHeating", "hotWater", "cooking")
+    ) == pytest.approx(1.0, abs=0.001)

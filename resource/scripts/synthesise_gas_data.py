@@ -10,17 +10,21 @@ and the fixture says so in its own metadata.
 
 What it is built from:
 
-  * Ofgem's medium Typical Domestic Consumption Value, 11,500 kWh of gas a year. The
+  * Ofgem's medium Typical Domestic Consumption Value for gas, 9,500 kWh a year. The
     electricity meter it is paired with, LCL household MAC000009, draws about 3,000
-    kWh, close to the medium electricity TDCV, so the medium gas figure is the
-    coherent partner for it.
+    kWh a year against a medium electricity TDCV of 2,500, so a typical household is
+    the right order of magnitude for its gas.
   * The real daily mean temperature at the premises' postcode district through the
     same year the electricity comes from, so the gas responds to the same winter the
-    electricity saw. Space heating follows heating degree days, base 15.5C, which is
-    the standard UK base for domestic heating demand.
-  * A split of 78% space heating, 18% hot water, 4% cooking, and boiler run times
-    that put the heat where an occupied home uses it: a morning warm-up, an evening
-    period, and midday running only when it is genuinely cold.
+    electricity saw. Space heating follows heating degree days, base 15.5C, the
+    standard UK base for domestic heating demand.
+  * The end use split DESNZ publishes for domestic natural gas: roughly three
+    quarters space heating, a fifth hot water, the rest cooking. Boiler run times put
+    the heat where an occupied home uses it: a morning warm-up, an evening period, and
+    midday running only when it is genuinely cold.
+
+Every constant below carries the URL that justifies it, and those URLs are copied into
+the fixture's own metadata, so the numbers can be checked without reading this script.
 
 What it deliberately is not: a household anyone metered. It is the right shape and
 the right magnitude, which is what a carbon calculation needs to be worth running,
@@ -60,32 +64,77 @@ WEATHER_ATTRIBUTION = (
 )
 WEATHER_LICENCE_URL = "https://creativecommons.org/licenses/by/4.0/"
 
-# Ofgem's medium Typical Domestic Consumption Value for gas.
-ANNUAL_KWH = 11500
+# Ofgem's medium Typical Domestic Consumption Value for gas: the regulator's estimate
+# of what a typical household burns in a year, and the anchor the whole profile is
+# scaled to. 9,500 kWh replaced 11,500 on 1 July 2026, a 2,000 kWh cut reflecting how
+# much less gas UK homes now use. These readings are served as present-day
+# consumption, so the figure in force is the one to scale to, even though the load
+# shape underneath comes from an earlier year.
+ANNUAL_KWH = 9500
 TDCV_URL = (
-    "https://www.ofgem.gov.uk/information-consumers/"
-    "energy-advice-households/average-gas-and-electricity-use-explained"
+    "https://www.ofgem.gov.uk/sites/default/files/2026-05/"
+    "Review%20of%20typical%20domestic%20consumption%20values%20decision.pdf"
+)
+TDCV_REVIEW_URL = (
+    "https://www.ofgem.gov.uk/consultation/review-typical-domestic-consumption-values"
 )
 
-# Metered gas is billed by volume and converted to energy with the calorific value of
-# the gas and a volume correction: kWh = m3 * 39.5 MJ/m3 * 1.02264 / 3.6.
+# Metered gas is billed by volume, and the conversion to energy is fixed in law:
+# kWh = m3 * calorific value * 1.02264 / 3.6. The 1.02264 corrects the volume for
+# temperature and pressure. 39.5 MJ/m3 is a representative calorific value; a real
+# bill carries the average of the gas actually delivered to that premises.
 KWH_PER_CUBIC_METRE = 39.5 * 1.02264 / 3.6
+GAS_CONVERSION_URL = (
+    "https://www.gov.uk/guidance/gas-meter-readings-and-bill-calculation"
+)
+GAS_CONVERSION_REGULATIONS_URL = (
+    "https://www.legislation.gov.uk/uksi/1996/439/contents/made"
+)
 
-# The base temperature below which a UK home is assumed to want heat.
+# The base temperature below which a UK home is assumed to want heat. 15.5C is the
+# long-standing UK convention, used by CIBSE and by DESNZ: above it the incidental
+# gains from bodies, cooking and appliances cover the fabric losses of a typical
+# building and the heating stays off.
 HEATING_BASE_C = 15.5
+DEGREE_DAY_BASE_URL = "https://www.degreedays.net/base-temperature"
+DEGREE_DAY_METHOD_URL = (
+    "https://www.cibse.org/knowledge-research/knowledge-portal/"
+    "technical-memorandum-41-degree-days-theory-and-application-2006-pdf/"
+)
 
-# Where the year's gas goes. Space heating dominates, which is what gives gas its
-# far stronger seasonality than electricity.
-SPACE_HEATING_SHARE = 0.78
-HOT_WATER_SHARE = 0.18
-COOKING_SHARE = 0.04
+# Where the year's gas goes, from DESNZ's Energy Consumption in the UK: Table U3
+# splits domestic consumption by end use and fuel, and these are its natural gas
+# columns for 2024, the most recent year. The split is stable over time — 2013, the
+# year the load shape comes from, was 74.4 / 23.3 / 2.3 — so nothing here turns on
+# which year is taken. Space heating dominating is what gives gas its far stronger
+# seasonality than electricity, and most of what a carbon calculation will see.
+SPACE_HEATING_SHARE = 0.749
+HOT_WATER_SHARE = 0.220
+COOKING_SHARE = 0.031
+END_USE_SPLIT_URL = (
+    "https://www.gov.uk/government/statistics/energy-consumption-in-the-uk-2025"
+)
+END_USE_SPLIT_TABLE = (
+    "ECUK 2025, Table U3: domestic consumption by end use and fuel, "
+    "natural gas columns, 2024"
+)
 
-# A boiler heating water from the incoming main works harder in winter, when the main
-# is colder. Mains temperature tracks air temperature, damped and offset.
+# The temperature hot water is delivered at, which sets how hard the boiler works
+# against the incoming main. HSE's legionella guidance puts stored water at 60C and
+# water reaching the outlets at 50C or above, so 55C sits between the two. Only the
+# ratio of winter to summer hot water demand depends on this, and that ratio barely
+# moves for a few degrees either way.
 CYLINDER_TARGET_C = 55.0
+HOT_WATER_TEMPERATURE_URL = "https://www.hse.gov.uk/healthservices/legionella.htm"
+
+# SAP, the government's methodology for assessing a dwelling's energy use, models the
+# incoming cold water main with a monthly temperature table. `mains_temperature`
+# below is a linear approximation in the same spirit.
+MAINS_TEMPERATURE_URL = "https://www.gov.uk/guidance/standard-assessment-procedure"
 
 # Below this a half hour is reported as zero: a boiler either fires or it does not,
-# and a thousandth of a cubic metre is not a firing.
+# and a thousandth of a cubic metre is not a firing. A judgement rather than a
+# published figure; it only affects how the quietest summer half hours round.
 FIRING_FLOOR_M3 = 0.001
 
 
@@ -250,7 +299,8 @@ def mains_temperature(air: float) -> float:
 
     Buried pipe damps and lags the air above it, so the main sits well above winter
     air and below summer air. The exact curve matters less than the direction: the
-    cylinder has more work to do in January than in July.
+    cylinder has more work to do in January than in July. SAP does this properly, with
+    a monthly cold water feed temperature table; see MAINS_TEMPERATURE_URL.
     """
     return 0.55 * air + 4.5
 
@@ -379,17 +429,29 @@ def main() -> int:
             "weather. Do not present it as an observed household."
         ),
         "synthetic": True,
+        # Every figure the profile rests on, with where it came from, so a reader can
+        # check the construction without opening the script.
         "method": {
             "annualEnergyBasis": "Ofgem medium gas Typical Domestic Consumption Value",
             "annualEnergyBasisUrl": TDCV_URL,
+            "annualEnergyBasisReviewUrl": TDCV_REVIEW_URL,
             "annualKwh": args.annual_kwh,
             "kwhPerCubicMetre": round(KWH_PER_CUBIC_METRE, 4),
+            "kwhPerCubicMetreUrl": GAS_CONVERSION_URL,
+            "kwhPerCubicMetreRegulationsUrl": GAS_CONVERSION_REGULATIONS_URL,
             "heatingBaseTemperatureC": HEATING_BASE_C,
+            "heatingBaseTemperatureUrl": DEGREE_DAY_BASE_URL,
+            "heatingBaseTemperatureMethodUrl": DEGREE_DAY_METHOD_URL,
             "shares": {
                 "spaceHeating": SPACE_HEATING_SHARE,
                 "hotWater": HOT_WATER_SHARE,
                 "cooking": COOKING_SHARE,
+                "source": END_USE_SPLIT_TABLE,
+                "sourceUrl": END_USE_SPLIT_URL,
             },
+            "hotWaterDeliveryTemperatureC": CYLINDER_TARGET_C,
+            "hotWaterDeliveryTemperatureUrl": HOT_WATER_TEMPERATURE_URL,
+            "mainsTemperatureUrl": MAINS_TEMPERATURE_URL,
             "pairedWith": (
                 "The electricity fixture's household, chosen because it is gas heated "
                 "and so leaves room for a boiler"
