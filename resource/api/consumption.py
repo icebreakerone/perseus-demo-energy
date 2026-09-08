@@ -3,20 +3,15 @@ Meter readings for a requested window.
 
 The demo serves one premises with two meters. Electricity is a real household's year
 of half-hourly readings from the UK Power Networks Low Carbon London trial, extracted
-by `scripts/extract_lcl_data.py`. Gas has no equivalent source — nobody publishes
-half-hourly domestic gas volumes — so `data/gas_profile.json` carries the monthly
-demand DESNZ does publish, and `_expand_profile` spreads it across the year.
+by `scripts/extract_lcl_data.py`. Gas has no equivalent source, so `data/gas_profile.json`
+carries the monthly demand DESNZ does publish, and `_expand_profile` spreads it across the year.
 
-The household was chosen for being gas heated: its electricity is appliances and
-lighting, lifting mildly in winter with the lights, which leaves room for a boiler
-alongside it. An electrically heated meter would have the more dramatic electricity
-curve, but pairing one with a gas profile would heat the same house twice and hand a
-CAP a premises that cannot exist.
+This household was chosen from the LCL dataset as a property likely to have
+gas heating - properties in this dataset with electric heating show obvious
+peaks overnight due to storage heater use.
 
 Because each fixture is a single year and callers ask for windows in the present,
-readings are date-shifted onto the requested window (see `_fixture_index`). Swap
-`load_fixture` for a different source — generated profiles, a real meter feed — and
-nothing above this module changes.
+readings are date-shifted onto the requested window (see `_fixture_index`).
 """
 
 from __future__ import annotations
