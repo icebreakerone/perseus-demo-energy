@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives import serialization
 from fastapi.testclient import TestClient
 
 from tests import client_certificate, ROOT_DIR  # noqa
-from api.main import app, DEMO_METER_ID, UNCOMPRESSED_WINDOW
+from api.main import app, DEMO_METER_ID, DEMO_GAS_METER_ID, UNCOMPRESSED_WINDOW
 from api import conf, consumption, models
 
 client = TestClient(app)
@@ -75,7 +75,9 @@ def get(headers, measure="import", meter=DEMO_METER_ID, **params):
 def test_readings_cover_the_requested_window(authorised):
     """The reported bug: from and to were parsed and then ignored."""
     headers, _ = authorised
-    response = get(headers, **{"from": "2026-03-01T00:00:00Z", "to": "2026-03-08T00:00:00Z"})
+    response = get(
+        headers, **{"from": "2026-03-01T00:00:00Z", "to": "2026-03-08T00:00:00Z"}
+    )
 
     assert response.status_code == 200
     readings = response.json()["data"]
@@ -87,8 +89,12 @@ def test_readings_cover_the_requested_window(authorised):
 def test_a_different_window_gives_different_readings(authorised):
     """A fixed fixture would answer both of these identically."""
     headers, _ = authorised
-    march = get(headers, **{"from": "2026-03-01T00:00:00Z", "to": "2026-03-02T00:00:00Z"})
-    july = get(headers, **{"from": "2026-07-01T00:00:00Z", "to": "2026-07-02T00:00:00Z"})
+    march = get(
+        headers, **{"from": "2026-03-01T00:00:00Z", "to": "2026-03-02T00:00:00Z"}
+    )
+    july = get(
+        headers, **{"from": "2026-07-01T00:00:00Z", "to": "2026-07-02T00:00:00Z"}
+    )
 
     assert [r["energy"]["value"] for r in march.json()["data"]] != [
         r["energy"]["value"] for r in july.json()["data"]
@@ -119,7 +125,9 @@ def test_readings_are_contiguous_half_hours(authorised):
 def test_to_defaults_to_now(authorised):
     """The registry API declares `to` optional, meaning up to the present."""
     headers, _ = authorised
-    yesterday = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)
+    yesterday = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(
+        days=1
+    )
     response = get(headers, **{"from": yesterday.strftime("%Y-%m-%dT%H:%M:%SZ")})
 
     assert response.status_code == 200
@@ -278,23 +286,44 @@ def test_datasources_advertises_the_registry_type(authorised):
 # ---------------------------------------------------------------------------
 
 
-def test_the_shift_keeps_winter_colder_than_summer():
+def test_the_shift_keeps_winter_heavier_than_summer():
     """
     What the shift is for. A CAP multiplies each half hour by grid intensity, so a
     year that had lost its seasonal shape would give an answer that looks nothing
     like the household's real emissions.
+
+    Whole months, because a gas heated household's lift is lighting and time spent
+    indoors rather than a heating load, and a single day is noise against that.
     """
-    def daily_total(month):
-        start = datetime.datetime(2026, month, 10, tzinfo=datetime.timezone.utc)
+
+    def daily_mean(month, days):
+        start = datetime.datetime(2026, month, 1, tzinfo=datetime.timezone.utc)
         readings = consumption.readings(
             start,
-            start + datetime.timedelta(days=1),
+            start + datetime.timedelta(days=days),
             models.EnergyType.ELECTRICITY,
             models.Measure.IMPORT,
         )
-        return sum(reading["energy"]["value"] for reading in readings)
+        return sum(reading["energy"]["value"] for reading in readings) / days
 
-    assert daily_total(2) > daily_total(7) * 2
+    assert daily_mean(2, 28) > daily_mean(7, 31) * 1.15
+
+
+def test_the_demo_household_is_not_electrically_heated():
+    """
+    The premise of the gas datasource. This meter's electricity has to leave room for
+    a boiler: if the fixture were swapped for an Economy 7 storage heated household,
+    the two datasources together would heat the same home twice, and a CAP would be
+    handed a premises that cannot exist.
+    """
+    _, values = consumption.load_fixture()
+    day = 48
+
+    # January and December against July and August, 62 days on each side.
+    winter = (sum(values[: 31 * day]) + sum(values[-31 * day :])) / 62
+    summer = sum(values[181 * day : 243 * day]) / 62
+
+    assert winter / summer < 2.0
 
 
 def test_the_shift_keeps_the_time_of_day():
@@ -343,3 +372,136 @@ def test_the_fixture_credits_its_source():
 
     assert "creativecommons.org" in fixture["source"]["licence"]
     assert fixture["source"]["attribution"]
+
+
+# ---------------------------------------------------------------------------
+# Gas
+# ---------------------------------------------------------------------------
+
+
+def test_gas_is_served_in_cubic_metres(authorised):
+    """
+    The registry standard reserves MTQ for gas, and gas alone. A gas meter reporting
+    watt hours would be describing a conversion it never made.
+    """
+    headers, _ = authorised
+    readings = get(
+        headers,
+        meter=DEMO_GAS_METER_ID,
+        **{"from": "2026-01-15T00:00:00Z", "to": "2026-01-16T00:00:00Z"},
+    ).json()["data"]
+
+    assert len(readings) == HALF_HOURS_PER_DAY
+    assert all(reading["type"] == "gas" for reading in readings)
+    assert all(reading["energy"]["unitCode"] == "MTQ" for reading in readings)
+    assert all(reading["cumulative"]["unitCode"] == "MTQ" for reading in readings)
+
+
+def test_gas_swings_harder_than_electricity_across_the_year(authorised):
+    """
+    Why gas is worth serving at all. Nearly four fifths of it is space heating, so a
+    January day is several times a July day, where the electricity barely moves. A CAP
+    weighing a home's carbon sees most of the year's variation here.
+    """
+    headers, _ = authorised
+
+    def month_total(meter, month):
+        readings = get(
+            headers,
+            meter=meter,
+            **{
+                "from": f"2026-{month:02d}-01T00:00:00Z",
+                "to": f"2026-{month:02d}-15T00:00:00Z",
+            },
+        ).json()["data"]
+        return sum(reading["energy"]["value"] for reading in readings)
+
+    gas_ratio = month_total(DEMO_GAS_METER_ID, 1) / month_total(DEMO_GAS_METER_ID, 7)
+    power_ratio = month_total(DEMO_METER_ID, 1) / month_total(DEMO_METER_ID, 7)
+
+    assert gas_ratio > 3
+    assert gas_ratio > power_ratio * 2
+
+
+def test_the_two_meters_shift_together(authorised):
+    """
+    One premises, so the two fixtures must land on the same calendar. They are the
+    same length and start on the same instant, which means the ring offset is the same
+    for both: the day the gas works hardest is a day the electricity also saw as
+    winter. If they drifted apart, a CAP would be reading two different houses.
+    """
+    electricity_start, electricity = consumption.load_fixture(
+        models.EnergyType.ELECTRICITY
+    )
+    gas_start, gas = consumption.load_fixture(models.EnergyType.GAS)
+
+    assert electricity_start == gas_start
+    assert len(electricity) == len(gas)
+
+
+def test_gas_does_not_offer_export(authorised):
+    """
+    /datasources advertises import only for the gas meter, and the endpoint holds to
+    it. Returning zeros instead would invite a CAP to subtract an export that no gas
+    meter can measure.
+    """
+    headers, _ = authorised
+    response = get(
+        headers,
+        measure="export",
+        meter=DEMO_GAS_METER_ID,
+        **{"from": "2026-01-15T00:00:00Z", "to": "2026-01-16T00:00:00Z"},
+    )
+
+    assert response.status_code == 404
+    assert "export" in response.json()["error_description"]
+
+
+def test_the_gas_profile_declares_itself_synthetic():
+    """
+    It is not metered data and no reader should have to guess. The electricity fixture
+    credits a real trial; this one has to say plainly that it was constructed, and
+    from what. The month-to-month shape is published demand, the shape within a day is
+    not, and the profile distinguishes the two.
+    """
+    with open(f"{conf.ROOT_DIR}/data/gas_profile.json") as handle:
+        profile = json.load(handle)
+
+    assert profile["synthetic"] is True
+    assert "SYNTHETIC" in profile["_comment"]
+
+    basis = profile["basis"]
+    assert basis["monthlyShares"]
+    assert basis["monthlySharesUrl"].startswith("https://")
+    assert basis["annualEnergy"]
+    assert "Illustrative" in basis["dailyShape"]
+
+
+def test_the_gas_profile_accounts_for_the_whole_year():
+    """
+    Both tables are shares of a whole, and the annual total rests on them summing to
+    one. A share edited without its neighbours would leave the year quietly short or
+    over, with nothing else to catch it.
+    """
+    with open(f"{conf.ROOT_DIR}/data/gas_profile.json") as handle:
+        profile = json.load(handle)
+
+    assert len(profile["monthlyShares"]) == 12
+    assert sum(profile["monthlyShares"].values()) == pytest.approx(1.0, abs=1e-6)
+
+    assert len(profile["dailyShape"]) == HALF_HOURS_PER_DAY
+    assert sum(profile["dailyShape"]) == pytest.approx(1.0, abs=1e-6)
+
+
+def test_the_gas_profile_expands_to_its_annual_total():
+    """
+    The expansion has to conserve what the profile claims. Shares and weights that sum
+    to one are only half of it: the arithmetic that spreads them across months of
+    different lengths has to land on the annual figure the consumption value fixes.
+    """
+    with open(f"{conf.ROOT_DIR}/data/gas_profile.json") as handle:
+        expected = json.load(handle)["annualCubicMetres"]
+
+    _, values = consumption.load_fixture(models.EnergyType.GAS)
+
+    assert sum(values) == pytest.approx(expected, rel=0.001)

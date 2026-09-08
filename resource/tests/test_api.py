@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests import client_certificate, ROOT_DIR  # noqa
-from api.main import app, DEMO_METER_ID
+from api.main import app, DEMO_METER_ID, DEMO_GAS_METER_ID
 from api import conf
 
 client = TestClient(app)
@@ -88,11 +88,20 @@ def test_datasources(
     assert response.status_code == 200
     data = response.json()
     assert "data" in data
-    assert len(data["data"]) == 1
-    assert data["data"][0]["id"] == DEMO_METER_ID
-    assert data["data"][0]["type"] == "electricity"
-    assert data["data"][0]["location"]["ukPostcodeOutcode"] == "SW8"
-    assert data["data"][0]["availableMeasures"] == ["import", "export"]
+    sources = {source["id"]: source for source in data["data"]}
+    assert set(sources) == {DEMO_METER_ID, DEMO_GAS_METER_ID}
+
+    electricity = sources[DEMO_METER_ID]
+    assert electricity["type"] == "electricity"
+    assert electricity["location"]["ukPostcodeOutcode"] == "SW8"
+    assert electricity["availableMeasures"] == ["import", "export"]
+
+    gas = sources[DEMO_GAS_METER_ID]
+    assert gas["type"] == "gas"
+    # One premises, so the same location on both meters.
+    assert gas["location"]["ukPostcodeOutcode"] == "SW8"
+    # No gas meter measures export.
+    assert gas["availableMeasures"] == ["import"]
 
 
 def test_consumption(
