@@ -3,8 +3,9 @@ Meter readings for a requested window.
 
 The demo serves one premises with two meters. Electricity is a real household's year
 of half-hourly readings from the UK Power Networks Low Carbon London trial, extracted
-by `scripts/extract_lcl_data.py`. Gas is synthesised by `scripts/synthesise_gas_data.py`,
-because no public dataset carries half-hourly domestic gas volumes.
+by `scripts/extract_lcl_data.py`. Gas has no equivalent source — nobody publishes
+half-hourly domestic gas volumes — so `data/gas_profile.json` carries the monthly
+demand DESNZ does publish, and `_expand_profile` spreads it across the year.
 
 The household was chosen for being gas heated: its electricity is appliances and
 lighting, lifting mildly in winter with the lights, which leaves room for a boiler
@@ -20,6 +21,7 @@ nothing above this module changes.
 
 from __future__ import annotations
 
+import calendar
 import datetime
 import functools
 import json
@@ -55,12 +57,43 @@ SOURCES: dict[models.EnergyType, Source] = {
     models.EnergyType.ELECTRICITY: Source(
         "consumption_year.json", models.UnitCode.WHR, 1000.0
     ),
-    models.EnergyType.GAS: Source("gas_year.json", models.UnitCode.MTQ, 1.0),
+    models.EnergyType.GAS: Source("gas_profile.json", models.UnitCode.MTQ, 1.0),
 }
 
 
 class FixtureError(Exception):
     """A fixture is missing or unusable."""
+
+
+def _expand_profile(fixture: dict, start: datetime.datetime) -> tuple[float, ...]:
+    """
+    A year of half hours from twelve monthly shares and one day's shape.
+
+    There is no metered half-hourly source for domestic gas to draw on, so rather than
+    model a boiler this states what is published: the share of a year's domestic gas
+    demand falling in each month. Within a day the shape is fixed and illustrative,
+    which costs nothing — gas carries a constant emissions factor, so the shape within
+    a day cannot change a carbon calculation, only whether a plot looks plausible.
+
+    The year in `start` supplies the month lengths. It is a non-leap year, matching the
+    electricity fixture, which is what keeps the two meters in phase.
+    """
+    annual = float(fixture["annualCubicMetres"])
+    shares = fixture["monthlyShares"]
+    shape = [float(weight) for weight in fixture["dailyShape"]]
+    if len(shape) != INTERVALS_PER_DAY:
+        raise FixtureError(
+            f"A daily shape needs {INTERVALS_PER_DAY} weights, one per half hour, "
+            f"and this one has {len(shape)}"
+        )
+
+    values: list[float] = []
+    for month in range(1, 13):
+        days = calendar.monthrange(start.year, month)[1]
+        daily = annual * float(shares[str(month)]) / days
+        for _ in range(days):
+            values.extend(round(daily * weight, 4) for weight in shape)
+    return tuple(values)
 
 
 @functools.lru_cache(maxsize=len(models.EnergyType))
@@ -76,24 +109,28 @@ def load_fixture(
         with open(path) as handle:
             fixture = json.load(handle)
     except FileNotFoundError:
-        raise FixtureError(
-            f"No {energy_type.value} fixture at {path}. Generate one with the scripts "
-            "in resource/scripts"
-        )
-
-    readings = fixture.get("readings")
-    if not readings:
-        raise FixtureError(f"Fixture at {path} has no readings")
-    if len(readings) % INTERVALS_PER_DAY:
-        raise FixtureError(
-            f"Fixture at {path} holds {len(readings)} readings, which is not a whole "
-            "number of days, so shifting it would move the time of day"
-        )
+        raise FixtureError(f"No {energy_type.value} fixture at {path}")
 
     start = datetime.datetime.fromisoformat(
         fixture["start"].replace("Z", "+00:00")
     ).astimezone(datetime.timezone.utc)
-    return start, tuple(float(value) for value in readings)
+
+    # Metered readings are stored one by one; a profile is expanded into them here.
+    readings = fixture.get("readings")
+    values = (
+        tuple(float(value) for value in readings)
+        if readings
+        else _expand_profile(fixture, start)
+    )
+
+    if not values:
+        raise FixtureError(f"Fixture at {path} has no readings")
+    if len(values) % INTERVALS_PER_DAY:
+        raise FixtureError(
+            f"Fixture at {path} holds {len(values)} readings, which is not a whole "
+            "number of days, so shifting it would move the time of day"
+        )
+    return start, values
 
 
 def _fixture_index(when: datetime.datetime, start: datetime.datetime, size: int) -> int:

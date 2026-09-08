@@ -457,35 +457,51 @@ def test_gas_does_not_offer_export(authorised):
     assert "export" in response.json()["error_description"]
 
 
-def test_the_gas_fixture_declares_itself_synthetic():
+def test_the_gas_profile_declares_itself_synthetic():
     """
     It is not metered data and no reader should have to guess. The electricity fixture
     credits a real trial; this one has to say plainly that it was constructed, and
-    from what.
+    from what. The month-to-month shape is published demand, the shape within a day is
+    not, and the profile distinguishes the two.
     """
-    with open(f"{conf.ROOT_DIR}/data/gas_year.json") as handle:
-        fixture = json.load(handle)
+    with open(f"{conf.ROOT_DIR}/data/gas_profile.json") as handle:
+        profile = json.load(handle)
 
-    assert fixture["synthetic"] is True
-    assert "SYNTHETIC" in fixture["_comment"]
-    assert "synthesise_gas_data.py" in fixture["_comment"]
-    assert fixture["method"]["annualEnergyBasis"]
-    # The weather is real and CC-BY, so its credit travels with the readings.
-    assert "creativecommons.org" in fixture["weather"]["licence"]
-    assert fixture["weather"]["attribution"]
+    assert profile["synthetic"] is True
+    assert "SYNTHETIC" in profile["_comment"]
+
+    basis = profile["basis"]
+    assert basis["monthlyShares"]
+    assert basis["monthlySharesUrl"].startswith("https://")
+    assert basis["annualEnergy"]
+    assert "Illustrative" in basis["dailyShape"]
 
 
-def test_the_gas_end_use_shares_account_for_the_whole_year():
+def test_the_gas_profile_accounts_for_the_whole_year():
     """
-    The readings are constructed, so the construction has to be checkable: the fixture
-    carries the figures it was built from. These three have to sum to one, or the
-    annual total the consumption value fixes is quietly wrong.
+    Both tables are shares of a whole, and the annual total rests on them summing to
+    one. A share edited without its neighbours would leave the year quietly short or
+    over, with nothing else to catch it.
     """
-    with open(f"{conf.ROOT_DIR}/data/gas_year.json") as handle:
-        method = json.load(handle)["method"]
+    with open(f"{conf.ROOT_DIR}/data/gas_profile.json") as handle:
+        profile = json.load(handle)
 
-    shares = method["shares"]
-    assert sum(
-        shares[key] for key in ("spaceHeating", "hotWater", "cooking")
-    ) == pytest.approx(1.0, abs=0.001)
-    assert shares["source"]
+    assert len(profile["monthlyShares"]) == 12
+    assert sum(profile["monthlyShares"].values()) == pytest.approx(1.0, abs=1e-6)
+
+    assert len(profile["dailyShape"]) == HALF_HOURS_PER_DAY
+    assert sum(profile["dailyShape"]) == pytest.approx(1.0, abs=1e-6)
+
+
+def test_the_gas_profile_expands_to_its_annual_total():
+    """
+    The expansion has to conserve what the profile claims. Shares and weights that sum
+    to one are only half of it: the arithmetic that spreads them across months of
+    different lengths has to land on the annual figure the consumption value fixes.
+    """
+    with open(f"{conf.ROOT_DIR}/data/gas_profile.json") as handle:
+        expected = json.load(handle)["annualCubicMetres"]
+
+    _, values = consumption.load_fixture(models.EnergyType.GAS)
+
+    assert sum(values) == pytest.approx(expected, rel=0.001)
