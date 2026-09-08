@@ -468,28 +468,24 @@ def test_the_gas_fixture_declares_itself_synthetic():
 
     assert fixture["synthetic"] is True
     assert "SYNTHETIC" in fixture["_comment"]
-    assert fixture["method"]["annualEnergyBasisUrl"]
+    assert "synthesise_gas_data.py" in fixture["_comment"]
+    assert fixture["method"]["annualEnergyBasis"]
+    # The weather is real and CC-BY, so its credit travels with the readings.
     assert "creativecommons.org" in fixture["weather"]["licence"]
+    assert fixture["weather"]["attribution"]
 
 
-def test_the_gas_fixture_cites_every_figure_it_rests_on():
+def test_the_gas_end_use_shares_account_for_the_whole_year():
     """
-    The readings are constructed, so the construction has to be checkable. Every number
-    the profile is built from carries the URL that justifies it, and the citations
-    travel with the fixture rather than living only in the script that wrote it.
+    The readings are constructed, so the construction has to be checkable: the fixture
+    carries the figures it was built from. These three have to sum to one, or the
+    annual total the consumption value fixes is quietly wrong.
     """
     with open(f"{conf.ROOT_DIR}/data/gas_year.json") as handle:
         method = json.load(handle)["method"]
 
-    urls = [value for key, value in method.items() if key.endswith("Url")]
-    urls.append(method["shares"]["sourceUrl"])
-
-    assert len(urls) >= 7
-    assert all(url.startswith("https://") for url in urls)
-
-    # The end use shares have to account for the whole year, or the annual total the
-    # TDCV fixes is quietly wrong.
     shares = method["shares"]
     assert sum(
         shares[key] for key in ("spaceHeating", "hotWater", "cooking")
     ) == pytest.approx(1.0, abs=0.001)
+    assert shares["source"]
