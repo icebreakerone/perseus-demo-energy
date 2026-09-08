@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- The resource API serves a year of real half-hourly electricity readings, taken from one household in the UK Power Networks Low Carbon London trial and extracted by `resource/scripts/extract_lcl_data.py`. Readings are date shifted onto the requested window, so a request for last February returns that household's February, with the heating season in it. A carbon calculation driven by this data sees real seasonal shape, roughly three times the consumption per half hour in January as in July, where the previous fixture was flat
+- Responses are gzipped. A year of half-hourly readings is around 4.2MB of JSON, past the 1MB an ALB will carry back from a Lambda, and compresses to about 265KB
+
+### Changed
+
+- `/datasources/{id}/{measure}` returns the readings covering the window asked for. It previously returned the same 100 fixed readings from 2012 whatever `from` and `to` were set to
+- `to` is optional and means now, as the registry's consumption-data API declares. It was previously required
+- Both edges of the window snap back to the half hour containing them, so a request from 09:47 returns the 09:30 reading rather than losing it
+- At most 396 days can be requested at once, which covers the previous 12 complete months. A window longer than 60 days is served only to a caller sending `Accept-Encoding: gzip`, rather than failing at the load balancer
+- The metering period in a provenance record is recorded to the minute in UTC, not just the date, so it describes the window that was actually served
+
+### Breaking
+
+- A reading's `type` is `electricity`, lower case, as the registry's consumption-data API declares it. It was `Electricity`. Anything matching on the old value needs updating
+- `takenAt` falls one interval after the reading's `to`, which is when a meter can first report a closed interval. It previously fell inside the interval, at 13:15 for a reading covering 13:00 to 13:30, which the specification does not allow
+- `unitCode` is constrained to the CEFACT codes the registry permits, `KWH`, `WHR` and `MTQ`, and an energy value may not be negative. Both were previously unconstrained
+- `create_provenance_records` takes datetimes for `from_date` and `to_date` rather than dates. A bare date still means midnight, so callers working in whole days are unaffected
+
 ## [v5.0.0] - 2026-09-02
 
 ### Fixed
