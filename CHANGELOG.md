@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [v6.0.0] - 2026-09-09
 
 ### Added
 
@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
 - A gas data source on the same premises, at `/datasources/G018011012261305588165/import`, reporting volumes in `MTQ` as the registry's consumption-data API requires. It advertises `import` only, and a request for `export` is refused: no gas meter measures it
 - The gas readings are **synthetic**, and `resource/data/gas_profile.json` says so in its own metadata. Nobody publishes half-hourly domestic gas volumes, but DESNZ publishes the month-to-month shape: Energy Trends table ET 4.2 gives domestic gas demand by month, and the share falling in each month barely moves between 2023 and 2024, so it describes a typical year rather than one year's particular winter. Twelve of those shares, a fixed daily shape and Ofgem's medium gas consumption value of 9,500 kWh are the whole profile, expanded into the year on load. It swings about six times harder between January and July than the electricity does, which is where most of a gas heated home's carbon variation lives. The shape within a day is illustrative rather than measured, and marked as such; gas carries a constant emissions factor, so it cannot affect a carbon calculation. None of it should be presented as data from a metered household
 - Responses are gzipped. A year of half-hourly readings is around 4.2MB of JSON, past the 1MB an ALB will carry back from a Lambda, and compresses to about 254KB
+- `scripts/refresh-certs.sh` refreshes every certificate the local development stack uses, issuing the client and signing certificates from the real sandbox directory service and downloading the real CA bundles for nginx and the resource API to trust. `setup.sh` built a complete self-signed PKI whose client CA existed only on the machine that ran it, so a client holding a real directory certificate could not connect to the local nginx, and the identity URIs in its certificates were invented rather than issued. Local testing could not catch a whole class of problem, such as a role scoped to the wrong registry host. Only the localhost server certificate is still generated locally, because no directory issues one for localhost
+- `AGENTS.md`, recording the repository's layout and conventions for contributors
 
 ### Changed
 
@@ -20,6 +22,9 @@ All notable changes to this project will be documented in this file.
 - Both edges of the window snap back to the half hour containing them, so a request from 09:47 returns the 09:30 reading rather than losing it
 - At most 396 days can be requested at once, which covers the previous 12 complete months. A window longer than 60 days is served only to a caller sending `Accept-Encoding: gzip`, rather than failing at the load balancer
 - The metering period in a provenance record is recorded to the minute in UTC, not just the date, so it describes the window that was actually served
+- The JWT signing key used in local development is kept across certificate refreshes. `setup.sh` regenerated it on every run, which invalidates every access token already issued and republishes the JWKS. Pass `--rotate-jwt-key` to replace it
+- The localhost development certificate carries a SubjectAltName rather than only a CN, so a client that verifies hostnames accepts it and no longer needs to skip server verification
+- `resource/data/sample_data.json` is removed. It held the 100 readings from February 2012 that the API used to return, and nothing reads it now the API serves a year of real ones
 
 ### Breaking
 
@@ -27,6 +32,7 @@ All notable changes to this project will be documented in this file.
 - `takenAt` falls one interval after the reading's `to`, which is when a meter can first report a closed interval. It previously fell inside the interval, at 13:15 for a reading covering 13:00 to 13:30, which the specification does not allow
 - `unitCode` is constrained to the CEFACT codes the registry permits, `KWH`, `WHR` and `MTQ`, and an energy value may not be negative. Both were previously unconstrained
 - `create_provenance_records` takes datetimes for `from_date` and `to_date` rather than dates. A bare date still means midnight, so callers working in whole days are unaffected
+- `scripts/setup.sh` is now `scripts/setup-offline.sh`, and is for use without a directory account or without a network. `scripts/refresh-certs.sh` replaces it as the normal way to refresh local certificates. The two produce incompatible client CAs, so `scripts/generated/MANIFEST.txt` records which of them ran last
 
 ## [v5.0.0] - 2026-09-02
 
