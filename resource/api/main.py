@@ -1,4 +1,3 @@
-import json
 import datetime
 import uuid
 from typing import Annotated
@@ -10,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.openapi.utils import get_openapi
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.requests import Request
 from ib1 import directory
 from mangum import Mangum
@@ -17,6 +17,7 @@ from mangum import Mangum
 from . import models
 from . import auth
 from . import conf
+from . import consumption as consumption_data
 from . import openapi
 from . import provenance
 from .exceptions import ApiError, AccessTokenValidatorError
@@ -24,7 +25,34 @@ from .logger import get_logger
 
 
 DEMO_METER_ID = "S018011012261305588165"
+# The same premises' gas meter. Both ids are invented; neither is an MPAN or MPRN.
+DEMO_GAS_METER_ID = "G018011012261305588165"
 DEMO_DATA_SOURCE_LOCATION = "SW8"
+
+# Compression is what makes a year of half-hourly readings fit in the 1MB a load
+# balancer will carry back from a Lambda. A caller that will not take a compressed
+# response is held to a window that fits without it.
+UNCOMPRESSED_WINDOW = datetime.timedelta(days=60)
+
+# The data sources this demo serves, keyed by the id /datasources advertises. One
+# premises, two meters: a CAP that wants the whole carbon picture reads both.
+DATA_SOURCES: dict[str, dict] = {
+    DEMO_METER_ID: {
+        "id": DEMO_METER_ID,
+        "type": models.EnergyType.ELECTRICITY,
+        "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},
+        "availableMeasures": list(models.Measure),
+    },
+    DEMO_GAS_METER_ID: {
+        "id": DEMO_GAS_METER_ID,
+        "type": models.EnergyType.GAS,
+        "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},
+        # A gas meter measures what the premises draws and nothing else. Advertising
+        # export here would promise a reading no gas meter can take.
+        "availableMeasures": [models.Measure.IMPORT],
+    },
+}
+
 logger = get_logger()
 
 
@@ -112,6 +140,12 @@ app = FastAPI(
     root_path=conf.OPEN_API_ROOT,
 )
 
+# A year of half-hourly readings is around 3.5MB of JSON, well past the 1MB an ALB
+# will carry back from a Lambda, but it is repetitive and compresses to a fraction
+# of that. Mangum base64-encodes the compressed body, since gzip's leading bytes are
+# not valid UTF-8, and the load balancer unwraps it.
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 API_ERROR_RESPONSES: dict = {
     400: {"model": models.ApiErrorResponse, "description": "Malformed request"},
     401: {
@@ -161,7 +195,8 @@ async def validation_error_handler(
         status_code=400,
         content={
             "error": "invalid_request",
-            "error_description": "Invalid or missing parameters. " + "; ".join(problems),
+            "error_description": "Invalid or missing parameters. "
+            + "; ".join(problems),
         },
     )
 
@@ -172,9 +207,7 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
     Catch everything else, so infrastructure failures are reportable.
     """
     reference = correlation_id()
-    logger.exception(
-        f"Unhandled error on {request.url.path}, correlation {reference}"
-    )
+    logger.exception(f"Unhandled error on {request.url.path}, correlation {reference}")
     return JSONResponse(
         status_code=500,
         content={
@@ -205,16 +238,59 @@ def root():
 def datasources(
     auth_result: tuple[dict, dict, object] = Depends(require_mtls_and_token),
 ) -> dict:
-    return {
-        "data": [
-            {
-                "id": DEMO_METER_ID,
-                "type": "electricity",
-                "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},
-                "availableMeasures": list(models.Measure),
-            }
-        ]
-    }
+    return {"data": list(DATA_SOURCES.values())}
+
+
+def _resolve_window(
+    request: Request,
+    from_date: datetime.datetime,
+    to_date: datetime.datetime | None,
+) -> tuple[datetime.datetime, datetime.datetime]:
+    """
+    Settle the window a caller asked for, or say why it cannot be served.
+
+    `to` is optional and means "now", as the registry API declares. Both edges snap
+    back to the half hour containing them, so a caller passing 09:47 gets the 09:30
+    reading rather than silently losing it.
+    """
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    # A caller may send a bare date. Read anything without a zone as UTC rather
+    # than guessing at the caller's.
+    if from_date.tzinfo is None:
+        from_date = from_date.replace(tzinfo=datetime.timezone.utc)
+    if to_date is None:
+        to_date = now
+    elif to_date.tzinfo is None:
+        to_date = to_date.replace(tzinfo=datetime.timezone.utc)
+
+    from_date = consumption_data.align(from_date)
+    to_date = consumption_data.align(to_date)
+
+    if to_date <= from_date:
+        raise ApiError(
+            400, "invalid_request", "The 'to' date must be after the 'from' date"
+        )
+    if to_date - from_date > consumption_data.MAX_WINDOW:
+        raise ApiError(
+            400,
+            "invalid_request",
+            f"At most {consumption_data.MAX_WINDOW.days} days can be requested at "
+            f"once, which covers the previous 12 complete months",
+        )
+
+    # Without compression a long window exceeds what a load balancer will carry
+    # back from a Lambda, so say so rather than failing at the edge.
+    accepts_gzip = "gzip" in request.headers.get("accept-encoding", "").lower()
+    if not accepts_gzip and to_date - from_date > UNCOMPRESSED_WINDOW:
+        raise ApiError(
+            400,
+            "invalid_request",
+            f"Windows longer than {UNCOMPRESSED_WINDOW.days} days are only served "
+            f"compressed. Send 'Accept-Encoding: gzip'",
+        )
+
+    return from_date, to_date
 
 
 @app.get(
@@ -223,16 +299,26 @@ def datasources(
     responses=API_ERROR_RESPONSES,
 )
 def consumption(
+    request: Request,
     id: str,
     measure: models.Measure,
-    from_date: datetime.date = Query(alias="from"),
-    to_date: datetime.date = Query(alias="to"),
+    from_date: datetime.datetime = Query(alias="from"),
+    to_date: datetime.datetime | None = Query(alias="to", default=None),
     auth_result: tuple[dict, dict, object] = Depends(require_mtls_and_token),
 ):
-    if id != DEMO_METER_ID:
+    source = DATA_SOURCES.get(id)
+    if source is None:
         # Not an RFC 6750 condition, so no registered code fits. The status
         # carries the meaning and no challenge is sent.
         raise ApiError(404, "not_found", "Meter not found")
+    if measure not in source["availableMeasures"]:
+        # The measure exists, this meter does not take it. /datasources said so.
+        raise ApiError(
+            404,
+            "not_found",
+            f"This data source does not measure {measure.value}",
+        )
+    from_date, to_date = _resolve_window(request, from_date, to_date)
     decoded, _, cert = auth_result
     # Create a new provenance record
     permission_granted = datetime.datetime.now(datetime.timezone.utc)
@@ -251,9 +337,8 @@ def consumption(
         # one granted on this token, not whichever this server prefers.
         license_url=auth.license_from_scopes(decoded.get("scp", [])),
     )
-    with open(f"{conf.ROOT_DIR}/data/sample_data.json") as f:
-        data = json.load(f)
-    logger.info(f"Returning data and provenance for {decoded['sub']}")
+    data = consumption_data.readings(from_date, to_date, source["type"], measure)
+    logger.info(f"Returning {len(data)} readings and provenance for {decoded['sub']}")
     return {
         "data": data,
         "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},
@@ -266,7 +351,8 @@ def custom_openapi():
         return app.openapi_schema
     openapi_schema = get_openapi(
         title="Perseus Demo EDP",
-        version="1.0.0",
+        # The release this build is from. Keep in step with CHANGELOG.md.
+        version="6.0.0",
         description=openapi.API_DESCRIPTION,
         routes=app.routes,
     )

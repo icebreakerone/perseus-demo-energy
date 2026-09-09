@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests import client_certificate, ROOT_DIR  # noqa
-from api.main import app, DEMO_METER_ID
+from api.main import app, DEMO_METER_ID, DEMO_GAS_METER_ID
 from api import conf
 
 client = TestClient(app)
@@ -32,9 +32,12 @@ def get_private_key():
 
 @pytest.fixture
 def api_consumption_url():
-    from_date = datetime.date.today().isoformat()
-    to_date = datetime.date.today().isoformat()
-    return f"/datasources/{DEMO_METER_ID}/import?from={from_date}&to={to_date}"
+    to_date = datetime.date.today()
+    from_date = to_date - datetime.timedelta(days=7)
+    return (
+        f"/datasources/{DEMO_METER_ID}/import"
+        f"?from={from_date.isoformat()}&to={to_date.isoformat()}"
+    )
 
 
 def test_consumption_no_token(api_consumption_url):
@@ -85,11 +88,20 @@ def test_datasources(
     assert response.status_code == 200
     data = response.json()
     assert "data" in data
-    assert len(data["data"]) == 1
-    assert data["data"][0]["id"] == DEMO_METER_ID
-    assert data["data"][0]["type"] == "electricity"
-    assert data["data"][0]["location"]["ukPostcodeOutcode"] == "SW8"
-    assert data["data"][0]["availableMeasures"] == ["import", "export"]
+    sources = {source["id"]: source for source in data["data"]}
+    assert set(sources) == {DEMO_METER_ID, DEMO_GAS_METER_ID}
+
+    electricity = sources[DEMO_METER_ID]
+    assert electricity["type"] == "electricity"
+    assert electricity["location"]["ukPostcodeOutcode"] == "SW8"
+    assert electricity["availableMeasures"] == ["import", "export"]
+
+    gas = sources[DEMO_GAS_METER_ID]
+    assert gas["type"] == "gas"
+    # One premises, so the same location on both meters.
+    assert gas["location"]["ukPostcodeOutcode"] == "SW8"
+    # No gas meter measures export.
+    assert gas["availableMeasures"] == ["import"]
 
 
 def test_consumption(
@@ -293,9 +305,10 @@ def test_not_found_sends_no_challenge(
         add_application=True,
     )
     today = datetime.date.today().isoformat()
+    week_ago = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
 
     response = client.get(
-        f"/datasources/not-a-meter/import?from={today}&to={today}",
+        f"/datasources/not-a-meter/import?from={week_ago}&to={today}",
         headers={
             "Authorization": "Bearer token",
             "x-amzn-mtls-clientcert-leaf": quote(pem),
@@ -331,7 +344,8 @@ def test_validation_error_uses_the_api_shape(mock_check_token):
     body = response.json()
     assert body["error"] == "invalid_request"
     assert "from" in body["error_description"]
-    assert "to" in body["error_description"]
+    # 'to' is optional and defaults to now, so only 'from' is reported missing.
+    assert "to:" not in body["error_description"]
 
 
 def test_unhandled_error_is_reportable(api_consumption_url, mocker):
@@ -398,9 +412,10 @@ def test_unknown_measure_is_rejected(mock_check_token):
         add_application=True,
     )
     today = datetime.date.today().isoformat()
+    week_ago = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
 
     response = client.get(
-        f"/datasources/{DEMO_METER_ID}/anymeasure?from={today}&to={today}",
+        f"/datasources/{DEMO_METER_ID}/anymeasure?from={week_ago}&to={today}",
         headers={
             "Authorization": "Bearer token",
             "x-amzn-mtls-clientcert-leaf": quote(pem),
@@ -446,6 +461,7 @@ def test_available_measures_match_what_is_accepted(
         "x-amzn-mtls-clientcert-leaf": quote(pem),
     }
     today = datetime.date.today().isoformat()
+    week_ago = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
 
     advertised = client.get("/datasources", headers=headers).json()["data"][0][
         "availableMeasures"
@@ -454,7 +470,7 @@ def test_available_measures_match_what_is_accepted(
     assert advertised == ["import", "export"]
     for measure in advertised:
         response = client.get(
-            f"/datasources/{DEMO_METER_ID}/{measure}?from={today}&to={today}",
+            f"/datasources/{DEMO_METER_ID}/{measure}?from={week_ago}&to={today}",
             headers=headers,
         )
         assert response.status_code == 200, measure
@@ -489,9 +505,10 @@ def test_measure_reaches_provenance_as_its_value(
         add_application=True,
     )
     today = datetime.date.today().isoformat()
+    week_ago = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()
 
     client.get(
-        f"/datasources/{DEMO_METER_ID}/export?from={today}&to={today}",
+        f"/datasources/{DEMO_METER_ID}/export?from={week_ago}&to={today}",
         headers={
             "Authorization": "Bearer token",
             "x-amzn-mtls-clientcert-leaf": quote(pem),

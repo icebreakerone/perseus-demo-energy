@@ -11,13 +11,23 @@ from . import conf
 from .keystores import get_key, get_certificate
 
 
-def _date_to_iso(date: datetime.date) -> str:
-    return f"{date.isoformat()}T00:00Z"
+def _date_to_iso(when: datetime.date | datetime.datetime) -> str:
+    """
+    The metering period as the scheme records it, to the minute and in UTC.
+
+    A bare date still means midnight, so callers that only work in whole days keep
+    working.
+    """
+    if not isinstance(when, datetime.datetime):
+        when = datetime.datetime.combine(when, datetime.time.min)
+    if when.tzinfo is not None:
+        when = when.astimezone(datetime.timezone.utc)
+    return f"{when.strftime('%Y-%m-%dT%H:%M')}Z"
 
 
 def create_provenance_records(
-    from_date: datetime.date,
-    to_date: datetime.date,
+    from_date: datetime.datetime,
+    to_date: datetime.datetime,
     permission_granted: datetime.datetime,
     permission_expires: datetime.datetime,
     service_url: str,
