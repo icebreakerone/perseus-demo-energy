@@ -538,7 +538,8 @@ def custom_openapi():
         return app.openapi_schema
     openapi_schema = get_openapi(
         title="Perseus Demo Authentication Server",
-        version="1.0.0",
+        # The release this build is from. Keep in step with CHANGELOG.md.
+        version="6.0.0",
         description=openapi.API_DESCRIPTION,
         routes=app.routes,
     )

@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file.
 - The JWT signing key used in local development is kept across certificate refreshes. `setup.sh` regenerated it on every run, which invalidates every access token already issued and republishes the JWKS. Pass `--rotate-jwt-key` to replace it
 - The localhost development certificate carries a SubjectAltName rather than only a CN, so a client that verifies hostnames accepts it and no longer needs to skip server verification
 - `resource/data/sample_data.json` is removed. It held the 100 readings from February 2012 that the API used to return, and nothing reads it now the API serves a year of real ones
+- The OpenAPI documents both apps serve at `/openapi.json` report the release version, `6.0.0`. It was hardcoded to `1.0.0` and had not moved since the first release, so it told a reader nothing about which build they were talking to
 
 ### Breaking
 
