@@ -62,7 +62,8 @@ authenticate with [Member identity certificates]({CERTIFICATE_SPEC}).
 2. **Authorize.** The user-agent is sent to `/api/v1/authorize?request_uri=…`,
    which redirects to the upstream Ory Hydra authorization endpoint.
 3. **Callback proxy.** Hydra redirects to `/api/v1/callback`, which forwards the
-   user back to the client's original redirect URI (looked up by `state`).
+   user back to the client's original redirect URI (looked up by `state`),
+   returning the `state` the client sent at PAR unchanged.
 4. **Token.** The client authenticates with **mTLS** and exchanges the code at
    `/api/v1/authorize/token` using **PKCE (S256)**. The issued access token is
    **bound to the certificate**: its `client_id` is the Application Directory URL

@@ -3,6 +3,7 @@ import os
 import sys
 from unittest.mock import patch, MagicMock
 import time
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 import requests
@@ -108,10 +109,10 @@ def jwt_signing_jwks():
 
 # Mock the redis server, as pushed_authorization_request() uses it
 @patch("api.store.redis_connection")
-@patch("api.main.store.store_callback_url")
+@patch("api.main.store.store_callback")
 @patch("api.main.auth.create_state_token")
 def test_pushed_authorization_request(
-    mock_create_state_token, mock_store_callback_url, mock_redis_connection
+    mock_create_state_token, mock_store_callback, mock_redis_connection
 ):
     cert_urlencoded = client_certificate()
     mock_redis = MagicMock()
@@ -126,14 +127,41 @@ def test_pushed_authorization_request(
             "code_challenge": "W78hCS0q72DfIHa...kgZkEJuAFaT4",
             "scope": "profile",
             "response_type": "code",
+            "state": "WFqUWTVvX49tM",
         },
         headers={"x-amzn-mtls-clientcert-leaf": cert_urlencoded},
     )
 
     assert response.status_code == 201
     assert "request_uri" in response.json()
-    mock_store_callback_url.assert_called_once_with(
-        "mock_state_token", "https://mobile.example.com/cb"
+    mock_store_callback.assert_called_once_with(
+        "mock_state_token", "https://mobile.example.com/cb", "WFqUWTVvX49tM"
+    )
+
+
+@patch("api.store.redis_connection")
+@patch("api.main.store.store_callback")
+@patch("api.main.auth.create_state_token")
+def test_pushed_authorization_request_without_state(
+    mock_create_state_token, mock_store_callback, mock_redis_connection
+):
+    """A client that sends no state has none stored to be returned"""
+    mock_redis_connection.return_value = MagicMock()
+    mock_create_state_token.return_value = "mock_state_token"
+    response = client.post(
+        "/api/v1/par",
+        data={
+            "redirect_uri": "https://mobile.example.com/cb",
+            "code_challenge": "W78hCS0q72DfIHa...kgZkEJuAFaT4",
+            "scope": "profile",
+            "response_type": "code",
+        },
+        headers={"x-amzn-mtls-clientcert-leaf": client_certificate()},
+    )
+
+    assert response.status_code == 201
+    mock_store_callback.assert_called_once_with(
+        "mock_state_token", "https://mobile.example.com/cb", None
     )
 
 
@@ -328,21 +356,45 @@ def test_revoke_token_hydra_rejects_our_credentials(
     assert "does not exist" not in response.text
 
 
-@patch("api.main.store.get_callback_url")
-def test_callback_redirects_to_stored_url(mock_get_callback_url):
+@patch("api.main.store.get_callback")
+def test_callback_redirects_to_stored_url(mock_get_callback):
     """Test callback endpoint redirects to the original stored URL."""
-    mock_get_callback_url.return_value = "https://mobile.example.com/cb"
+    mock_get_callback.return_value = {
+        "redirect_uri": "https://mobile.example.com/cb",
+        "client_state": "WFqUWTVvX49tM",
+    }
     response = client.get(
         "/api/v1/callback",
-        params={"code": "auth_code_123", "state": "test_state", "scope": "profile"},
+        params={"code": "auth_code_123", "state": "hydra_state", "scope": "profile"},
         follow_redirects=False,
     )
     assert response.status_code == 302
-    location = response.headers["Location"]
-    assert "mobile.example.com/cb" in location
-    assert "code=auth_code_123" in location
-    assert "state=test_state" in location
-    assert "scope=profile" in location
+    location = urlparse(response.headers["Location"])
+    assert location.netloc == "mobile.example.com"
+    assert location.path == "/cb"
+    assert parse_qs(location.query) == {
+        "code": ["auth_code_123"],
+        "state": ["WFqUWTVvX49tM"],
+        "scope": ["profile"],
+    }
+    mock_get_callback.assert_called_once_with("hydra_state")
+
+
+@patch("api.main.store.get_callback")
+def test_callback_without_client_state(mock_get_callback):
+    """Our state is not leaked to a client that sent none"""
+    mock_get_callback.return_value = {
+        "redirect_uri": "https://mobile.example.com/cb",
+        "client_state": None,
+    }
+    response = client.get(
+        "/api/v1/callback",
+        params={"code": "auth_code_123", "state": "hydra_state"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    location = urlparse(response.headers["Location"])
+    assert parse_qs(location.query) == {"code": ["auth_code_123"]}
 
 
 def test_callback_missing_state():
@@ -357,10 +409,10 @@ def test_callback_missing_state():
     assert "Missing state" in response.json()["error_description"]
 
 
-@patch("api.main.store.get_callback_url")
-def test_callback_expired_state(mock_get_callback_url):
+@patch("api.main.store.get_callback")
+def test_callback_expired_state(mock_get_callback):
     """Test callback endpoint returns 400 when state has expired."""
-    mock_get_callback_url.return_value = None
+    mock_get_callback.return_value = None
     response = client.get(
         "/api/v1/callback",
         params={"code": "auth_code_123", "state": "expired_state"},
@@ -747,3 +799,22 @@ def test_caller_error_has_no_correlation_id():
 
     assert response.status_code == 400
     assert "correlation_id" not in response.json()
+
+
+@patch("api.store.redis_connection")
+def test_callback_store_round_trip(mock_redis_connection):
+    """The client's state survives being stored alongside the callback URL"""
+    from api import store
+
+    saved = {}
+    mock_redis = MagicMock()
+    mock_redis.set.side_effect = saved.__setitem__
+    mock_redis.get.side_effect = saved.get
+    mock_redis_connection.return_value = mock_redis
+
+    store.store_callback("our_state", "https://mobile.example.com/cb", "WFqUWTVvX49tM")
+    assert store.get_callback("our_state") == {
+        "redirect_uri": "https://mobile.example.com/cb",
+        "client_state": "WFqUWTVvX49tM",
+    }
+    assert store.get_callback("unknown_state") is None

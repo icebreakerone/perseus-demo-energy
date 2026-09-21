@@ -32,12 +32,20 @@ def get_request(token: str) -> dict | None:
     return data
 
 
-def store_callback_url(state: str, url: str):
+def store_callback(state: str, redirect_uri: str, client_state: str | None):
+    """
+    Remember where to send the user after Hydra, keyed by our own state. The
+    client's state is kept too, as it must be returned to the client unchanged
+    """
     connection = redis_connection()
-    connection.set(f"callback:{state}", url)
+    callback = {"redirect_uri": redirect_uri, "client_state": client_state}
+    connection.set(f"callback:{state}", json.dumps(callback))
     connection.expire(f"callback:{state}", 600)  # 10 minutes
 
 
-def get_callback_url(state: str) -> str | None:
+def get_callback(state: str) -> dict | None:
     connection = redis_connection()
-    return connection.get(f"callback:{state}")
+    callback = connection.get(f"callback:{state}")
+    if callback is None:
+        return None
+    return json.loads(str(callback))

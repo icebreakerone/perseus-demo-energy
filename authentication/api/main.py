@@ -187,6 +187,7 @@ async def pushed_authorization_request(
     redirect_uri: Annotated[str, Form()],
     code_challenge: Annotated[str, Form()],
     scope: Annotated[str, Form()],
+    state: Annotated[str | None, Form()] = None,
     x_amzn_mtls_clientcert_leaf: Annotated[str | None, Header()] = None,
 ) -> dict:
     """
@@ -215,13 +216,13 @@ async def pushed_authorization_request(
         "code_challenge_method": "S256",  # "plain" or "S256
         "redirect_uri": redirect_uri,
         "scope": scope,
-        "state": auth.create_state_token(
-            {"client_id": client_id}
-        ),  # For ory hydra interaction
+        # Our own state for the Hydra interaction. The client's state is kept
+        # with the callback and handed back to it unchanged
+        "state": auth.create_state_token({"client_id": client_id}),
     }
     token = store.get_token()
     store.store_request(token, parameters)
-    store.store_callback_url(parameters["state"], redirect_uri)
+    store.store_callback(parameters["state"], redirect_uri, state)
     return {
         "request_uri": f"urn:ietf:params:oauth:request_uri:{token}",
         "expires_in": 600,
@@ -283,7 +284,8 @@ async def callback(request: Request):
 
     Hydra redirects here after login/consent. We look up the client's
     original callback URL from Redis (keyed by state) and forward the
-    user there with all query parameters preserved.
+    user there with all query parameters preserved, except that our state is
+    swapped for the one the client sent in its PAR request.
     """
     params = dict(request.query_params)
     state = params.get("state")
@@ -292,19 +294,24 @@ async def callback(request: Request):
             status.HTTP_400_BAD_REQUEST, "invalid_request", "Missing state parameter"
         )
 
-    original_url = store.get_callback_url(state)
-    if not original_url:
+    callback = store.get_callback(state)
+    if not callback:
         raise OAuthError(
             status.HTTP_400_BAD_REQUEST,
             "invalid_request",
             "Callback URL not found or expired for this state",
         )
 
-    parsed = urlparse(original_url)
+    parsed = urlparse(callback["redirect_uri"])
     existing_params = parse_qs(parsed.query, keep_blank_values=True)
     # Flatten single-value lists from parse_qs
     merged = {k: v[0] if len(v) == 1 else v for k, v in existing_params.items()}
+    # Our state was only for Hydra. The client gets back exactly the state it
+    # sent, or none if it sent none (RFC 6749 section 4.1.2)
+    del params["state"]
     merged.update(params)
+    if callback["client_state"] is not None:
+        merged["state"] = callback["client_state"]
     new_query = urlencode(merged, doseq=True)
     redirect_url = urlunparse(parsed._replace(query=new_query))
 
