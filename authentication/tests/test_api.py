@@ -376,6 +376,7 @@ def test_callback_redirects_to_stored_url(mock_get_callback):
         "code": ["auth_code_123"],
         "state": ["WFqUWTVvX49tM"],
         "scope": ["profile"],
+        "iss": [conf.ISSUER_URL],
     }
     mock_get_callback.assert_called_once_with("hydra_state")
 
@@ -394,7 +395,69 @@ def test_callback_without_client_state(mock_get_callback):
     )
     assert response.status_code == 302
     location = urlparse(response.headers["Location"])
-    assert parse_qs(location.query) == {"code": ["auth_code_123"]}
+    assert parse_qs(location.query) == {
+        "code": ["auth_code_123"],
+        "iss": [conf.ISSUER_URL],
+    }
+
+
+@patch("api.main.store.get_callback")
+def test_callback_error_carries_iss(mock_get_callback):
+    """An error response carries iss too (RFC 9207 section 2)"""
+    mock_get_callback.return_value = {
+        "redirect_uri": "https://mobile.example.com/cb",
+        "client_state": "WFqUWTVvX49tM",
+    }
+    response = client.get(
+        "/api/v1/callback",
+        params={"error": "access_denied", "state": "hydra_state"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    location = urlparse(response.headers["Location"])
+    assert parse_qs(location.query) == {
+        "error": ["access_denied"],
+        "state": ["WFqUWTVvX49tM"],
+        "iss": [conf.ISSUER_URL],
+    }
+
+
+@patch("api.main.store.get_callback")
+def test_callback_replaces_upstream_iss(mock_get_callback):
+    """An iss from Hydra names Hydra, not us, so the client never sees it"""
+    mock_get_callback.return_value = {
+        "redirect_uri": "https://mobile.example.com/cb",
+        "client_state": None,
+    }
+    response = client.get(
+        "/api/v1/callback",
+        params={
+            "code": "auth_code_123",
+            "state": "hydra_state",
+            "iss": "https://example.projects.oryapis.com",
+        },
+        follow_redirects=False,
+    )
+    location = urlparse(response.headers["Location"])
+    assert parse_qs(location.query)["iss"] == [conf.ISSUER_URL]
+
+
+@patch("api.main.store.get_callback")
+def test_callback_iss_matches_discovery(mock_get_callback):
+    """RFC 9207 requires iss to equal the issuer in our metadata exactly"""
+    mock_get_callback.return_value = {
+        "redirect_uri": "https://mobile.example.com/cb",
+        "client_state": None,
+    }
+    metadata = client.get("/.well-known/oauth-authorization-server").json()
+    assert metadata["authorization_response_iss_parameter_supported"] is True
+    response = client.get(
+        "/api/v1/callback",
+        params={"code": "auth_code_123", "state": "hydra_state"},
+        follow_redirects=False,
+    )
+    location = urlparse(response.headers["Location"])
+    assert parse_qs(location.query)["iss"] == [metadata["issuer"]]
 
 
 def test_callback_missing_state():

@@ -285,7 +285,8 @@ async def callback(request: Request):
     Hydra redirects here after login/consent. We look up the client's
     original callback URL from Redis (keyed by state) and forward the
     user there with all query parameters preserved, except that our state is
-    swapped for the one the client sent in its PAR request.
+    swapped for the one the client sent in its PAR request, and our issuer is
+    added as iss.
     """
     params = dict(request.query_params)
     state = params.get("state")
@@ -312,6 +313,10 @@ async def callback(request: Request):
     merged.update(params)
     if callback["client_state"] is not None:
         merged["state"] = callback["client_state"]
+    # Discovery advertises authorization_response_iss_parameter_supported, so
+    # every response, error or not, carries our issuer (RFC 9207). Hydra's
+    # issuer is not ours, so anything it sends is overwritten
+    merged["iss"] = conf.ISSUER_URL
     new_query = urlencode(merged, doseq=True)
     redirect_url = urlunparse(parsed._replace(query=new_query))
 
