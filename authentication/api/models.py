@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from typing import Literal
 from pydantic import BaseModel, Field, field_serializer
 
 from . import examples
@@ -72,6 +73,9 @@ class TokenRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    # Certificate-bound tokens are still Bearer tokens (RFC 8705 section 3)
+    token_type: Literal["Bearer"] = "Bearer"
+    expires_in: int
     refresh_token: str
     model_config = {"json_schema_extra": {"examples": [examples.TOKEN_RESPONSE]}}
 

@@ -45,12 +45,8 @@ TOKEN_REQUEST: JsonDict = {
 
 TOKEN_RESPONSE: JsonDict = {
     "access_token": "SUtEVc3Tj3D3xOdysQtssQxe9egAhI4fimexNVMjRyU",
-    "id_token": (
-        "eyJraWQiOiIxIiwiYWxnIjoiRVMyNTYifQ.eyJzdWIiOiJ0ZXN0dXNlcjAxIiwiYXVkIjpbIjU5MTIwN"
-        "Tk4NzgxNjQ5MCJdLCJpc3MiOiJodHRwczovL2FzLmV4YW1wbGUuY29tIiwiZXhwIjoxNTcyNDEyNzY5L"
-        "CJpYXQiOjE1NzIzMjYzNjksIm5vbmNlIjoibi0wUzZfV3pBMk1qIn0.9EQojck-Cf2hnKAZWR164kr21"
-        "o5lPKehvIHyViZgRg4CY_ZGmnyFooG4FCwlZxu-QOTtaDCffCsuCdz4GqknTA"
-    ),
+    "token_type": "Bearer",
+    "expires_in": 3600,
     "refresh_token": "tXZjYfoK35I-djg9V3n6s58zsrVqRIzTNMXKIS_wkj8",
 }
 
