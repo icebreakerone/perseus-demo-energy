@@ -439,6 +439,7 @@ async def token(
     )
     return models.TokenResponse(
         access_token=encoded_token,
+        expires_in=enhanced_token["exp"] - enhanced_token["iat"],
         refresh_token=result.get("refresh_token"),
     )
 
