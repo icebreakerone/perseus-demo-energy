@@ -30,6 +30,7 @@ from . import messaging
 from . import hydra
 from .exceptions import (
     AccessTokenDecodingError,
+    PermissionRefreshError,
     OAuthError,
     PermissionRevocationError,
 )
@@ -381,6 +382,12 @@ async def token(
         logger.info("Refresh token flow")
         if not refresh_token:
             raise OAuthError(400, "invalid_request", "Missing refresh token")
+        try:
+            permission = permissions.check_refresh(
+                refresh_token, client_id_from_cert(client_cert)
+            )
+        except PermissionRefreshError as e:
+            raise OAuthError(400, "invalid_grant", str(e))
 
         payload = {
             "grant_type": "refresh_token",
@@ -419,7 +426,12 @@ async def token(
     encoded_token = auth.encode_jwt(
         enhanced_token,
     )
-    permissions.store_permission(enhanced_token, result.get("refresh_token"))
+    if grant_type == "authorization_code":
+        permissions.store_permission(enhanced_token, result.get("refresh_token"))
+    else:
+        permissions.store_refreshed_permission(
+            permission, enhanced_token, result.get("refresh_token")
+        )
     logger.info(
         f"Issued token for {enhanced_token.get('client_id')}, grant {grant_type}, "
         f"ref {permissions.token_reference(encoded_token)}, "

@@ -1,3 +1,4 @@
+import calendar
 import datetime
 import hashlib
 from typing import Optional
@@ -8,6 +9,7 @@ from . import models
 from . import conf
 from .exceptions import (
     LicenseScopeError,
+    PermissionRefreshError,
     PermissionStorageError,
     PermissionRevocationError,
 )
@@ -183,39 +185,107 @@ def license_from_scopes(scopes: list[str]) -> str:
     return licenses[0]
 
 
+def add_license_duration(start: datetime.datetime, duration: str) -> datetime.datetime:
+    """
+    Add an ib1:licenseDuration, "<count> <unit>", to a time. Months and years are
+    calendar months and years, so a Permission granted on 31 January for one
+    month expires on the last day of February.
+    """
+    count_text, unit = duration.split()
+    count = int(count_text)
+    unit = unit.removesuffix("s")
+    if unit == "day":
+        return start + datetime.timedelta(days=count)
+    if unit == "year":
+        count, unit = count * 12, "month"
+    if unit != "month":
+        raise ValueError(f"Unknown license duration unit in {duration!r}")
+    month_index = start.month - 1 + count
+    year, month = start.year + month_index // 12, month_index % 12 + 1
+    day = min(start.day, calendar.monthrange(year, month)[1])
+    return start.replace(year=year, month=month, day=day)
+
+
+def token_expiry(
+    issued_at: datetime.datetime, permission_expires: datetime.datetime
+) -> datetime.datetime:
+    """
+    When the refresh token just issued expires, which the Permission Records
+    specification requires to be no later than the Permission's expiry
+    """
+    return min(issued_at + conf.REFRESH_TOKEN_LIFESPAN, permission_expires)
+
+
+def utc_timestamp(timestamp: int) -> datetime.datetime:
+    return datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
+
+
 def token_to_permission(
     decoded_token: dict,
     refresh_token: str,
 ) -> models.Permission:
+    """
+    A new Permission, granted by the end user in the authorization code flow
+    """
+    license = license_from_scopes(decoded_token.get("scp", []))
+    granted = utc_timestamp(decoded_token["iat"])
+    expires = add_license_duration(granted, conf.LICENSE_DURATIONS[license])
     return models.Permission(
         oauthIssuer=decoded_token["iss"],
         client=decoded_token["client_id"],
-        license=license_from_scopes(decoded_token.get("scp", [])),
+        license=license,
         account=decoded_token["sub"],
-        lastGranted=datetime.datetime.fromtimestamp(decoded_token["iat"]),
-        expires=datetime.datetime.fromtimestamp(decoded_token["exp"]),
+        lastGranted=granted,
+        expires=expires,
         refreshToken=refresh_token,
         revoked=None,
         dataAvailableFrom=datetime.datetime.now(datetime.timezone.utc),
-        tokenIssuedAt=datetime.datetime.fromtimestamp(decoded_token["iat"]),
-        tokenExpires=datetime.datetime.fromtimestamp(decoded_token["exp"]),
+        tokenIssuedAt=granted,
+        tokenExpires=token_expiry(granted, expires),
     )
+
+
+def check_refresh(refresh_token: str, client_id: str) -> models.Permission:
+    """
+    Find the Permission a refresh token belongs to, and check that the client
+    presenting it may exchange it. This must run before the token reaches
+    Hydra, which rotates it on use.
+    """
+    permission = get_permission_by_token(refresh_token)
+    if permission is None:
+        raise PermissionRefreshError("Refresh token is not recognised")
+    if permission.client != client_id:
+        logger.warning(
+            f"Client {client_id} presented a refresh token issued to "
+            f"{permission.client}, ref {token_reference(refresh_token)}"
+        )
+        raise PermissionRefreshError(
+            "Refresh token was not issued to this client certificate"
+        )
+    if permission.revoked is not None:
+        raise PermissionRefreshError("Permission has been revoked")
+    if permission.expires - permission.lastGranted < datetime.timedelta(days=1):
+        # Written before expires followed the License, when it held the
+        # access token's expiry. Count the License duration from lastGranted.
+        permission.expires = add_license_duration(
+            permission.lastGranted, conf.LICENSE_DURATIONS[permission.license]
+        )
+    if permission.expires <= datetime.datetime.now(datetime.timezone.utc):
+        raise PermissionRefreshError(
+            "Permission has expired and must be granted again by the end user"
+        )
+    return permission
 
 
 def store_permission(decoded_token: dict, refresh_token: str) -> models.Permission:
     """
-    Store the permission in the database.
-
-    Args:
-        decoded_token (dict): The decoded JWT token containing the user information.
-        permission (Permission): The permission object to be stored.
+    Store a new Permission granted in the authorization code flow
 
     Raises:
         PermissionStorageError: If there is an error while storing the permission.
     """
     permission = token_to_permission(decoded_token, refresh_token)
     try:
-        # Store the permission in the database
         write_permission(permission)
     except Exception:
         logger.exception(
@@ -223,3 +293,31 @@ def store_permission(decoded_token: dict, refresh_token: str) -> models.Permissi
         )
         raise PermissionStorageError("Could not store permission")
     return permission
+
+
+def store_refreshed_permission(
+    permission: models.Permission, decoded_token: dict, refresh_token: str
+) -> models.Permission:
+    """
+    Record a refresh against an existing Permission. A refresh is not a new
+    grant, so only the token details change.
+
+    Raises:
+        PermissionStorageError: If there is an error while storing the permission.
+    """
+    issued = utc_timestamp(decoded_token["iat"])
+    refreshed = permission.model_copy(
+        update={
+            "refreshToken": refresh_token,
+            "tokenIssuedAt": issued,
+            "tokenExpires": token_expiry(issued, permission.expires),
+        }
+    )
+    try:
+        write_permission(refreshed)
+    except Exception:
+        logger.exception(
+            f"Error storing permission for token {token_reference(refresh_token)}"
+        )
+        raise PermissionStorageError("Could not store permission")
+    return refreshed

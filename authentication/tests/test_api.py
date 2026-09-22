@@ -3,6 +3,7 @@ import os
 import sys
 from unittest.mock import patch, MagicMock
 import time
+import datetime
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -22,6 +23,8 @@ from tests import (
     SCHEME_URL,
     TEST_ROLE,
 )
+
+from tests.test_permissions import stored_permission
 
 logger = get_logger()
 client = TestClient(app)
@@ -232,6 +235,82 @@ def test_token_success(mock_permissions, mock_decode_with_jwks, mock_auth):
     assert response.status_code == 200
     json_response = response.json()
     assert json_response["access_token"] == MOCK_TOKEN
+    # A new grant creates the Permission Record
+    mock_permissions.store_permission.assert_called_once()
+    mock_permissions.store_refreshed_permission.assert_not_called()
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@patch("api.auth.decode_with_jwks")
+@patch("api.permissions.write_permission")
+@patch("api.permissions.get_permission_by_token")
+@responses.activate
+def test_token_refresh_updates_the_permission(
+    mock_get_permission_by_token, mock_write_permission, mock_decode_with_jwks
+):
+    """A refresh by the owning client keeps the grant and records the new token"""
+    stored = stored_permission(client=CLIENT_ID)
+    mock_get_permission_by_token.return_value = stored
+    now = int(time.time())
+    mock_decode_with_jwks.return_value = {
+        "exp": now + 3600,
+        "iat": now,
+        "sub": stored.account,
+        "scp": [stored.license, "offline_access"],
+    }
+    responses.add(
+        responses.POST,
+        f"{FakeConf().ORY_URL}/oauth2/token",
+        json={"access_token": MOCK_TOKEN, "refresh_token": "new-refresh-token"},
+        status=200,
+    )
+    response = client.post(
+        "/api/v1/authorize/token",
+        data={"grant_type": "refresh_token", "refresh_token": "current-refresh-token"},
+        headers={"x-amzn-mtls-clientcert-leaf": client_certificate(roles=[TEST_ROLE])},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["refresh_token"] == "new-refresh-token"
+    mock_get_permission_by_token.assert_called_once_with("current-refresh-token")
+    written = mock_write_permission.call_args[0][0]
+    assert written.refreshToken == "new-refresh-token"
+    assert written.lastGranted == stored.lastGranted
+    assert written.expires == stored.expires
+    assert written.evidenceId == stored.evidenceId
+
+
+@pytest.mark.parametrize(
+    "stored",
+    [
+        None,
+        stored_permission(client="https://directory.core.ib1.org/application/other"),
+        stored_permission(client=CLIENT_ID, revoked=datetime.datetime.now(datetime.timezone.utc)),
+    ],
+    ids=["unknown", "other-client", "revoked"],
+)
+@patch("api.main.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@patch("api.permissions.get_permission_by_token")
+@responses.activate
+def test_token_refresh_refused_before_hydra(mock_get_permission_by_token, stored):
+    """
+    A refused refresh never reaches Hydra, which would rotate the token and
+    leave the owning client unable to use it
+    """
+    mock_get_permission_by_token.return_value = stored
+    response = client.post(
+        "/api/v1/authorize/token",
+        data={"grant_type": "refresh_token", "refresh_token": "stolen-refresh-token"},
+        headers={"x-amzn-mtls-clientcert-leaf": client_certificate(roles=[TEST_ROLE])},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"] == "invalid_grant"
+    assert "stolen-refresh-token" not in response.text
+    assert len(responses.calls) == 0
 
 
 @patch("api.main.conf", FakeConf())
