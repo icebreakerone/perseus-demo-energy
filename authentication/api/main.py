@@ -30,6 +30,7 @@ from . import messaging
 from . import hydra
 from .exceptions import (
     AccessTokenDecodingError,
+    PermissionRefreshError,
     OAuthError,
     PermissionRevocationError,
 )
@@ -381,6 +382,12 @@ async def token(
         logger.info("Refresh token flow")
         if not refresh_token:
             raise OAuthError(400, "invalid_request", "Missing refresh token")
+        try:
+            permission = permissions.check_refresh(
+                refresh_token, client_id_from_cert(client_cert)
+            )
+        except PermissionRefreshError as e:
+            raise OAuthError(400, "invalid_grant", str(e))
 
         payload = {
             "grant_type": "refresh_token",
@@ -419,7 +426,12 @@ async def token(
     encoded_token = auth.encode_jwt(
         enhanced_token,
     )
-    permissions.store_permission(enhanced_token, result.get("refresh_token"))
+    if grant_type == "authorization_code":
+        permissions.store_permission(enhanced_token, result.get("refresh_token"))
+    else:
+        permissions.store_refreshed_permission(
+            permission, enhanced_token, result.get("refresh_token")
+        )
     logger.info(
         f"Issued token for {enhanced_token.get('client_id')}, grant {grant_type}, "
         f"ref {permissions.token_reference(encoded_token)}, "
@@ -433,22 +445,30 @@ async def token(
 
 @app.post(
     "/api/v1/permissions",
-    dependencies=[Depends(parsed_client_cert)],
     responses={**OAUTH_ERROR_RESPONSES, 404: {"model": models.OAuthErrorResponse}},
     openapi_extra={"security": [{"mtls": []}]},
 )
 async def get_permissions(
     token: str = Form(...),
+    client_cert: x509.Certificate = Depends(parsed_client_cert),
 ):
     """
     Permissions endpoint
 
     - Requires mTLS authentication (client certificate validation)
-    - Returns the permissions for the client
+    - Returns the permissions for the client, only if the refresh token was
+      issued to the Application in the client certificate
     """
 
-    # Get permissions from Redis
     permissions_data = permissions.get_permission_by_token(token)
+    client_id = client_id_from_cert(client_cert)
+    if permissions_data is not None and permissions_data.client != client_id:
+        logger.warning(
+            f"Client {client_id} asked for the permission of a token issued to "
+            f"{permissions_data.client}, ref {permissions.token_reference(token)}"
+        )
+        # Answered as not found, so another client learns nothing about the token
+        permissions_data = None
     if permissions_data is None:
         logger.warning(
             f"No permissions found for token {permissions.token_reference(token)}"
@@ -477,6 +497,7 @@ async def revoke_token(
     Token revocation endpoint
 
     - Requires mTLS authentication (client certificate validation)
+    - Only the Application the token was issued to may revoke it
     - Calls Ory Hydra's token revocation endpoint
     - Supports both access and refresh token revocation
     - Marks stored permission as revoked
@@ -487,7 +508,9 @@ async def revoke_token(
     payload = {"token": token, "token_type_hint": token_type_hint}
 
     try:
-        revoked_permission = permissions.revoke_permission(token)
+        revoked_permission = permissions.revoke_permission(
+            token, client_id_from_cert(client_cert)
+        )
     except PermissionRevocationError as e:
         raise OAuthError(400, "invalid_grant", str(e))
 

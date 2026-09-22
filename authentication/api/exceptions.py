@@ -76,3 +76,10 @@ class PermissionStorageError(Exception):
 
 class PermissionRevocationError(Exception):
     pass
+
+
+class PermissionRefreshError(Exception):
+    """
+    A refresh token may not be exchanged: it belongs to another client, or its
+    Permission has been revoked or has expired.
+    """
