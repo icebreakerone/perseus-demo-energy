@@ -445,22 +445,30 @@ async def token(
 
 @app.post(
     "/api/v1/permissions",
-    dependencies=[Depends(parsed_client_cert)],
     responses={**OAUTH_ERROR_RESPONSES, 404: {"model": models.OAuthErrorResponse}},
     openapi_extra={"security": [{"mtls": []}]},
 )
 async def get_permissions(
     token: str = Form(...),
+    client_cert: x509.Certificate = Depends(parsed_client_cert),
 ):
     """
     Permissions endpoint
 
     - Requires mTLS authentication (client certificate validation)
-    - Returns the permissions for the client
+    - Returns the permissions for the client, only if the refresh token was
+      issued to the Application in the client certificate
     """
 
-    # Get permissions from Redis
     permissions_data = permissions.get_permission_by_token(token)
+    client_id = client_id_from_cert(client_cert)
+    if permissions_data is not None and permissions_data.client != client_id:
+        logger.warning(
+            f"Client {client_id} asked for the permission of a token issued to "
+            f"{permissions_data.client}, ref {permissions.token_reference(token)}"
+        )
+        # Answered as not found, so another client learns nothing about the token
+        permissions_data = None
     if permissions_data is None:
         logger.warning(
             f"No permissions found for token {permissions.token_reference(token)}"

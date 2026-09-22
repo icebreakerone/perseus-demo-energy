@@ -666,6 +666,50 @@ def test_permissions_does_not_echo_the_token(mock_get_permission_by_token):
 
 
 @patch("api.main.conf", FakeConf())
+@patch("api.main.permissions.get_permission_by_token")
+def test_permissions_returns_the_record_to_its_client(mock_get_permission_by_token):
+    stored = stored_permission(client=CLIENT_ID)
+    mock_get_permission_by_token.return_value = stored
+
+    response = client.post(
+        "/api/v1/permissions",
+        data={"token": "current-refresh-token"},
+        headers={
+            "x-amzn-mtls-clientcert-leaf": client_certificate(roles=[TEST_ROLE])
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["permissions"]["evidenceId"] == stored.evidenceId
+
+
+@pytest.mark.parametrize("revoked", [None, datetime.datetime.now(datetime.timezone.utc)])
+@patch("api.main.conf", FakeConf())
+@patch("api.main.permissions.get_permission_by_token")
+def test_permissions_hides_another_clients_record(mock_get_permission_by_token, revoked):
+    """
+    A token issued to another Application gets the same answer as an unknown
+    one, so the caller cannot tell whether it exists
+    """
+    mock_get_permission_by_token.return_value = stored_permission(
+        client="https://directory.core.ib1.org/application/other", revoked=revoked
+    )
+
+    response = client.post(
+        "/api/v1/permissions",
+        data={"token": "leaked-refresh-token"},
+        headers={
+            "x-amzn-mtls-clientcert-leaf": client_certificate(roles=[TEST_ROLE])
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error_description"] == "No permissions found for token"
+    assert "application/other" not in response.text
+    assert "leaked-refresh-token" not in response.text
+
+
+@patch("api.main.conf", FakeConf())
 @patch("api.auth.conf", FakeConf())
 @patch("api.hydra.conf", FakeConf())
 @responses.activate
