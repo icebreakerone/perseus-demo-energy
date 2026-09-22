@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - The authorization response returns the `state` the client sent in its Pushed Authorization Request, as [OAuth with Member Identity Certificates](https://specification.trust.ib1.org/oauth-with-member-identity-certificates/1.0/) and RFC 6749 section 4.1.2 require. The PAR endpoint ignored the client's `state`, and the callback proxy returned the signed token the authorization server uses for its own interaction with Hydra in its place, so a client checking `state` rejected every authorization response. A client that sends no `state` now gets none back rather than the internal token
+- The authorization response carries an `iss` parameter naming this server, as RFC 9207 and the FAPI 2.0 Security Profile require. The discovery document has advertised `authorization_response_iss_parameter_supported` all along, but the parameter was never sent, so a client following RFC 9207 had to reject every authorization response. It is sent on error responses as well as successful ones, and always matches the `issuer` in the discovery document
 
 ## [v6.0.0] - 2026-09-09
 
