@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [v6.1.0] - 2026-09-22
 
 ### Fixed
 
@@ -16,6 +16,10 @@ All notable changes to this project will be documented in this file.
 - **The permissions endpoint returns a Permission Record only to the Application its refresh token was issued to.** It previously returned the record to any Member presenting the refresh token. A token issued to another Application gets the same 404 as an unknown token, so the caller cannot tell whether it exists. Expired and revoked records are still returned to their own client, as the Permission Records specification requires
 - **The revocation endpoint lets only the Application a refresh token was issued to revoke it**, as RFC 7009 section 2.1 requires. It previously let any Member presenting the token revoke the Permission, which also sent a revocation message to the owning client. A token issued to another Application is refused with the same `invalid_grant` as an unknown token, and nothing is revoked or sent
 - Permission Records written before this release, which hold the access token's expiry, are given the License duration counted from their `lastGranted` on their next refresh, so existing clients do not have to ask end users to grant permission again
+
+### Changed
+
+- The resource API uses `ib1-provenance` 0.5.3, up from 0.2b0. 0.2b0 cannot verify a provenance record signed with a current Directory certificate, because it expects an `ib1Application` certificate extension that the [Member Identity Digital Certificates](https://specification.trust.ib1.org/member-identity-digital-certificates/1.0/) specification does not require and the Directory does not issue. Signing is unchanged, and the records it produces verify with 0.5.3
 
 ## [v6.0.0] - 2026-09-09
 
