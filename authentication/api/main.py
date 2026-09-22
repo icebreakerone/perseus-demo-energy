@@ -497,6 +497,7 @@ async def revoke_token(
     Token revocation endpoint
 
     - Requires mTLS authentication (client certificate validation)
+    - Only the Application the token was issued to may revoke it
     - Calls Ory Hydra's token revocation endpoint
     - Supports both access and refresh token revocation
     - Marks stored permission as revoked
@@ -507,7 +508,9 @@ async def revoke_token(
     payload = {"token": token, "token_type_hint": token_type_hint}
 
     try:
-        revoked_permission = permissions.revoke_permission(token)
+        revoked_permission = permissions.revoke_permission(
+            token, client_id_from_cert(client_cert)
+        )
     except PermissionRevocationError as e:
         raise OAuthError(400, "invalid_grant", str(e))
 

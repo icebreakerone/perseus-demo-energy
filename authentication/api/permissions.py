@@ -129,8 +129,19 @@ def get_permission_by_token(refresh_token: str) -> models.Permission | None:
     return models.Permission(**items[0])
 
 
-def revoke_permission(refresh_token: str) -> models.Permission:
+def revoke_permission(refresh_token: str, client_id: str) -> models.Permission:
+    """
+    Revoke the Permission a refresh token belongs to. Only the Application the
+    token was issued to may revoke it (RFC 7009 section 2.1).
+    """
     permission = get_permission_by_token(refresh_token)
+    if permission is not None and permission.client != client_id:
+        logger.warning(
+            f"Client {client_id} tried to revoke a token issued to "
+            f"{permission.client}, ref {token_reference(refresh_token)}"
+        )
+        # Answered as not found, so another client learns nothing about the token
+        permission = None
     if permission is None:
         logger.warning(
             f"No permission found for token {token_reference(refresh_token)}"

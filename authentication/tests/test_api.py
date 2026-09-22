@@ -346,12 +346,47 @@ def test_revoke_token_success(
     json_response = response.json()
     assert json_response["status"] == "success"
     assert json_response["message"] == "Token revoked"
-    mock_revoke_permission.assert_called_once_with(MOCK_REFRESH_TOKEN)
+    mock_revoke_permission.assert_called_once_with(MOCK_REFRESH_TOKEN, CLIENT_ID)
     mock_session.post.assert_called_once_with(
         f"{FakeConf().ORY_URL}/oauth2/revoke",
         data={"token": MOCK_REFRESH_TOKEN, "token_type_hint": "refresh_token"},
         timeout=10.0,
     )
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@patch("api.main.messaging.send_revocation_message")
+@patch("api.permissions.write_permission")
+@patch("api.permissions.get_permission_by_token")
+@responses.activate
+def test_revoke_token_refuses_another_client(
+    mock_get_permission_by_token, mock_write_permission, mock_send_message
+):
+    """
+    A leaked refresh token cannot be used by another Member to revoke the
+    Permission. Nothing is revoked at Hydra and no message is sent.
+    """
+    mock_get_permission_by_token.return_value = stored_permission(
+        client="https://directory.core.ib1.org/application/other"
+    )
+
+    response = client.post(
+        "/api/v1/authorize/revoke",
+        data={"token": "leaked-refresh-token", "token_type_hint": "refresh_token"},
+        headers={
+            "x-amzn-mtls-clientcert-leaf": client_certificate(roles=[TEST_ROLE])
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": "invalid_grant",
+        "error_description": "Permission not found",
+    }
+    assert len(responses.calls) == 0
+    mock_write_permission.assert_not_called()
+    mock_send_message.assert_not_called()
 
 
 @patch("api.main.conf", FakeConf())

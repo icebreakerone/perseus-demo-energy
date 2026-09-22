@@ -294,7 +294,7 @@ def test_revoke_permission_success(mock_get_permission_by_token, mock_write_perm
     )
     mock_get_permission_by_token.return_value = permission
 
-    result = revoke_permission(refresh_token)
+    result = revoke_permission(refresh_token, "client123")
 
     assert result is not None
     assert result.revoked is not None
@@ -306,6 +306,26 @@ def test_revoke_permission_success(mock_get_permission_by_token, mock_write_perm
     assert call_args.revoked is not None
 
 
+@patch("api.permissions.write_permission")
+@patch("api.permissions.get_permission_by_token")
+def test_revoke_permission_refuses_another_client(
+    mock_get_permission_by_token, mock_write_permission
+):
+    """
+    Another Application's token is refused exactly as an unknown one is, and
+    the Permission is left as it was
+    """
+    mock_get_permission_by_token.return_value = stored_permission()
+
+    with pytest.raises(PermissionRevocationError) as exc_info:
+        revoke_permission(
+            "leaked-refresh-token", "https://directory.core.ib1.org/application/other"
+        )
+
+    assert str(exc_info.value) == "Permission not found"
+    mock_write_permission.assert_not_called()
+
+
 @patch("api.permissions.get_permission_by_token")
 def test_revoke_permission_not_found(mock_get_permission_by_token):
     """Test permission revocation when permission is not found."""
@@ -313,7 +333,7 @@ def test_revoke_permission_not_found(mock_get_permission_by_token):
     mock_get_permission_by_token.return_value = None
 
     with pytest.raises(PermissionRevocationError) as exc_info:
-        revoke_permission(refresh_token)
+        revoke_permission(refresh_token, "client123")
 
     assert "Permission not found" in str(exc_info.value)
     # The caller supplied the token, echoing it back adds nothing and puts the
@@ -344,7 +364,7 @@ def test_revoke_permission_write_error(mock_get_permission_by_token, mock_write_
     mock_write_permission.side_effect = Exception("Database error")
 
     with pytest.raises(PermissionRevocationError) as exc_info:
-        revoke_permission(refresh_token)
+        revoke_permission(refresh_token, "client123")
 
     assert "Could not revoke permission" in str(exc_info.value)
     # The underlying failure goes to the logs, not to the caller
