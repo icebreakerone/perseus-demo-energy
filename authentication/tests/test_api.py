@@ -201,10 +201,11 @@ def test_authorization_code(mock_get_request):
 def test_token_success(mock_permissions, mock_decode_with_jwks, mock_auth):
     """Test a successful token request."""
     cert_urlencoded = client_certificate(roles=[TEST_ROLE])
+    now = int(time.time())
     mock_decode_with_jwks.return_value = {
         "client_id": CLIENT_ID,
-        "exp": int(time.time()) + 3600,
-        "iat": int(time.time()),
+        "exp": now + 3600,
+        "iat": now,
         "sub": "mock_user",
         "iss": FakeConf().ISSUER_URL,
         "scp": ["https://directory.ib1.org/roles/test"],
@@ -232,6 +233,9 @@ def test_token_success(mock_permissions, mock_decode_with_jwks, mock_auth):
     assert response.status_code == 200
     json_response = response.json()
     assert json_response["access_token"] == MOCK_TOKEN
+    # RFC 6749 section 5.1 requires token_type
+    assert json_response["token_type"] == "Bearer"
+    assert json_response["expires_in"] == 3600
 
 
 @patch("api.main.conf", FakeConf())
