@@ -1,3 +1,4 @@
+import datetime
 import os
 
 DIRNAME = os.path.dirname(os.path.realpath(__file__))
@@ -85,6 +86,18 @@ ENERGY_CONSUMPTION_EMISSIONS_LICENSE_URL = (
 ENERGY_DATA_LICENSE_URLS = (
     ENERGY_CONSUMPTION_LICENSE_URL,
     ENERGY_CONSUMPTION_EMISSIONS_LICENSE_URL,
+)
+# How long a Permission granted under each License lasts, as the License declares
+# in ib1:licenseDuration in the Registry
+LICENSE_DURATIONS = {
+    ENERGY_CONSUMPTION_LICENSE_URL: "1 year",
+    ENERGY_CONSUMPTION_EMISSIONS_LICENSE_URL: "1 year",
+}
+
+# Must match the refresh token lifespan set in the Ory Hydra tenant. Hydra does
+# not report it in the token response.
+REFRESH_TOKEN_LIFESPAN = datetime.timedelta(
+    hours=int(os.environ.get("REFRESH_TOKEN_LIFESPAN_HOURS", "720"))
 )
 
 DYNAMODB_TABLE = os.environ.get(
