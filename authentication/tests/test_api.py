@@ -41,6 +41,9 @@ class FakeConf:
         self.ISSUER_URL = os.environ.get(
             "ISSUER_URL", "https://perseus-demo-authentication.ib1.org"
         )
+        self.MTLS_URL = os.environ.get(
+            "MTLS_URL", "https://mtls.perseus-demo-authentication.ib1.org"
+        )
         self.ORY_CLIENT_SECRET = "123abc"
         self.ORY_URL = "https://test-oauth.io"
         self.ORY_CLIENT_ID = "abc-123"
@@ -702,6 +705,69 @@ def test_permissions_does_not_echo_the_token(mock_get_permission_by_token):
 
     assert response.status_code == 404
     assert MOCK_REFRESH_TOKEN not in response.text
+
+
+def test_default_issuer_is_the_host_without_client_certificates():
+    """
+    The deployed defaults, which local development overrides to one host. The
+    issuer identifier must be the host a browser and a plain HTTP client can
+    reach, not the mTLS host.
+    """
+    import importlib
+
+    with patch.dict(os.environ, {}, clear=True):
+        defaults = importlib.reload(conf)
+        issuer, mtls = defaults.ISSUER_URL, defaults.MTLS_URL
+    importlib.reload(conf)  # restore the values the rest of the suite runs with
+
+    assert issuer == "https://perseus-demo-authentication.ib1.org"
+    assert mtls == "https://mtls.perseus-demo-authentication.ib1.org"
+
+
+# Local development serves both hosts from one nginx, so the metadata tests
+# pin two distinct hosts to tell the endpoints apart.
+ISSUER_HOST = "https://issuer.example.org"
+MTLS_HOST = "https://mtls.example.org"
+
+
+@patch.object(conf, "MTLS_URL", MTLS_HOST)
+@patch.object(conf, "ISSUER_URL", ISSUER_HOST)
+def test_metadata_is_published_by_the_issuer_it_names():
+    """
+    RFC 8414 section 3.3: the issuer in the document must be the identifier the
+    document is published under. That host takes no client certificate, so any
+    client can read the metadata and a browser can reach the authorization
+    endpoint. The endpoints that need a client certificate live on the mTLS
+    host, which the issuer identifier does not have to be.
+    """
+    metadata = client.get("/.well-known/oauth-authorization-server").json()
+
+    assert metadata["issuer"] == ISSUER_HOST
+    for field in ("authorization_endpoint", "jwks_uri"):
+        assert metadata[field].startswith(ISSUER_HOST), field
+    for field in (
+        "pushed_authorization_request_endpoint",
+        "token_endpoint",
+        "revocation_endpoint",
+        "permissions_endpoint",
+    ):
+        assert metadata[field].startswith(MTLS_HOST), field
+
+
+@patch.object(conf, "MTLS_URL", MTLS_HOST)
+@patch.object(conf, "ISSUER_URL", ISSUER_HOST)
+def test_metadata_aliases_repeat_the_endpoints_exactly():
+    """
+    The IB1 OAuth profile: "Any *_endpoint value must be repeated exactly
+    within the mtls_endpoint_aliases property so the aliased and unaliased
+    values are equal."
+    """
+    metadata = client.get("/.well-known/oauth-authorization-server").json()
+    aliases = metadata["mtls_endpoint_aliases"]
+
+    assert aliases
+    for field, value in aliases.items():
+        assert metadata[field] == value, field
 
 
 @patch("api.main.conf", FakeConf())

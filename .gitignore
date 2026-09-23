@@ -36,3 +36,6 @@ certs-backup/
 
 # Cached Low Carbon London archive members (see resource/scripts/extract_lcl_data.py)
 resource/data/.lcl-cache/
+
+# Replacement certificates prepared for a rotation, local only
+resource/cdk/deployment/signing-certs/replacements/

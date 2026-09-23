@@ -106,9 +106,9 @@ def add_fapi_security_schemes(openapi_schema: dict) -> dict:
         ),
         "flows": {
             "authorizationCode": {
-                "authorizationUrl": f"{conf.UNPROTECTED_URL}/api/v1/authorize",
-                "tokenUrl": f"{conf.ISSUER_URL}/api/v1/authorize/token",
-                "refreshUrl": f"{conf.ISSUER_URL}/api/v1/authorize/token",
+                "authorizationUrl": f"{conf.ISSUER_URL}/api/v1/authorize",
+                "tokenUrl": f"{conf.MTLS_URL}/api/v1/authorize/token",
+                "refreshUrl": f"{conf.MTLS_URL}/api/v1/authorize/token",
                 "scopes": OAUTH2_SCOPES,
             }
         },
