@@ -749,9 +749,33 @@ def test_metadata_is_published_by_the_issuer_it_names():
         "pushed_authorization_request_endpoint",
         "token_endpoint",
         "revocation_endpoint",
-        "permissions_endpoint",
+        "ib1_permission_endpoint",
     ):
         assert metadata[field].startswith(MTLS_HOST), field
+
+
+@patch.object(conf, "MTLS_URL", MTLS_HOST)
+@patch.object(conf, "ISSUER_URL", ISSUER_HOST)
+def test_metadata_names_the_permission_endpoint_as_the_specification_does():
+    """
+    Permission Records 1.0: "A client discovers the URL of the Permission
+    endpoint from the ib1_permission_endpoint field in the OAuth Issuer's
+    Authorization Server Metadata."
+    """
+    metadata = client.get("/.well-known/oauth-authorization-server").json()
+
+    assert metadata["ib1_permission_endpoint"] == f"{MTLS_HOST}/api/v1/permissions"
+    assert "permissions_endpoint" not in metadata
+
+
+def test_metadata_states_how_to_authenticate_at_the_revocation_endpoint():
+    """
+    RFC 8414 defaults an unstated revocation_endpoint_auth_methods_supported to
+    client_secret_basic, which this server does not accept.
+    """
+    metadata = client.get("/.well-known/oauth-authorization-server").json()
+
+    assert metadata["revocation_endpoint_auth_methods_supported"] == ["tls_client_auth"]
 
 
 @patch.object(conf, "MTLS_URL", MTLS_HOST)
