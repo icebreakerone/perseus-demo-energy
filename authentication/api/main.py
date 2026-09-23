@@ -540,12 +540,17 @@ async def get_openid_configuration():
         "pushed_authorization_request_endpoint": f"{conf.MTLS_URL}/api/v1/par",
         "token_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/token",
         "revocation_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/revoke",
-        "permissions_endpoint": f"{conf.MTLS_URL}/api/v1/permissions",
+        # The Permission Records specification names this field, and a client
+        # discovers the endpoint from it
+        "ib1_permission_endpoint": f"{conf.MTLS_URL}/api/v1/permissions",
         "jwks_uri": f"{conf.ISSUER_URL}/.well-known/jwks.json",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
         "authorization_endpoint_auth_methods_supported": ["tls_client_auth"],
         "token_endpoint_auth_methods_supported": ["tls_client_auth"],
+        # Without this a client falls back to the RFC 8414 default of
+        # client_secret_basic, which this endpoint does not accept
+        "revocation_endpoint_auth_methods_supported": ["tls_client_auth"],
         "require_pushed_authorization_requests": True,
         "code_challenge_methods_supported": ["S256"],
         "mtls_endpoint_aliases": {
@@ -553,7 +558,7 @@ async def get_openid_configuration():
             "pushed_authorization_request_endpoint": f"{conf.MTLS_URL}/api/v1/par",
             "token_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/token",
             "revocation_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/revoke",
-            "permissions_endpoint": f"{conf.MTLS_URL}/api/v1/permissions",
+            "ib1_permission_endpoint": f"{conf.MTLS_URL}/api/v1/permissions",
         },
         "use_mtls_endpoint_aliases": True,
         "tls_client_certificate_bound_access_tokens": True,
