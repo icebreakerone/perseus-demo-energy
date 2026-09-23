@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A client no longer has to ask for `offline_access` to be issued a refresh token.** The [OAuth profile](https://specification.trust.ib1.org/oauth-with-member-identity-certificates/1.0/#oauth-profile) says the scope is a Registry License URL and nothing else, and the metadata advertises the `refresh_token` grant, but the scope was passed to Ory Hydra unchanged and Hydra issues a refresh token only when `offline_access` is among the granted scopes. A client following the specification got a token response with no refresh token, which then failed this server's own response model and became a 500. This server now asks Hydra for `offline_access` itself. The scope a client sends, and the License recorded in the Permission Record, are unchanged
+- A token response from Hydra with no refresh token is reported as an upstream error rather than a 500, and no Permission Record is written for it
+- The scope is URL encoded when the user is redirected to Hydra. A scope carrying more than one value would previously have put a raw space in the URL
 ### Changed
 
 - **The OAuth issuer identifier is `https://perseus-demo-authentication.ib1.org`, the host that does not require a client certificate.** It was the `mtls.` host, so the metadata published at `https://perseus-demo-authentication.ib1.org/.well-known/oauth-authorization-server` named an issuer other than the one it was published under, which RFC 8414 section 3.3 forbids, and a client could not read the metadata at all without a client certificate. The endpoints that require mTLS, PAR, token, revocation and permissions, stay on the `mtls.` host, which the profile allows because the issuer identifier need not host the endpoints. Access tokens and authorization responses carry the new value as `iss`, and clients that pin the old one must be updated. The Directory record for this issuer must be changed to match

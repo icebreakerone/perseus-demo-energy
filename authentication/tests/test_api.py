@@ -32,6 +32,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 MOCK_TOKEN = "mock_enhanced_access_token"
 MOCK_ENHANCED_TOKEN = "mock_enhanced_access_token"
 MOCK_REFRESH_TOKEN = "mock_refresh_token"
+LICENSE = conf.ENERGY_CONSUMPTION_LICENSE_URL
 MOCK_CERT = "mock_client_cert"
 
 
@@ -196,6 +197,67 @@ def test_authorization_code(mock_get_request):
     assert "Location" in response.headers
     location = response.headers["Location"]
     assert f"redirect_uri={FakeConf().CALLBACK_URL}" in location
+    # The client sends a License URL alone, and this server asks Hydra for the
+    # offline_access that a refresh token depends on
+    assert parse_qs(urlparse(location).query)["scope"] == ["profile offline_access"]
+
+
+@pytest.mark.parametrize(
+    "scope, expected",
+    [
+        (LICENSE, f"{LICENSE} offline_access"),
+        (f"{LICENSE} offline_access", f"{LICENSE} offline_access"),
+        ("offline_access", "offline_access"),
+    ],
+    ids=["license-only", "already-asked-for", "offline-only"],
+)
+def test_upstream_scope_asks_for_offline_access_once(scope, expected):
+    assert auth.upstream_scope(scope) == expected
+
+
+@patch("api.main.conf", FakeConf())
+@patch("api.auth.conf", FakeConf())
+@patch("api.hydra.conf", FakeConf())
+@patch("api.auth.decode_with_jwks")
+@patch("api.main.permissions")
+@responses.activate
+def test_token_without_a_refresh_token_is_an_upstream_error(
+    mock_permissions, mock_decode_with_jwks
+):
+    """
+    A Permission is renewed by refreshing, so a token response Hydra sends
+    without a refresh token is an upstream failure, not a 500 from validating
+    our own response model.
+    """
+    now = int(time.time())
+    mock_decode_with_jwks.return_value = {
+        "client_id": CLIENT_ID,
+        "exp": now + 3600,
+        "iat": now,
+        "sub": "mock_user",
+        "iss": FakeConf().ISSUER_URL,
+        "scp": [LICENSE],
+    }
+    responses.add(
+        responses.POST,
+        f"{FakeConf().ORY_URL}/oauth2/token",
+        json={"access_token": MOCK_TOKEN},
+        status=200,
+    )
+    response = client.post(
+        "/api/v1/authorize/token",
+        data={
+            "grant_type": "authorization_code",
+            "redirect_uri": "https://client.app/callback",
+            "code_verifier": "mock_verifier",
+            "code": "mock_code",
+        },
+        headers={"x-amzn-mtls-clientcert-leaf": client_certificate(roles=[TEST_ROLE])},
+    )
+
+    assert response.status_code == 502
+    assert response.json()["error"] == "server_error"
+    mock_permissions.store_permission.assert_not_called()
 
 
 @patch("api.main.conf", FakeConf())
