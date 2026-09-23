@@ -546,24 +546,29 @@ async def get_openid_configuration():
     logger.info("Getting Oauth configuration")
     return {
         "issuer": conf.ISSUER_URL,
-        "authorization_endpoint": f"{conf.UNPROTECTED_URL}/api/v1/authorize",
-        "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
-        "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
-        "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
-        "permissions_endpoint": f"{conf.ISSUER_URL}/api/v1/permissions",
-        "jwks_uri": f"{conf.UNPROTECTED_URL}/.well-known/jwks.json",
+        "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+        "pushed_authorization_request_endpoint": f"{conf.MTLS_URL}/api/v1/par",
+        "token_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/token",
+        "revocation_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/revoke",
+        # The Permission Records specification names this field, and a client
+        # discovers the endpoint from it
+        "ib1_permission_endpoint": f"{conf.MTLS_URL}/api/v1/permissions",
+        "jwks_uri": f"{conf.ISSUER_URL}/.well-known/jwks.json",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
         "authorization_endpoint_auth_methods_supported": ["tls_client_auth"],
         "token_endpoint_auth_methods_supported": ["tls_client_auth"],
+        # Without this a client falls back to the RFC 8414 default of
+        # client_secret_basic, which this endpoint does not accept
+        "revocation_endpoint_auth_methods_supported": ["tls_client_auth"],
         "require_pushed_authorization_requests": True,
         "code_challenge_methods_supported": ["S256"],
         "mtls_endpoint_aliases": {
-            "authorization_endpoint": f"{conf.UNPROTECTED_URL}/api/v1/authorize",
-            "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
-            "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
-            "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
-            "permissions_endpoint": f"{conf.ISSUER_URL}/api/v1/permissions",
+            "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+            "pushed_authorization_request_endpoint": f"{conf.MTLS_URL}/api/v1/par",
+            "token_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/token",
+            "revocation_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/revoke",
+            "ib1_permission_endpoint": f"{conf.MTLS_URL}/api/v1/permissions",
         },
         "use_mtls_endpoint_aliases": True,
         "tls_client_certificate_bound_access_tokens": True,
@@ -590,7 +595,17 @@ def custom_openapi():
         routes=app.routes,
     )
     # Set the OpenAPI URL to the root domain
-    openapi_schema["servers"] = [{"url": conf.API_DOMAIN}]
+    openapi.apply_servers(
+        openapi_schema,
+        public_url=conf.ISSUER_URL,
+        mtls_url=conf.MTLS_URL,
+        mtls_paths=(
+            "/api/v1/par",
+            "/api/v1/authorize/token",
+            "/api/v1/authorize/revoke",
+            "/api/v1/permissions",
+        ),
+    )
     # Inject the FAPI security schemes (mTLS + OAuth2) that FastAPI cannot infer
     openapi.add_fapi_security_schemes(openapi_schema)
     app.openapi_schema = openapi_schema

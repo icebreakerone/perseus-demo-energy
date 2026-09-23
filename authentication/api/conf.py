@@ -5,13 +5,20 @@ DIRNAME = os.path.dirname(os.path.realpath(__file__))
 # For our jwks endpoint and signing
 
 
+# The OAuth issuer identifier (RFC 8414 section 2). The metadata document is
+# published at this URL and names it as the issuer, tokens carry it as iss, and
+# the Directory records it as the oauthIssuer. It is the host that does not
+# require a client certificate, so a browser can reach the authorization
+# endpoint and any client can read the metadata.
 ISSUER_URL = os.environ.get(
-    "ISSUER_URL", "https://mtls.perseus-demo-authentication.ib1.org"
-)  # This server, used to generate openid-configuration
+    "ISSUER_URL", "https://perseus-demo-authentication.ib1.org"
+)
 
-UNPROTECTED_URL = os.environ.get(  # For endpoints that don't require mtls
-    "UNPROTECTED_URL", "https://perseus-demo-authentication.ib1.org"
-)  # This server, used to generate openid-configuration
+# The host serving the server-to-server endpoints, which require mTLS. The
+# issuer identifier does not have to host these (RFC 8705 section 5).
+MTLS_URL = os.environ.get(
+    "MTLS_URL", "https://mtls.perseus-demo-authentication.ib1.org"
+)
 
 ENV = os.environ.get("ENV", "dev")
 
@@ -44,10 +51,9 @@ REDIRECT_URI = os.environ.get(  #
     "REDIRECT_URI", "https://perseus-demo-accounting.ib1.org/callback"
 )
 CALLBACK_URL = os.environ.get(
-    "CALLBACK_URL", f"{UNPROTECTED_URL}/api/v1/callback"
+    "CALLBACK_URL", f"{ISSUER_URL}/api/v1/callback"
 )
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
-API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")
 
 
 JWT_SIGNING_KEY = os.environ.get(

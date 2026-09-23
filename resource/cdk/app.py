@@ -103,11 +103,12 @@ fastapi_lambda = FastAPILambdaConstruct(
     environment_variables={
         "LOG_LEVEL": "info",
         "ISSUER_URL": "https://perseus-demo-authentication.ib1.org",
-        "API_DOMAIN": (
-            f"{contexts[deployment_context]['subdomain']}.{contexts[deployment_context]['hosted_zone_name']}"
+        "PUBLIC_URL": (
+            f"https://{contexts[deployment_context]['subdomain']}.{contexts[deployment_context]['hosted_zone_name']}"
             if contexts[deployment_context]["subdomain"]
-            else contexts[deployment_context]["hosted_zone_name"]
+            else f"https://{contexts[deployment_context]['hosted_zone_name']}"
         ),
+        "MTLS_URL": f"https://{contexts[deployment_context]['mtls_subdomain']}.{contexts[deployment_context]['hosted_zone_name']}",
         "ENV": contexts[deployment_context]["environment_name"],
         # PROVIDER_ROLE and TRUST_FRAMEWORK_URL derive from SCHEME_BASE_URL in conf.py.
         "SCHEME_BASE_URL": contexts[deployment_context]["scheme_base_url"],

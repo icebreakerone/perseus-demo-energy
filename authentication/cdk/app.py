@@ -124,13 +124,12 @@ fastapi_service = AuthenticationAPIServiceConstruct(
     vpc=network.vpc,
     ssm_policy=ssm_policy.policy,
     environment={
-        "API_DOMAIN": f'{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}',
-        "UNPROTECTED_URL": unprotected_url,
         "JWT_SIGNING_KEY": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/jwt-signing-key",
         "REDIS_HOST": redis.redis.attr_redis_endpoint_address,
         "ORY_CLIENT_ID": "f67916ce-de33-4e2f-a8e3-cbd5f6459c30",
         "ORY_URL": "https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com",
-        "ISSUER_URL": f"https://{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}",
+        "ISSUER_URL": unprotected_url,
+        "MTLS_URL": f"https://{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}",
         "ORY_CLIENT_SECRET_PARAM": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/client_secret",
         "DYNAMODB_TABLE": dynamodb.table.table_name,
         # PROVIDER_ROLE and TRUST_FRAMEWORK_URL derive from SCHEME_BASE_URL in conf.py.

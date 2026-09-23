@@ -42,6 +42,9 @@ class FakeConf:
         self.ISSUER_URL = os.environ.get(
             "ISSUER_URL", "https://perseus-demo-authentication.ib1.org"
         )
+        self.MTLS_URL = os.environ.get(
+            "MTLS_URL", "https://mtls.perseus-demo-authentication.ib1.org"
+        )
         self.ORY_CLIENT_SECRET = "123abc"
         self.ORY_URL = "https://test-oauth.io"
         self.ORY_CLIENT_ID = "abc-123"
@@ -766,6 +769,93 @@ def test_permissions_does_not_echo_the_token(mock_get_permission_by_token):
     assert MOCK_REFRESH_TOKEN not in response.text
 
 
+def test_default_issuer_is_the_host_without_client_certificates():
+    """
+    The deployed defaults, which local development overrides to one host. The
+    issuer identifier must be the host a browser and a plain HTTP client can
+    reach, not the mTLS host.
+    """
+    import importlib
+
+    with patch.dict(os.environ, {}, clear=True):
+        defaults = importlib.reload(conf)
+        issuer, mtls = defaults.ISSUER_URL, defaults.MTLS_URL
+    importlib.reload(conf)  # restore the values the rest of the suite runs with
+
+    assert issuer == "https://perseus-demo-authentication.ib1.org"
+    assert mtls == "https://mtls.perseus-demo-authentication.ib1.org"
+
+
+# Local development serves both hosts from one nginx, so the metadata tests
+# pin two distinct hosts to tell the endpoints apart.
+ISSUER_HOST = "https://issuer.example.org"
+MTLS_HOST = "https://mtls.example.org"
+
+
+@patch.object(conf, "MTLS_URL", MTLS_HOST)
+@patch.object(conf, "ISSUER_URL", ISSUER_HOST)
+def test_metadata_is_published_by_the_issuer_it_names():
+    """
+    RFC 8414 section 3.3: the issuer in the document must be the identifier the
+    document is published under. That host takes no client certificate, so any
+    client can read the metadata and a browser can reach the authorization
+    endpoint. The endpoints that need a client certificate live on the mTLS
+    host, which the issuer identifier does not have to be.
+    """
+    metadata = client.get("/.well-known/oauth-authorization-server").json()
+
+    assert metadata["issuer"] == ISSUER_HOST
+    for field in ("authorization_endpoint", "jwks_uri"):
+        assert metadata[field].startswith(ISSUER_HOST), field
+    for field in (
+        "pushed_authorization_request_endpoint",
+        "token_endpoint",
+        "revocation_endpoint",
+        "ib1_permission_endpoint",
+    ):
+        assert metadata[field].startswith(MTLS_HOST), field
+
+
+@patch.object(conf, "MTLS_URL", MTLS_HOST)
+@patch.object(conf, "ISSUER_URL", ISSUER_HOST)
+def test_metadata_names_the_permission_endpoint_as_the_specification_does():
+    """
+    Permission Records 1.0: "A client discovers the URL of the Permission
+    endpoint from the ib1_permission_endpoint field in the OAuth Issuer's
+    Authorization Server Metadata."
+    """
+    metadata = client.get("/.well-known/oauth-authorization-server").json()
+
+    assert metadata["ib1_permission_endpoint"] == f"{MTLS_HOST}/api/v1/permissions"
+    assert "permissions_endpoint" not in metadata
+
+
+def test_metadata_states_how_to_authenticate_at_the_revocation_endpoint():
+    """
+    RFC 8414 defaults an unstated revocation_endpoint_auth_methods_supported to
+    client_secret_basic, which this server does not accept.
+    """
+    metadata = client.get("/.well-known/oauth-authorization-server").json()
+
+    assert metadata["revocation_endpoint_auth_methods_supported"] == ["tls_client_auth"]
+
+
+@patch.object(conf, "MTLS_URL", MTLS_HOST)
+@patch.object(conf, "ISSUER_URL", ISSUER_HOST)
+def test_metadata_aliases_repeat_the_endpoints_exactly():
+    """
+    The IB1 OAuth profile: "Any *_endpoint value must be repeated exactly
+    within the mtls_endpoint_aliases property so the aliased and unaliased
+    values are equal."
+    """
+    metadata = client.get("/.well-known/oauth-authorization-server").json()
+    aliases = metadata["mtls_endpoint_aliases"]
+
+    assert aliases
+    for field, value in aliases.items():
+        assert metadata[field] == value, field
+
+
 @patch("api.main.conf", FakeConf())
 @patch("api.main.permissions.get_permission_by_token")
 def test_permissions_returns_the_record_to_its_client(mock_get_permission_by_token):
@@ -1105,3 +1195,35 @@ def test_callback_store_round_trip(mock_redis_connection):
         "client_state": "WFqUWTVvX49tM",
     }
     assert store.get_callback("unknown_state") is None
+
+
+def test_openapi_servers_name_the_hosts_that_serve_each_path():
+    """
+    This API spans both hosts: a browser reaches the authorization endpoint on
+    the public host, and the rest require a client certificate. Every server
+    URL must be absolute, or a client resolves it against the document's own
+    URL.
+    """
+    schema = client.get("/openapi.json").json()
+
+    assert schema["servers"] == [
+        {"url": conf.ISSUER_URL, "description": "No client certificate required"}
+    ]
+    for path in (
+        "/api/v1/par",
+        "/api/v1/authorize/token",
+        "/api/v1/authorize/revoke",
+        "/api/v1/permissions",
+    ):
+        assert schema["paths"][path]["servers"] == [
+            {"url": conf.MTLS_URL, "description": "Requires a client certificate"}
+        ], path
+    assert "servers" not in schema["paths"]["/api/v1/authorize"]
+    urls = [server["url"] for server in schema["servers"]]
+    urls += [
+        server["url"]
+        for path in schema["paths"].values()
+        for server in path.get("servers", [])
+    ]
+    for url in urls:
+        assert url.startswith("https://"), url
