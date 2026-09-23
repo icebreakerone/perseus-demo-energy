@@ -42,6 +42,23 @@ def get_session():
     return session
 
 
+def upstream_scope(scope: str) -> str:
+    """
+    The scope to ask the upstream authorization server for.
+
+    Per the IB1 OAuth profile the client's scope is a Registry License URL and
+    nothing else, but a refresh token is only issued when offline_access is
+    among the granted scopes. The profile has the issuer advertise the
+    refresh_token grant, and a Permission outlives any access token, so this
+    server asks for offline_access itself rather than requiring every client
+    to know that it must.
+    """
+    scopes = scope.split()
+    if "offline_access" not in scopes:
+        scopes.append("offline_access")
+    return " ".join(scopes)
+
+
 def create_state_token(context: dict | None = None) -> str:
     """
     A signed JWT token to be used as a state parameter in OAuth2 interactions with ory hydra

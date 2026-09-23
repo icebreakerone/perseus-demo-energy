@@ -2,7 +2,7 @@ from typing import Annotated
 import json
 import os
 import uuid
-from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qs, quote_plus
 
 from cryptography import x509
 from fastapi import (
@@ -267,7 +267,7 @@ async def authorize(
         f"client_id={conf.ORY_CLIENT_ID}&"
         f"response_type=code&"
         f"redirect_uri={conf.CALLBACK_URL}&"
-        f"scope={par_request['scope']}&"
+        f"scope={quote_plus(auth.upstream_scope(par_request['scope']))}&"
         f"code_challenge={par_request['code_challenge']}&"
         f"code_challenge_method=S256&"
         f"request={json.dumps(par_request)}&"
@@ -398,6 +398,16 @@ async def token(
         raise OAuthError(400, "unsupported_grant_type", "Invalid grant type")
 
     result = hydra.request_token(payload)
+    if not result.get("refresh_token"):
+        # A Permission is renewed by refreshing, and the metadata advertises the
+        # refresh_token grant, so a response without one cannot be used
+        logger.error(
+            f"Ory Hydra issued no refresh token for grant {grant_type}. "
+            "Check that offline_access is among the client's allowed scopes."
+        )
+        raise OAuthError(
+            status.HTTP_502_BAD_GATEWAY, "server_error", hydra.UPSTREAM_ERROR
+        )
     # Bind the token to the client by setting client_id from the certificate
     try:
         enhanced_token = auth.create_enhanced_access_token(
