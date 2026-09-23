@@ -6,7 +6,6 @@ ISSUER_URL = os.environ.get("ISSUER_URL", "")
 AUTHENTICATION_SERVER = os.environ.get(
     "AUTHENTICATION_SERVER", "https://localhost:8080"
 )
-OPEN_API_ROOT = "/dev" if ENV == "prod" else ""
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Can be local or s3 + ssm
@@ -17,7 +16,14 @@ SIGNING_ROOT_CA_CERTIFICATE = os.environ.get(
 SIGNING_BUNDLE = os.environ.get(
     "SIGNING_BUNDLE", "/certs/signing-issued-intermediate-bundle.pem"
 )
-API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")
+# The host serving the data endpoints. They require a client certificate, which
+# only the mTLS load balancer passes through, so this is the URL a client calls
+# and the one recorded as the service in a provenance record.
+MTLS_URL = os.environ.get("MTLS_URL", "https://mtls.perseus-demo-energy.ib1.org")
+
+# The host serving the endpoints that need no client certificate, such as the
+# root listing and the API documentation.
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "https://perseus-demo-energy.ib1.org")
 # SCHEME_BASE_URL is the single source of truth for the Perseus scheme in the Trust
 # Registry, controlling which environment (sandbox/development/pilot/core) is
 # referenced. Env-overridable; the sandbox default is used for local/docker/test.

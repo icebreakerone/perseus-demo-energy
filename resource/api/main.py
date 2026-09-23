@@ -137,7 +137,6 @@ def require_mtls_and_token(
 app = FastAPI(
     docs_url="/api-docs",
     title="Perseus Energy Demo Resource API",
-    root_path=conf.OPEN_API_ROOT,
 )
 
 # A year of half-hourly readings is around 3.5MB of JSON, well past the 1MB an ALB
@@ -331,7 +330,7 @@ def consumption(
         permission_expires=permission_expires,
         permission_granted=permission_granted,
         account=decoded["sub"],
-        service_url=f"https://{conf.API_DOMAIN}/datasources/{id}/{measure.value}",
+        service_url=f"{conf.MTLS_URL}/datasources/{id}/{measure.value}",
         cap_member=directory.extensions.decode_application(cert),
         # The record must name the license the user consented to, which is the
         # one granted on this token, not whichever this server prefers.
@@ -356,8 +355,12 @@ def custom_openapi():
         description=openapi.API_DESCRIPTION,
         routes=app.routes,
     )
-    # Set the OpenAPI URL to the root domain
-    openapi_schema["servers"] = [{"url": conf.API_DOMAIN}]
+    openapi.apply_servers(
+        openapi_schema,
+        public_url=conf.PUBLIC_URL,
+        mtls_url=conf.MTLS_URL,
+        mtls_paths=("/datasources", "/datasources/{id}/{measure}"),
+    )
     # Inject the FAPI security schemes (mTLS + certificate-bound token) and
     # rewrite the auto-generated bearer requirement to the combined mTLS+token one.
     openapi.add_fapi_security_schemes(openapi_schema)

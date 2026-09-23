@@ -585,7 +585,17 @@ def custom_openapi():
         routes=app.routes,
     )
     # Set the OpenAPI URL to the root domain
-    openapi_schema["servers"] = [{"url": conf.API_DOMAIN}]
+    openapi.apply_servers(
+        openapi_schema,
+        public_url=conf.ISSUER_URL,
+        mtls_url=conf.MTLS_URL,
+        mtls_paths=(
+            "/api/v1/par",
+            "/api/v1/authorize/token",
+            "/api/v1/authorize/revoke",
+            "/api/v1/permissions",
+        ),
+    )
     # Inject the FAPI security schemes (mTLS + OAuth2) that FastAPI cannot infer
     openapi.add_fapi_security_schemes(openapi_schema)
     app.openapi_schema = openapi_schema

@@ -54,7 +54,6 @@ CALLBACK_URL = os.environ.get(
     "CALLBACK_URL", f"{ISSUER_URL}/api/v1/callback"
 )
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
-API_DOMAIN = os.environ.get("API_DOMAIN", "perseus-demo-authentication.ib1.org")
 
 
 JWT_SIGNING_KEY = os.environ.get(
