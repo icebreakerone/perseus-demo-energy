@@ -19,6 +19,13 @@ All notable changes to this project will be documented in this file.
 - The metadata publishes `revocation_endpoint_auth_methods_supported: ["tls_client_auth"]`. Without it, RFC 8414 says a client should assume `client_secret_basic`, which the revocation endpoint does not accept
 - `ISSUER_URL` is the issuer identifier and the host for the authorization endpoint, the callback and the JWKS. The new `MTLS_URL` setting is the host for the endpoints that require a client certificate. `UNPROTECTED_URL` is removed, as `ISSUER_URL` now means what it held
 
+## [Unreleased]
+
+### Changed
+
+- **Both load balancers serve TLS 1.3 only, with ECDSA P-256 certificates.** The [Baseline TLS Configuration](https://specification.trust.ib1.org/baseline-tls-configuration/1.0/) specification requires every machine-to-machine connection to use TLS 1.3 or later, and server certificates to use ECDSA with the P-256 or P-384 curve. Both apps used the `ELBSecurityPolicy-TLS-1-2-2017-01` policy and RSA-2048 certificates: a TLS 1.3 handshake was refused, and connections negotiated TLS 1.2 with `ECDHE-RSA-AES128-GCM-SHA256`. A client that cannot do TLS 1.3 can no longer connect, which is the point of the requirement, and browsers have supported it since 2018
+- The certificates are issued and renewed by ACM as part of each stack, validated against the hosted zone, rather than being created by hand and referenced by ARN. The `certificate` and `mtls_certificate` context values are gone
+
 ## [v6.1.0] - 2026-09-22
 
 ### Fixed

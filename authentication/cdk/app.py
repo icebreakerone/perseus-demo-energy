@@ -29,18 +29,14 @@ contexts: dict[str, Context] = {
     "dev": {
         "environment_name": "dev",
         "mtls_subdomain": "preprod.mtls",
-        "mtls_certificate": "507e3751-89c9-4e71-888f-9d22eed4f085",
         "subdomain": "preprod",
-        "certificate": "54953fe2-52bf-4568-8242-4ab0115bac18",
         "hosted_zone_name": HOSTED_ZONE_NAME,
         "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
     "prod": {
         "environment_name": "prod",
         "mtls_subdomain": "mtls",
-        "mtls_certificate": "9a286285-c171-447e-9ce1-06ddcd343ca5",
         "subdomain": "",
-        "certificate": "d4547c2b-3c08-4f5d-b709-663e27ea0ebf",
         "hosted_zone_name": HOSTED_ZONE_NAME,
         "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
