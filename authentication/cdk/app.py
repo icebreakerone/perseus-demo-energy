@@ -124,7 +124,6 @@ fastapi_service = AuthenticationAPIServiceConstruct(
     vpc=network.vpc,
     ssm_policy=ssm_policy.policy,
     environment={
-        "API_DOMAIN": f'{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}',
         "JWT_SIGNING_KEY": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/jwt-signing-key",
         "REDIS_HOST": redis.redis.attr_redis_endpoint_address,
         "ORY_CLIENT_ID": "f67916ce-de33-4e2f-a8e3-cbd5f6459c30",

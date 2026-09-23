@@ -1133,3 +1133,35 @@ def test_callback_store_round_trip(mock_redis_connection):
         "client_state": "WFqUWTVvX49tM",
     }
     assert store.get_callback("unknown_state") is None
+
+
+def test_openapi_servers_name_the_hosts_that_serve_each_path():
+    """
+    This API spans both hosts: a browser reaches the authorization endpoint on
+    the public host, and the rest require a client certificate. Every server
+    URL must be absolute, or a client resolves it against the document's own
+    URL.
+    """
+    schema = client.get("/openapi.json").json()
+
+    assert schema["servers"] == [
+        {"url": conf.ISSUER_URL, "description": "No client certificate required"}
+    ]
+    for path in (
+        "/api/v1/par",
+        "/api/v1/authorize/token",
+        "/api/v1/authorize/revoke",
+        "/api/v1/permissions",
+    ):
+        assert schema["paths"][path]["servers"] == [
+            {"url": conf.MTLS_URL, "description": "Requires a client certificate"}
+        ], path
+    assert "servers" not in schema["paths"]["/api/v1/authorize"]
+    urls = [server["url"] for server in schema["servers"]]
+    urls += [
+        server["url"]
+        for path in schema["paths"].values()
+        for server in path.get("servers", [])
+    ]
+    for url in urls:
+        assert url.startswith("https://"), url

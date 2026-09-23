@@ -518,3 +518,31 @@ def test_measure_reaches_provenance_as_its_value(
     service_url = mock_records.call_args.kwargs["service_url"]
     assert service_url.endswith("/export")
     assert "Measure" not in service_url
+
+
+def test_openapi_servers_name_the_hosts_that_serve_each_path():
+    """
+    The data endpoints only work on the mTLS host, and every server URL must be
+    absolute, or a client resolves it against the document's own URL.
+    """
+    schema = client.get("/openapi.json").json()
+
+    # A root_path is added to the served document as an extra server entry, but
+    # only in deployment, so the app's own setting is what this can check. "/dev"
+    # was the API Gateway stage this API no longer sits behind.
+    assert app.root_path == ""
+    assert schema["servers"] == [
+        {"url": conf.PUBLIC_URL, "description": "No client certificate required"}
+    ]
+    for path in ("/datasources", "/datasources/{id}/{measure}"):
+        assert schema["paths"][path]["servers"] == [
+            {"url": conf.MTLS_URL, "description": "Requires a client certificate"}
+        ]
+    urls = [server["url"] for server in schema["servers"]]
+    urls += [
+        server["url"]
+        for path in schema["paths"].values()
+        for server in path.get("servers", [])
+    ]
+    for url in urls:
+        assert url.startswith("https://"), url

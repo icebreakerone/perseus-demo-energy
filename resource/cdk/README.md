@@ -49,7 +49,8 @@ The Lambda function is configured with the following environment variables:
 
 - `LOG_LEVEL`: Logging level (info)
 - `ISSUER_URL`: OAuth issuer URL
-- `API_DOMAIN`: API domain name
+- `PUBLIC_URL`: base URL of the host that needs no client certificate
+- `MTLS_URL`: base URL of the host serving the data endpoints, which require a client certificate
 - `ENV`: Environment name (dev/prod)
 - `SIGNING_KEY`: SSM parameter path for signing key
 - `SIGNING_ROOT_CA_CERTIFICATE`: S3 path to root CA certificate
