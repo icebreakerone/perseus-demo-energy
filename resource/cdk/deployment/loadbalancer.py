@@ -1,4 +1,5 @@
 from aws_cdk import (
+    aws_certificatemanager as acm,
     aws_elasticloadbalancingv2 as elbv2,
     aws_elasticloadbalancingv2_targets as elbv2_targets,
     aws_ec2 as ec2,
@@ -6,7 +7,6 @@ from aws_cdk import (
     aws_route53_targets as targets,
     aws_lambda as lambda_,
     aws_iam as iam,
-    Stack,
 )
 from constructs import Construct
 from models import Context
@@ -23,6 +23,35 @@ class LoadBalancer(Construct):
         lambda_function: lambda_.Function,
     ):
         super().__init__(scope, id)
+
+        # ========== Names and certificates ==========
+        zone_name = context["hosted_zone_name"]
+        mtls_domain = f"{context['mtls_subdomain']}.{zone_name}"
+        public_domain = (
+            f"{context['subdomain']}.{zone_name}" if context["subdomain"] else zone_name
+        )
+
+        hosted_zone = route53.HostedZone.from_lookup(
+            self, "HostedZone", domain_name=context["hosted_zone_name"]
+        )
+
+        # The Baseline TLS Configuration specification requires server
+        # certificates to use ECDSA with P-256 or P-384, and forbids wildcard
+        # names. ACM issues and renews these, so no ARN is carried in context.
+        mtls_certificate = acm.Certificate(
+            self,
+            "MTLSCertificate",
+            domain_name=mtls_domain,
+            validation=acm.CertificateValidation.from_dns(hosted_zone),
+            key_algorithm=acm.KeyAlgorithm.EC_PRIME256_V1,
+        )
+        public_certificate = acm.Certificate(
+            self,
+            "PublicCertificate",
+            domain_name=public_domain,
+            validation=acm.CertificateValidation.from_dns(hosted_zone),
+            key_algorithm=acm.KeyAlgorithm.EC_PRIME256_V1,
+        )
 
         # ========== mTLS Target Group (Lambda) ==========
         # For Lambda targets, we don't specify port or VPC in the target group
@@ -72,9 +101,7 @@ class LoadBalancer(Construct):
             self,
             "MTLSHTTPSListener",
             certificates=[
-                {
-                    "certificateArn": f"arn:aws:acm:{Stack.of(self).region}:{Stack.of(self).account}:certificate/{context['mtls_certificate']}"  # type: ignore
-                }
+                {"certificateArn": mtls_certificate.certificate_arn}
             ],
             default_actions=[
                 {
@@ -85,7 +112,7 @@ class LoadBalancer(Construct):
             load_balancer_arn=mtls_alb.load_balancer_arn,
             port=443,
             protocol="HTTPS",
-            ssl_policy="ELBSecurityPolicy-TLS-1-2-2017-01",
+            ssl_policy="ELBSecurityPolicy-TLS13-1-3-2021-06",
             mutual_authentication={
                 "mode": "verify",
                 "trustStoreArn": trust_store.attr_trust_store_arn,
@@ -110,9 +137,7 @@ class LoadBalancer(Construct):
             self,
             "PublicHTTPSListener",
             certificates=[
-                {
-                    "certificateArn": f"arn:aws:acm:{Stack.of(self).region}:{Stack.of(self).account}:certificate/{context['certificate']}"  # type: ignore
-                }
+                {"certificateArn": public_certificate.certificate_arn}
             ],
             default_actions=[
                 {
@@ -123,13 +148,10 @@ class LoadBalancer(Construct):
             load_balancer_arn=public_alb.load_balancer_arn,
             port=443,
             protocol="HTTPS",
-            ssl_policy="ELBSecurityPolicy-TLS-1-2-2017-01",
+            ssl_policy="ELBSecurityPolicy-TLS13-1-3-2021-06",
         )
 
         # ========== Route53 DNS Records ==========
-        hosted_zone = route53.HostedZone.from_lookup(
-            self, "HostedZone", domain_name=context["hosted_zone_name"]
-        )
 
         # mTLS domain record
         route53.ARecord(

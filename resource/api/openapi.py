@@ -98,3 +98,29 @@ def add_fapi_security_schemes(openapi_schema: dict) -> dict:
         ),
     }
     return openapi_schema
+
+
+def apply_servers(
+    openapi_schema: dict,
+    public_url: str,
+    mtls_url: str,
+    mtls_paths: tuple[str, ...],
+) -> dict:
+    """
+    State which host serves each path.
+
+    The endpoints requiring a client certificate are only reachable on the mTLS
+    host, and the rest only on the public one, so a single servers list cannot
+    describe the API. OpenAPI allows a path to override it.
+    """
+    openapi_schema["servers"] = [
+        {"url": public_url, "description": "No client certificate required"}
+    ]
+    paths = openapi_schema.get("paths", {})
+    for path in mtls_paths:
+        if path not in paths:
+            raise ValueError(f"{path} is not in the OpenAPI document")
+        paths[path]["servers"] = [
+            {"url": mtls_url, "description": "Requires a client certificate"}
+        ]
+    return openapi_schema

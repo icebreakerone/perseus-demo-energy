@@ -24,8 +24,6 @@ contexts: dict[str, Context] = {
         "mtls_subdomain": "preprod.mtls",
         "trust_store": "PerseusDemoTruststore/90ae6295e483d9f9",
         "subdomain": "preprod",
-        "mtls_certificate": "fd59453d-a782-4728-a78c-ee8c37a3717e",
-        "certificate": "535b09e0-4f69-41ad-853a-316754f81e6b",
         "hosted_zone_name": HOSTED_ZONE_NAME,
         "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
@@ -34,8 +32,6 @@ contexts: dict[str, Context] = {
         "mtls_subdomain": "mtls",
         "trust_store": "PerseusDemoTruststore/90ae6295e483d9f9",
         "subdomain": "",
-        "certificate": "50752488-303e-4757-85d3-fea66ae0a2d0",
-        "mtls_certificate": "dc498c29-daa3-4eab-bd0e-dcce2d4de2c2",
         "hosted_zone_name": HOSTED_ZONE_NAME,
         "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
@@ -103,11 +99,12 @@ fastapi_lambda = FastAPILambdaConstruct(
     environment_variables={
         "LOG_LEVEL": "info",
         "ISSUER_URL": "https://perseus-demo-authentication.ib1.org",
-        "API_DOMAIN": (
-            f"{contexts[deployment_context]['subdomain']}.{contexts[deployment_context]['hosted_zone_name']}"
+        "PUBLIC_URL": (
+            f"https://{contexts[deployment_context]['subdomain']}.{contexts[deployment_context]['hosted_zone_name']}"
             if contexts[deployment_context]["subdomain"]
-            else contexts[deployment_context]["hosted_zone_name"]
+            else f"https://{contexts[deployment_context]['hosted_zone_name']}"
         ),
+        "MTLS_URL": f"https://{contexts[deployment_context]['mtls_subdomain']}.{contexts[deployment_context]['hosted_zone_name']}",
         "ENV": contexts[deployment_context]["environment_name"],
         # PROVIDER_ROLE and TRUST_FRAMEWORK_URL derive from SCHEME_BASE_URL in conf.py.
         "SCHEME_BASE_URL": contexts[deployment_context]["scheme_base_url"],

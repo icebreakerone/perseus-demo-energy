@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v7.0.0] - 2026-09-23
+
+### Fixed
+
+- **A client no longer has to ask for `offline_access` to be issued a refresh token.** The [OAuth profile](https://specification.trust.ib1.org/oauth-with-member-identity-certificates/1.0/#oauth-profile) says the scope is a Registry License URL and nothing else, and the metadata advertises the `refresh_token` grant, but the scope was passed to Ory Hydra unchanged and Hydra issues a refresh token only when `offline_access` is among the granted scopes. A client following the specification got a token response with no refresh token, which then failed this server's own response model and became a 500. This server now asks Hydra for `offline_access` itself. The scope a client sends, and the License recorded in the Permission Record, are unchanged
+- A token response from Hydra with no refresh token is reported as an upstream error rather than a 500, and no Permission Record is written for it
+- The scope is URL encoded when the user is redirected to Hydra. A scope carrying more than one value would previously have put a raw space in the URL
+
+### Changed
+
+- **Both OpenAPI documents name the host that serves each path, as an absolute `https` URL.** The resource API advertised `[{"url": "/dev"}, {"url": "perseus-demo-energy.ib1.org"}]`: `/dev` was the API Gateway stage the API no longer sits behind, and a server URL without a scheme is a relative URL, so a client asked for `https://perseus-demo-energy.ib1.org/perseus-demo-energy.ib1.org/datasources`. Both documents also named a single host, although the endpoints requiring a client certificate are only reachable on the `mtls.` host, which is now stated per path
+- The resource API records the mTLS URL of the data service as the `service` in a provenance record. It recorded the public host, which cannot serve the data
+- The metadata publishes `revocation_endpoint_auth_methods_supported: ["tls_client_auth"]`. Without it, RFC 8414 says a client should assume `client_secret_basic`, which the revocation endpoint does not accept
+- The certificates are issued and renewed by ACM as part of each stack, validated against the hosted zone, rather than being created by hand and referenced by ARN. The `certificate` and `mtls_certificate` context values are gone
+
+### Breaking
+
+- **The OAuth issuer identifier is `https://perseus-demo-authentication.ib1.org`, the host that does not require a client certificate.** It was the `mtls.` host, so the metadata published at `https://perseus-demo-authentication.ib1.org/.well-known/oauth-authorization-server` named an issuer other than the one it was published under, which RFC 8414 section 3.3 forbids, and a client could not read the metadata at all without a client certificate. The endpoints that require mTLS, PAR, token, revocation and permissions, stay on the `mtls.` host, which the profile allows because the issuer identifier need not host the endpoints. Access tokens and authorization responses carry the new value as `iss`, and clients that pin the old one must be updated. The Directory record for this issuer must be changed to match
+- **The permission endpoint is published as `ib1_permission_endpoint`, the field [Permission Records](https://specification.trust.ib1.org/permission-records/1.0/) tells clients to read.** It was `permissions_endpoint`, a name this server invented before that specification was published, so a conforming client could not discover the endpoint at all. The endpoint itself is unchanged
+- **Both load balancers serve TLS 1.3 only, with ECDSA P-256 certificates.** The [Baseline TLS Configuration](https://specification.trust.ib1.org/baseline-tls-configuration/1.0/) specification requires every machine-to-machine connection to use TLS 1.3 or later, and server certificates to use ECDSA with the P-256 or P-384 curve. Both apps used the `ELBSecurityPolicy-TLS-1-2-2017-01` policy and RSA-2048 certificates: a TLS 1.3 handshake was refused, and connections negotiated TLS 1.2 with `ECDHE-RSA-AES128-GCM-SHA256`. A client that cannot do TLS 1.3 can no longer connect, which is the point of the requirement, and browsers have supported it since 2018
+- `ISSUER_URL` is the issuer identifier and the host for the authorization endpoint, the callback and the JWKS. The new `MTLS_URL` setting is the host for the endpoints that require a client certificate. `UNPROTECTED_URL` is removed, as `ISSUER_URL` now means what it held
+- `API_DOMAIN` is replaced by `PUBLIC_URL` and `MTLS_URL` in the resource API, and by the existing `ISSUER_URL` and `MTLS_URL` in the authentication API. It held a bare hostname in one place and a URL in another
+
 ## [v6.1.0] - 2026-09-22
 
 ### Fixed

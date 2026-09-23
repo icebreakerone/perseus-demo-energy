@@ -2,7 +2,7 @@ from typing import Annotated
 import json
 import os
 import uuid
-from urllib.parse import urlencode, urlparse, urlunparse, parse_qs
+from urllib.parse import urlencode, urlparse, urlunparse, parse_qs, quote_plus
 
 from cryptography import x509
 from fastapi import (
@@ -267,7 +267,7 @@ async def authorize(
         f"client_id={conf.ORY_CLIENT_ID}&"
         f"response_type=code&"
         f"redirect_uri={conf.CALLBACK_URL}&"
-        f"scope={par_request['scope']}&"
+        f"scope={quote_plus(auth.upstream_scope(par_request['scope']))}&"
         f"code_challenge={par_request['code_challenge']}&"
         f"code_challenge_method=S256&"
         f"request={json.dumps(par_request)}&"
@@ -398,6 +398,16 @@ async def token(
         raise OAuthError(400, "unsupported_grant_type", "Invalid grant type")
 
     result = hydra.request_token(payload)
+    if not result.get("refresh_token"):
+        # A Permission is renewed by refreshing, and the metadata advertises the
+        # refresh_token grant, so a response without one cannot be used
+        logger.error(
+            f"Ory Hydra issued no refresh token for grant {grant_type}. "
+            "Check that offline_access is among the client's allowed scopes."
+        )
+        raise OAuthError(
+            status.HTTP_502_BAD_GATEWAY, "server_error", hydra.UPSTREAM_ERROR
+        )
     # Bind the token to the client by setting client_id from the certificate
     try:
         enhanced_token = auth.create_enhanced_access_token(
@@ -536,24 +546,29 @@ async def get_openid_configuration():
     logger.info("Getting Oauth configuration")
     return {
         "issuer": conf.ISSUER_URL,
-        "authorization_endpoint": f"{conf.UNPROTECTED_URL}/api/v1/authorize",
-        "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
-        "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
-        "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
-        "permissions_endpoint": f"{conf.ISSUER_URL}/api/v1/permissions",
-        "jwks_uri": f"{conf.UNPROTECTED_URL}/.well-known/jwks.json",
+        "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+        "pushed_authorization_request_endpoint": f"{conf.MTLS_URL}/api/v1/par",
+        "token_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/token",
+        "revocation_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/revoke",
+        # The Permission Records specification names this field, and a client
+        # discovers the endpoint from it
+        "ib1_permission_endpoint": f"{conf.MTLS_URL}/api/v1/permissions",
+        "jwks_uri": f"{conf.ISSUER_URL}/.well-known/jwks.json",
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
         "authorization_endpoint_auth_methods_supported": ["tls_client_auth"],
         "token_endpoint_auth_methods_supported": ["tls_client_auth"],
+        # Without this a client falls back to the RFC 8414 default of
+        # client_secret_basic, which this endpoint does not accept
+        "revocation_endpoint_auth_methods_supported": ["tls_client_auth"],
         "require_pushed_authorization_requests": True,
         "code_challenge_methods_supported": ["S256"],
         "mtls_endpoint_aliases": {
-            "authorization_endpoint": f"{conf.UNPROTECTED_URL}/api/v1/authorize",
-            "pushed_authorization_request_endpoint": f"{conf.ISSUER_URL}/api/v1/par",
-            "token_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/token",
-            "revocation_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize/revoke",
-            "permissions_endpoint": f"{conf.ISSUER_URL}/api/v1/permissions",
+            "authorization_endpoint": f"{conf.ISSUER_URL}/api/v1/authorize",
+            "pushed_authorization_request_endpoint": f"{conf.MTLS_URL}/api/v1/par",
+            "token_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/token",
+            "revocation_endpoint": f"{conf.MTLS_URL}/api/v1/authorize/revoke",
+            "ib1_permission_endpoint": f"{conf.MTLS_URL}/api/v1/permissions",
         },
         "use_mtls_endpoint_aliases": True,
         "tls_client_certificate_bound_access_tokens": True,
@@ -575,12 +590,22 @@ def custom_openapi():
     openapi_schema = get_openapi(
         title="Perseus Demo Authentication Server",
         # The release this build is from. Keep in step with CHANGELOG.md.
-        version="6.1.0",
+        version="7.0.0",
         description=openapi.API_DESCRIPTION,
         routes=app.routes,
     )
     # Set the OpenAPI URL to the root domain
-    openapi_schema["servers"] = [{"url": conf.API_DOMAIN}]
+    openapi.apply_servers(
+        openapi_schema,
+        public_url=conf.ISSUER_URL,
+        mtls_url=conf.MTLS_URL,
+        mtls_paths=(
+            "/api/v1/par",
+            "/api/v1/authorize/token",
+            "/api/v1/authorize/revoke",
+            "/api/v1/permissions",
+        ),
+    )
     # Inject the FAPI security schemes (mTLS + OAuth2) that FastAPI cannot infer
     openapi.add_fapi_security_schemes(openapi_schema)
     app.openapi_schema = openapi_schema
