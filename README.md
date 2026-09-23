@@ -77,7 +77,8 @@ Both apps have example `.env.template` files in their root directories. These sh
 - `OAUTH_URL`: URL for the Ory Hydra client
 - `OAUTH_CLIENT_SECRET`: Client secret for the Ory Hydra client
 - `REDIRECT_URI`: The page to return to after authentication and authorisation eg. for local development http://127.0.0.1:3000/callback
-- `ISSUER_URL`: URL of the Oauth issuer eg. for docker compose https://authentication_web
+- `ISSUER_URL`: the OAuth issuer identifier. The metadata is published here, tokens carry it as `iss`, and it serves the endpoints a browser reaches. eg. for docker compose https://authentication_web
+- `MTLS_URL`: the host serving the endpoints that require a client certificate, PAR, token, revocation and permissions. Local development serves both from the same nginx
 - `REFRESH_TOKEN_LIFESPAN_HOURS`: the refresh token lifespan set in the Ory Hydra tenant, default 720. Hydra does not report it, and it is needed to record when each refresh token expires
 
 The following environment variables are used in the resource app:

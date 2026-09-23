@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- **The OAuth issuer identifier is `https://perseus-demo-authentication.ib1.org`, the host that does not require a client certificate.** It was the `mtls.` host, so the metadata published at `https://perseus-demo-authentication.ib1.org/.well-known/oauth-authorization-server` named an issuer other than the one it was published under, which RFC 8414 section 3.3 forbids, and a client could not read the metadata at all without a client certificate. The endpoints that require mTLS, PAR, token, revocation and permissions, stay on the `mtls.` host, which the profile allows because the issuer identifier need not host the endpoints. Access tokens and authorization responses carry the new value as `iss`, and clients that pin the old one must be updated. The Directory record for this issuer must be changed to match
+- `ISSUER_URL` is the issuer identifier and the host for the authorization endpoint, the callback and the JWKS. The new `MTLS_URL` setting is the host for the endpoints that require a client certificate. `UNPROTECTED_URL` is removed, as `ISSUER_URL` now means what it held
+
 ## [v6.1.0] - 2026-09-22
 
 ### Fixed
