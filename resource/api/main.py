@@ -1,5 +1,4 @@
 import datetime
-import uuid
 from typing import Annotated
 
 # import x509
@@ -15,6 +14,7 @@ from ib1 import directory
 from mangum import Mangum
 
 from . import models
+from . import audit
 from . import auth
 from . import conf
 from . import consumption as consumption_data
@@ -78,9 +78,6 @@ def require_mtls_and_token(
             .get("clientCert", {})
         )
         cert_pem = cert_context.get("clientCertPem")
-        logger.info("Loaded certificate from requestContext.authentication")
-    else:
-        logger.info("Loaded certificate from x_amzn_mtls_clientcert_leaf header")
 
     if not cert_pem:
         # Defence in depth. In production the ALB listener runs mutual
@@ -89,19 +86,19 @@ def require_mtls_and_token(
         # uses ssl_verify_client optional, and would be if the app were ever
         # exposed without the ALB in front of it.
         logger.warning("No client certificate found in request")
+        audit.record(failure_stage="cert_missing")
         raise ApiError(401, "invalid_token", "Client certificate required")
 
     try:
         cert = directory.parse_cert(cert_pem)
-        logger.info(
-            f"Parsed certificate subject: "
-            f"{directory.extensions.decode_application(cert)}"
-        )
+        directory.extensions.decode_application(cert)
     except directory.CertificateInvalidError as e:
         logger.warning(f"Client certificate could not be parsed: {e}")
+        audit.record(failure_stage="cert_invalid")
         raise ApiError(401, "invalid_token", str(e))
     except directory.CertificateExtensionError as e:
         logger.warning(f"Client certificate is missing required extensions: {e}")
+        audit.record(failure_stage="cert_no_application")
         raise ApiError(401, "invalid_token", str(e))
     try:
         directory.require_role(
@@ -110,6 +107,7 @@ def require_mtls_and_token(
         )
     except (directory.CertificateRoleError, directory.CertificateExtensionError) as e:
         logger.warning(f"Client certificate role check failed: {e}")
+        audit.record(failure_stage="role")
         raise ApiError(401, "invalid_token", str(e))
     if token and token.credentials:
         # TODO don't use instrospection, check the token signature
@@ -119,14 +117,20 @@ def require_mtls_and_token(
                 cert_pem,
                 token.credentials,
             )
-            logger.info(f"Token validated successfully for sub {decoded.get('sub')}")
+            audit.record(
+                account=decoded.get("sub"),
+                token_expires=decoded.get("exp"),
+                scope=" ".join(decoded.get("scp", [])),
+            )
         except AccessTokenValidatorError as e:
             logger.warning(f"Token validation failed: {e}")
+            audit.record(failure_stage="token")
             raise ApiError(401, "invalid_token", str(e))
     else:
         # RFC 6750 section 3: no credentials presented, so the challenge
         # carries no error code
         logger.warning("No bearer token provided")
+        audit.record(failure_stage="token_missing")
         raise ApiError(
             401, "invalid_token", "No token provided", include_code_in_header=False
         )
@@ -144,6 +148,8 @@ app = FastAPI(
 # of that. Mangum base64-encodes the compressed body, since gzip's leading bytes are
 # not valid UTF-8, and the load balancer unwraps it.
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+# Added last so it is outermost, and sees every response including errors
+app.add_middleware(audit.AuditMiddleware, service="resource")
 
 API_ERROR_RESPONSES: dict = {
     400: {"model": models.ApiErrorResponse, "description": "Malformed request"},
@@ -155,11 +161,15 @@ API_ERROR_RESPONSES: dict = {
 }
 
 
-def correlation_id() -> str:
+def correlation_id(request: Request) -> str:
     """
     An identifier a caller can quote when reporting a server side failure.
+
+    It is the request id, so it finds the request's audit line and every other
+    line logged while handling it.
     """
-    return uuid.uuid4().hex[:12]
+    fields = getattr(request.state, "audit", None) or {}
+    return fields.get("request_id") or audit.request_id()
 
 
 @app.exception_handler(ApiError)
@@ -167,6 +177,7 @@ async def api_error_handler(request: Request, exc: ApiError) -> JSONResponse:
     """
     Render errors with an RFC 6750 code, and a challenge on a 401.
     """
+    audit.record(error=exc.error, error_description=exc.error_description)
     headers = {}
     challenge = exc.header()
     if challenge:
@@ -190,12 +201,13 @@ async def validation_error_handler(
             for error in exc.errors()
         }
     )
+    description = "Invalid or missing parameters. " + "; ".join(problems)
+    audit.record(error="invalid_request", error_description=description)
     return JSONResponse(
         status_code=400,
         content={
             "error": "invalid_request",
-            "error_description": "Invalid or missing parameters. "
-            + "; ".join(problems),
+            "error_description": description,
         },
     )
 
@@ -205,7 +217,7 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
     """
     Catch everything else, so infrastructure failures are reportable.
     """
-    reference = correlation_id()
+    reference = correlation_id(request)
     logger.exception(f"Unhandled error on {request.url.path}, correlation {reference}")
     return JSONResponse(
         status_code=500,
@@ -305,6 +317,7 @@ def consumption(
     to_date: datetime.datetime | None = Query(alias="to", default=None),
     auth_result: tuple[dict, dict, object] = Depends(require_mtls_and_token),
 ):
+    audit.record(datasource=id, measure=measure.value)
     source = DATA_SOURCES.get(id)
     if source is None:
         # Not an RFC 6750 condition, so no registered code fits. The status
@@ -319,6 +332,9 @@ def consumption(
         )
     from_date, to_date = _resolve_window(request, from_date, to_date)
     decoded, _, cert = auth_result
+    # The record must name the license the user consented to, which is the
+    # one granted on this token, not whichever this server prefers.
+    record_license = auth.license_from_scopes(decoded.get("scp", []))
     # Create a new provenance record
     permission_granted = datetime.datetime.now(datetime.timezone.utc)
     permission_expires = datetime.datetime.now(
@@ -332,12 +348,15 @@ def consumption(
         account=decoded["sub"],
         service_url=f"{conf.MTLS_URL}/datasources/{id}/{measure.value}",
         cap_member=directory.extensions.decode_application(cert),
-        # The record must name the license the user consented to, which is the
-        # one granted on this token, not whichever this server prefers.
-        license_url=auth.license_from_scopes(decoded.get("scp", [])),
+        license_url=record_license,
     )
     data = consumption_data.readings(from_date, to_date, source["type"], measure)
-    logger.info(f"Returning {len(data)} readings and provenance for {decoded['sub']}")
+    audit.record(
+        license=record_license,
+        readings=len(data),
+        window_from=from_date.isoformat(),
+        window_to=to_date.isoformat(),
+    )
     return {
         "data": data,
         "location": {"ukPostcodeOutcode": DEMO_DATA_SOURCE_LOCATION},

@@ -2,6 +2,7 @@ import os
 
 from aws_cdk import App, Stack, Tags
 import aws_cdk as cdk
+from aws_cdk import aws_ssm as ssm
 
 from deployment.policies import SSMPermissionsConstruct
 from deployment.s3_bucket import TruststoreBucketConstruct
@@ -9,6 +10,7 @@ from deployment.truststore import TruststoreConstruct
 from deployment.networking import NetworkConstruct
 from deployment.lambda_function import FastAPILambdaConstruct
 from deployment.loadbalancer import LoadBalancer
+from deployment.alb_logs import AlbLogs
 from models import Context
 
 app = App()
@@ -24,6 +26,7 @@ contexts: dict[str, Context] = {
         "mtls_subdomain": "preprod.mtls",
         "trust_store": "PerseusDemoTruststore/90ae6295e483d9f9",
         "subdomain": "preprod",
+        "log_retention_days": 30,
         "hosted_zone_name": HOSTED_ZONE_NAME,
         "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
@@ -32,6 +35,7 @@ contexts: dict[str, Context] = {
         "mtls_subdomain": "mtls",
         "trust_store": "PerseusDemoTruststore/90ae6295e483d9f9",
         "subdomain": "",
+        "log_retention_days": 90,
         "hosted_zone_name": HOSTED_ZONE_NAME,
         "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
@@ -96,6 +100,7 @@ fastapi_lambda = FastAPILambdaConstruct(
     "FastAPILambda",
     environment_name=contexts[deployment_context]["environment_name"],
     ssm_policy=ssm_policy.policy,
+    log_retention_days=contexts[deployment_context]["log_retention_days"],
     environment_variables={
         "LOG_LEVEL": "info",
         "ISSUER_URL": "https://perseus-demo-authentication.ib1.org",
@@ -128,6 +133,30 @@ alb = LoadBalancer(
     trust_store=truststore.trust_store,
     lambda_function=fastapi_lambda.function,
 )
+
+alb_logs = AlbLogs(
+    stack,
+    "AlbLogs",
+    app_name="resource",
+    environment_name=contexts[deployment_context]["environment_name"],
+    retention_days=contexts[deployment_context]["log_retention_days"],
+)
+alb_logs.log(alb.mtls_alb, "mtls", connection_logs=True)
+alb_logs.log(alb.public_alb, "public")
+
+# The dashboard lives in the authentication stack, which is deployed after this
+# one, and finds the resource API's load balancers and function through these
+for name, value in {
+    "mtls-alb-full-name": alb.mtls_alb.load_balancer_full_name,
+    "public-alb-full-name": alb.public_alb.load_balancer_full_name,
+    "function-name": fastapi_lambda.function.function_name,
+}.items():
+    ssm.StringParameter(
+        stack,
+        f"Dashboard-{name}",
+        parameter_name=f"/perseus/{contexts[deployment_context]['environment_name']}/resource-api/{name}",
+        string_value=value,
+    )
 
 # Note: API Gateway deployment is commented out - using ALB instead
 # api_gateway = DualApiGatewayConstruct(

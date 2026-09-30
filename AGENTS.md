@@ -56,6 +56,21 @@ cd authentication/cdk
 cdk deploy --context deployment_context=dev
 ```
 
+The dashboard in the authentication stack reads SSM parameters that the resource
+stack writes, which is another reason the resource stack goes first.
+
+## Logging
+
+Both apps log JSON through loguru (`api/logger.py`), one object per line. Keep
+`backtrace=False, diagnose=False` on the stdout handler, and keep it the first
+handler, as `test_tracebacks_do_not_carry_frame_locals` inspects it.
+
+`api/audit.py` writes one audit line per request with `"event": "request"`. Add
+request context with `audit.record(field=value)` rather than logging it in a
+message, so the dashboard can query it. Never record a token: use
+`permissions.token_reference()`. The dashboard's Logs Insights queries in
+`authentication/cdk/deployment/dashboard.py` depend on the field names.
+
 ## Architecture
 
 ### Certificate Types

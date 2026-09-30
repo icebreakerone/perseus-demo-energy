@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **Every request writes one audit line naming the client certificate that made it.** Both apps log a JSON line with `"event": "request"` carrying the route, status, outcome and latency, and the certificate's Application, Member, roles, subject, issuer, serial, fingerprint and expiry. A refused request says why in `failure_stage` (`cert_missing`, `cert_invalid`, `cert_no_application`, `role`, `token`, `token_missing`, `permission`, `grant` or `upstream`). Endpoints add what they know, such as the grant type, the account and License, or the data source and measure. Tokens are named by reference only, never logged
+- Responses carry an `X-Request-Id` header. On a server error the `correlation_id` is the same value, so it finds the request's audit line and every other line logged while handling it
+- **A CloudWatch dashboard, `Perseus-dev` or `Perseus-prod`, covering both apps.** It shows who is connecting to what, refused requests by reason and client, recent errors, token activity, the client certificates in use sorted by expiry, latency, and load balancer and Lambda failures. The same queries are saved in Logs Insights under `Perseus/<env>/`
+- **Load balancer access logs on all four load balancers, and connection logs on the two mTLS ones.** The mTLS listeners verify client certificates, so a refused certificate never reaches the app. The connection log records each handshake with the certificate's subject, serial, validity and the verify result. Both are written to S3 and queried with Athena, through a workgroup with saved queries for refused certificates, connecting clients and load balancer errors
+
+### Changed
+
+- Both apps log JSON, one object per line, with `timestamp`, `level` and `message` and any bound fields at the top level. The authentication app logged bare message text. Tracebacks are kept inside the object, and still carry no frame locals
+- Log groups are named `/perseus/<env>/authentication-api` and `/perseus/<env>/resource-api`, and kept for 30 days in dev and 90 days in prod. They were unnamed, and kept for two years and forever. The old groups are retained by CloudFormation and can be deleted by hand once the new ones are in use
+- The authentication app is given `ENV`, so its logs name the environment. It fell back to `dev` in prod
+- The authorize endpoint no longer logs the full redirect to Hydra, which carried the stored PAR request and state
+- CI deploys the resource stack before the authentication stack. The dashboard reads the resource API's load balancer and function names from SSM parameters the resource stack writes
+
 ## [v7.0.0] - 2026-09-23
 
 ### Fixed

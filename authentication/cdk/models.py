@@ -7,3 +7,4 @@ class Context(TypedDict):
     subdomain: str
     hosted_zone_name: str
     scheme_base_url: str
+    log_retention_days: int

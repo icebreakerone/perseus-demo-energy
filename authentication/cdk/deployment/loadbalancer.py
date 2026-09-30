@@ -159,6 +159,10 @@ class LoadBalancer(Construct):
             ),
         )
 
+        # The logging and dashboard constructs need the load balancers themselves
+        self.mtls_alb = mtls_alb
+        self.public_alb = public_alb
+
         # Optional: expose ALB DNS names as class properties
         self.mtls_alb_dns = mtls_alb.load_balancer_dns_name
         self.public_alb_dns = public_alb.load_balancer_dns_name
