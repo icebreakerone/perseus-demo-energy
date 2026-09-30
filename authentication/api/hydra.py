@@ -9,6 +9,7 @@ therefore built from an allowlist, and anything unrecognised is dropped.
 
 import requests
 
+from . import audit
 from . import conf
 from .auth import get_session
 from .exceptions import OAuthError
@@ -96,6 +97,7 @@ def upstream_error(response: requests.Response) -> OAuthError:
             f"Unparseable response from Ory Hydra, status {response.status_code}, "
             f"body {response.text[:MAX_DESCRIPTION_LENGTH]!r}"
         )
+        audit.record(failure_stage="upstream")
         return OAuthError(502, "server_error", UPSTREAM_ERROR)
 
     if code in CALLER_ERRORS or (code not in SERVICE_ERRORS and response.status_code == 400):
@@ -104,6 +106,7 @@ def upstream_error(response: requests.Response) -> OAuthError:
         logger.warning(
             f"Ory Hydra rejected the request, status {response.status_code}, error {code}"
         )
+        audit.record(failure_stage="grant")
         return OAuthError(
             status,
             code,
@@ -126,6 +129,7 @@ def upstream_error(response: requests.Response) -> OAuthError:
             f"hint {_clean(body.get('error_hint'))!r}"
         )
 
+    audit.record(failure_stage="upstream", upstream_error=code)
     if code == "temporarily_unavailable":
         return OAuthError(503, "temporarily_unavailable", UPSTREAM_UNAVAILABLE)
     return OAuthError(502, "server_error", UPSTREAM_ERROR)
@@ -140,9 +144,11 @@ def _post(url: str, payload: dict) -> requests.Response:
         return session.post(url, data=payload, timeout=conf.ORY_TIMEOUT)
     except requests.exceptions.Timeout:
         logger.warning(f"Timed out after {conf.ORY_TIMEOUT}s calling {url}")
+        audit.record(failure_stage="upstream", upstream_error="timeout")
         raise OAuthError(504, "server_error", UPSTREAM_TIMEOUT)
     except requests.exceptions.RequestException:
         logger.exception(f"Could not reach {url}")
+        audit.record(failure_stage="upstream", upstream_error="unreachable")
         raise OAuthError(502, "server_error", UPSTREAM_ERROR)
 
 

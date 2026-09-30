@@ -9,3 +9,4 @@ class Context(TypedDict):
     hosted_zone_name: str
     hosted_zone_id: str
     scheme_base_url: str
+    log_retention_days: int

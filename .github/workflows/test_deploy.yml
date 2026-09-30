@@ -31,7 +31,9 @@ jobs:
           folder: resource
   deploy-authentication:
     runs-on: ubuntu-latest
-    needs: test-authentication
+    # The resource stack owns the shared truststore bucket and publishes the
+    # names the dashboard in this stack reads, so it goes first
+    needs: [test-authentication, deploy-resource]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/preprod'
     steps:
       - uses: actions/checkout@v4

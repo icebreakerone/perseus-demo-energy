@@ -194,7 +194,7 @@ def log_lines():
 
     captured: list = []
     log = get_logger()
-    sink_id = log.add(captured.append, format="{message}")
+    sink_id = log.add(captured.append, format=lambda record: "{extra[_json]}")
     yield captured
     log.remove(sink_id)
 

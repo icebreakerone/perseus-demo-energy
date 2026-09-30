@@ -4,8 +4,18 @@ from aws_cdk import (
     aws_iam as iam,
     Duration,
     aws_ecr_assets as ecr_assets,
+    aws_logs as logs,
+    RemovalPolicy,
 )
 from constructs import Construct
+
+# Log retention by the number of days in the deployment context, which the
+# load balancer log bucket's lifecycle also uses
+RETENTION = {
+    30: logs.RetentionDays.ONE_MONTH,
+    90: logs.RetentionDays.THREE_MONTHS,
+    365: logs.RetentionDays.ONE_YEAR,
+}
 
 
 class FastAPILambdaConstruct(Construct):
@@ -16,6 +26,7 @@ class FastAPILambdaConstruct(Construct):
         environment_name: str,
         ssm_policy: iam.ManagedPolicy,
         environment_variables: dict,
+        log_retention_days: int,
     ):
         super().__init__(scope, id)
 
@@ -32,6 +43,16 @@ class FastAPILambdaConstruct(Construct):
             platform=ecr_assets.Platform.LINUX_AMD64,
         )
 
+        # Named, so the dashboard in the authentication stack can query it.
+        # Without this Lambda creates /aws/lambda/<function> itself, kept forever.
+        self.log_group = logs.LogGroup(
+            self,
+            "LogGroup",
+            log_group_name=f"/perseus/{environment_name}/resource-api",
+            retention=RETENTION[log_retention_days],
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+
         # Create Lambda function using container image
         self.function = lambda_.Function(
             self,
@@ -45,6 +66,7 @@ class FastAPILambdaConstruct(Construct):
             environment=environment_variables,
             timeout=Duration.seconds(30),
             memory_size=512,
+            log_group=self.log_group,
         )
 
         # Attach SSM policy
@@ -53,7 +75,7 @@ class FastAPILambdaConstruct(Construct):
         else:
             raise RuntimeError("No role found for Lambda function")
 
-        # Add additional permissions for S3 and CloudWatch
+        # Add additional permissions for S3
         self.function.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
@@ -67,13 +89,4 @@ class FastAPILambdaConstruct(Construct):
             )
         )
 
-        self.function.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=[
-                    "logs:CreateLogGroup",
-                    "logs:CreateLogStream",
-                    "logs:PutLogEvents",
-                ],
-                resources=["*"],
-            )
-        )
+        self.log_group.grant_write(self.function)
