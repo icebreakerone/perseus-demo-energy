@@ -79,16 +79,25 @@ TOKEN_REQUEST_DATA = {
 @pytest.fixture
 def log_lines():
     """
-    Capture loguru output. loguru does not feed pytest's caplog, so the sink has
-    to be added by hand.
+    Capture loguru output as the JSON lines production writes, so every bound
+    field is checked, not only the message. loguru does not feed pytest's
+    caplog, so the sink has to be added by hand.
     """
     from api.logger import get_logger
 
     captured: list = []
     log = get_logger()
-    sink_id = log.add(captured.append, format="{message}")
+    sink_id = log.add(captured.append, format=lambda record: "{extra[_json]}")
     yield captured
     log.remove(sink_id)
+
+
+def audit_line(log_lines: list) -> dict:
+    """The one audit line a request writes."""
+    lines = [json.loads(line) for line in log_lines]
+    audits = [line for line in lines if line.get("event") == "request"]
+    assert len(audits) == 1
+    return audits[0]
 
 
 @pytest.fixture
@@ -1063,7 +1072,11 @@ def test_token_success_does_not_log_credentials(
     assert MOCK_TOKEN not in logged
     assert MOCK_REFRESH_TOKEN not in logged
     # A reference is logged instead, so a support request can still be traced
-    assert "Issued token for" in logged
+    audit = audit_line(log_lines)
+    assert audit["status"] == 200
+    assert len(audit["token_ref"]) == 12
+    assert audit["grant_type"] == "authorization_code"
+    assert audit["account"] == "mock_user"
 
 
 def test_tracebacks_do_not_carry_frame_locals():

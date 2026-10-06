@@ -14,6 +14,8 @@ from deployment.authentication_service import AuthenticationAPIServiceConstruct
 from deployment.certificates_bucket import CertificatesBucket
 from deployment.dynamodb import DynamoDBConstruct
 from deployment.loadbalancer import LoadBalancer
+from deployment.alb_logs import AlbLogs
+from deployment.dashboard import Dashboard
 from deployment.messaging_policy import MessagingPolicy
 from models import Context
 
@@ -30,6 +32,7 @@ contexts: dict[str, Context] = {
         "environment_name": "dev",
         "mtls_subdomain": "preprod.mtls",
         "subdomain": "preprod",
+        "log_retention_days": 30,
         "hosted_zone_name": HOSTED_ZONE_NAME,
         "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
@@ -37,6 +40,7 @@ contexts: dict[str, Context] = {
         "environment_name": "prod",
         "mtls_subdomain": "mtls",
         "subdomain": "",
+        "log_retention_days": 90,
         "hosted_zone_name": HOSTED_ZONE_NAME,
         "scheme_base_url": "https://registry.core.sandbox.trust.ib1.org/scheme/perseus",
     },
@@ -125,6 +129,7 @@ fastapi_service = AuthenticationAPIServiceConstruct(
         "ORY_CLIENT_ID": "f67916ce-de33-4e2f-a8e3-cbd5f6459c30",
         "ORY_URL": "https://vigorous-heyrovsky-1trvv0ikx9.projects.oryapis.com",
         "ISSUER_URL": unprotected_url,
+        "ENV": contexts[deployment_context]["environment_name"],
         "MTLS_URL": f"https://{contexts[deployment_context]["mtls_subdomain"]}.{contexts[deployment_context]["hosted_zone_name"]}",
         "ORY_CLIENT_SECRET_PARAM": f"/copilot/perseus-demo-authentication/{deployment_context}/secrets/client_secret",
         "DYNAMODB_TABLE": dynamodb.table.table_name,
@@ -140,6 +145,31 @@ fastapi_service = AuthenticationAPIServiceConstruct(
     public_alb_sg=alb.public_alb_sg,
     table=dynamodb.table,
     messaging_policy=messaging_policy.policy,
+    environment_name=contexts[deployment_context]["environment_name"],
+    log_retention_days=contexts[deployment_context]["log_retention_days"],
+)
+
+alb_logs = AlbLogs(
+    stack,
+    "AlbLogs",
+    app_name="authentication",
+    environment_name=contexts[deployment_context]["environment_name"],
+    retention_days=contexts[deployment_context]["log_retention_days"],
+)
+alb_logs.log(alb.mtls_alb, "mtls", connection_logs=True)
+alb_logs.log(alb.public_alb, "public")
+
+Dashboard(
+    stack,
+    "Dashboard",
+    environment_name=contexts[deployment_context]["environment_name"],
+    authentication_log_group=fastapi_service.log_group,
+    authentication_mtls_alb=alb.mtls_alb,
+    authentication_public_alb=alb.public_alb,
+    athena_workgroups=[
+        alb_logs.workgroup.name,
+        f"perseus-resource-{contexts[deployment_context]['environment_name']}-alb-logs",
+    ],
 )
 
 app.synth()

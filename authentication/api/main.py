@@ -1,7 +1,6 @@
 from typing import Annotated
 import json
 import os
-import uuid
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qs, quote_plus
 
 from cryptography import x509
@@ -19,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse, Response
 from ib1 import directory
+from . import audit
 from . import models
 from . import conf
 from . import store
@@ -57,6 +57,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Added last so it is outermost, and sees every response including errors
+app.add_middleware(audit.AuditMiddleware, service="authentication")
+
 app.mount("/static", StaticFiles(directory=f"{ROOT_DIR}/static"), name="static")
 
 
@@ -74,11 +77,15 @@ OAUTH_ERROR_RESPONSES: dict = {
 }
 
 
-def correlation_id() -> str:
+def correlation_id(request: Request) -> str:
     """
     An identifier a caller can quote when reporting a server side failure.
+
+    It is the request id, so it finds the request's audit line and every other
+    line logged while handling it.
     """
-    return uuid.uuid4().hex[:12]
+    fields = getattr(request.state, "audit", None) or {}
+    return fields.get("request_id") or audit.request_id()
 
 
 @app.exception_handler(OAuthError)
@@ -90,9 +97,11 @@ async def oauth_error_handler(request: Request, exc: OAuthError) -> JSONResponse
     {"detail": ...}.
     """
     body = exc.body()
+    audit.record(error=exc.error, error_description=exc.error_description)
     if exc.status_code >= 500:
-        reference = correlation_id()
+        reference = correlation_id(request)
         body["correlation_id"] = reference
+        audit.record(correlation_id=reference)
         logger.error(
             f"{exc.error} on {request.url.path}, correlation {reference}"
         )
@@ -117,11 +126,13 @@ async def validation_error_handler(
             for error in exc.errors()
         }
     )
+    description = "Invalid or missing parameters. " + "; ".join(problems)
+    audit.record(error="invalid_request", error_description=description)
     return JSONResponse(
         status_code=400,
         content={
             "error": "invalid_request",
-            "error_description": "Invalid or missing parameters. " + "; ".join(problems),
+            "error_description": description,
         },
     )
 
@@ -134,7 +145,7 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
     Redis, DynamoDB and SSM failures all reached the caller as a bare
     500 Internal Server Error with no body and nothing to quote.
     """
-    reference = correlation_id()
+    reference = correlation_id(request)
     logger.exception(
         f"Unhandled error on {request.url.path}, correlation {reference}"
     )
@@ -161,6 +172,7 @@ def parse_client_cert(client_certificate: str) -> x509.Certificate:
         return directory.parse_cert(client_certificate)
     except directory.CertificateInvalidError as e:
         logger.warning(f"Client certificate could not be parsed: {e}")
+        audit.record(failure_stage="cert_invalid")
         raise OAuthError(status.HTTP_401_UNAUTHORIZED, "invalid_client", str(e))
 
 
@@ -173,6 +185,7 @@ def client_id_from_cert(client_cert: x509.Certificate) -> str:
         return directory.extensions.decode_application(client_cert)
     except directory.CertificateExtensionError as e:
         logger.warning(f"Client certificate is missing application information: {e}")
+        audit.record(failure_stage="cert_no_application")
         raise OAuthError(status.HTTP_401_UNAUTHORIZED, "invalid_client", str(e))
 
 
@@ -201,6 +214,7 @@ async def pushed_authorization_request(
     """
     # Client authentication by mtls
     if not x_amzn_mtls_clientcert_leaf:
+        audit.record(failure_stage="cert_missing")
         raise OAuthError(
             status.HTTP_401_UNAUTHORIZED,
             "invalid_client",
@@ -209,6 +223,7 @@ async def pushed_authorization_request(
 
     client_cert = parse_client_cert(x_amzn_mtls_clientcert_leaf)
     client_id = client_id_from_cert(client_cert)
+    audit.record(scope=scope)
     # Get args as dict
     parameters = {
         "response_type": response_type,
@@ -273,7 +288,8 @@ async def authorize(
         f"request={json.dumps(par_request)}&"
         f"state={par_request['state']}"
     )
-    logger.info(f"Redirecting to {authorization_url}")
+    # A browser request with no certificate, so name the client from its PAR
+    audit.record(client_application=par_request.get("client_id"))
     # Redirect the user to the authorization URL
     return Response(status_code=302, headers={"Location": authorization_url})
 
@@ -331,6 +347,7 @@ async def parsed_client_cert(
     Parse the client certificate from the request header
     """
     if x_amzn_mtls_clientcert_leaf is None:
+        audit.record(failure_stage="cert_missing")
         raise OAuthError(401, "invalid_client", "Client certificate required")
     client_cert = parse_client_cert(x_amzn_mtls_clientcert_leaf)
     try:
@@ -340,6 +357,7 @@ async def parsed_client_cert(
         )
     except (directory.CertificateRoleError, directory.CertificateExtensionError) as e:
         logger.warning(f"Client certificate role check failed: {e}")
+        audit.record(failure_stage="role")
         raise OAuthError(401, "invalid_client", str(e))
     return client_cert
 
@@ -366,8 +384,8 @@ async def token(
     our own id_token, and add client certificate details to the token
     """
 
+    audit.record(grant_type=grant_type)
     if grant_type == "authorization_code":
-        logger.info("Authorization code flow")
         if not code or not code_verifier or not redirect_uri:
             raise OAuthError(400, "invalid_request", "Missing required parameters")
 
@@ -379,14 +397,15 @@ async def token(
             "code_verifier": code_verifier,
         }
     elif grant_type == "refresh_token":
-        logger.info("Refresh token flow")
         if not refresh_token:
             raise OAuthError(400, "invalid_request", "Missing refresh token")
+        audit.record(refresh_token_ref=permissions.token_reference(refresh_token))
         try:
             permission = permissions.check_refresh(
                 refresh_token, client_id_from_cert(client_cert)
             )
         except PermissionRefreshError as e:
+            audit.record(failure_stage="permission")
             raise OAuthError(400, "invalid_grant", str(e))
 
         payload = {
@@ -432,6 +451,7 @@ async def token(
         )
     except directory.CertificateExtensionError as e:
         logger.warning(f"Client certificate is missing application information: {e}")
+        audit.record(failure_stage="cert_no_application")
         raise OAuthError(status.HTTP_401_UNAUTHORIZED, "invalid_client", str(e))
     encoded_token = auth.encode_jwt(
         enhanced_token,
@@ -442,10 +462,11 @@ async def token(
         permissions.store_refreshed_permission(
             permission, enhanced_token, result.get("refresh_token")
         )
-    logger.info(
-        f"Issued token for {enhanced_token.get('client_id')}, grant {grant_type}, "
-        f"ref {permissions.token_reference(encoded_token)}, "
-        f"expires {enhanced_token.get('exp')}"
+    audit.record(
+        token_ref=permissions.token_reference(encoded_token),
+        account=enhanced_token.get("sub"),
+        scope=" ".join(enhanced_token.get("scp", [])),
+        token_expires=enhanced_token.get("exp"),
     )
     return models.TokenResponse(
         access_token=encoded_token,
@@ -471,6 +492,7 @@ async def get_permissions(
       issued to the Application in the client certificate
     """
 
+    audit.record(token_ref=permissions.token_reference(token))
     permissions_data = permissions.get_permission_by_token(token)
     client_id = client_id_from_cert(client_cert)
     if permissions_data is not None and permissions_data.client != client_id:
@@ -484,6 +506,7 @@ async def get_permissions(
         logger.warning(
             f"No permissions found for token {permissions.token_reference(token)}"
         )
+        audit.record(failure_stage="permission")
         # Not an OAuth2 condition, so there is no registered code that fits.
         # invalid_request is the closest, and the status carries the meaning.
         raise OAuthError(
@@ -491,6 +514,9 @@ async def get_permissions(
             "invalid_request",
             "No permissions found for token",
         )
+    audit.record(
+        account=permissions_data.account, evidence_id=permissions_data.evidenceId
+    )
     return {"permissions": permissions_data}
 
 
@@ -517,21 +543,28 @@ async def revoke_token(
     """
     # Prepare revocation request to Hydra
     payload = {"token": token, "token_type_hint": token_type_hint}
+    audit.record(token_ref=permissions.token_reference(token))
 
     try:
         revoked_permission = permissions.revoke_permission(
             token, client_id_from_cert(client_cert)
         )
     except PermissionRevocationError as e:
+        audit.record(failure_stage="permission")
         raise OAuthError(400, "invalid_grant", str(e))
 
+    audit.record(
+        account=getattr(revoked_permission, "account", None),
+        evidence_id=getattr(revoked_permission, "evidenceId", None),
+    )
     hydra.revoke_token(payload)
 
     # Send revocation message to the client application
     # For demo purposes we do allow this to fail without impacting the revocation response
     # but in a production system you would want to implement retries and error handling here
     try:
-        messaging.send_revocation_message(revoked_permission)
+        delivered = messaging.send_revocation_message(revoked_permission)
+        audit.record(revocation_message_delivered=bool(delivered))
     except Exception as e:
         # Log error but don't fail the revocation request
         logger.exception(

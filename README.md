@@ -23,6 +23,7 @@ It may also be a useful reference for developers who are creating secure data en
 - [FAPI Flow](#fapi-flow)
 - [Deployment](#deployment)
   - [Preparing certificates](#preparing-certificates)
+  - [Observability](#observability)
   - [System Context Diagram](#system-context-diagram)
   - [Container Diagram](#container-diagram)
 
@@ -254,6 +255,16 @@ A set of signing certificates are also required for signing provenance records. 
 A script is available ([resource/cdk/scripts/upload-certificates.sh](resource/cdk/scripts/upload-certificates.sh)) which will upload files into the correct locations. You will need to create a certificate chain with the leaf certificate and the intermediate CA. Check the upload script for further details.
 
 Another script is available [resource/cdk/scripts/checkcerts.sh](resource/cdk/scripts/checkcerts.sh) which can be used to check you a valid set of signing certificates before uploading.
+
+### Observability
+
+Each request that reaches either app writes one JSON audit line with `"event": "request"`, naming the client certificate (`client_application`, `client_member`, `client_serial`, `client_not_after` and so on), the `route`, the `status` and `outcome`, and for a refused request the `failure_stage`. The code is in `api/audit.py` in each app, and a handler adds fields with `audit.record()`.
+
+- **Dashboard:** `Perseus-dev` or `Perseus-prod` in CloudWatch, defined in [authentication/cdk/deployment/dashboard.py](authentication/cdk/deployment/dashboard.py). Its queries are also saved in Logs Insights under `Perseus/<env>/`
+- **Logs:** `/perseus/<env>/authentication-api` and `/perseus/<env>/resource-api`
+- **Refused client certificates:** the mTLS load balancers refuse a certificate before the request reaches the app, so these are only in the load balancer connection logs. Query them in Athena with the saved queries in the `perseus-authentication-<env>-alb-logs` and `perseus-resource-<env>-alb-logs` workgroups. Access logs for all four load balancers are in the same buckets
+
+To follow one request, search the log group for the `X-Request-Id` a caller received, which on a server error is also the `correlation_id`.
 
 ### System Context Diagram
 

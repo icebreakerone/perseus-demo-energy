@@ -6,8 +6,17 @@ from aws_cdk import (
     aws_ecr_assets as ecr_assets,
     aws_elasticloadbalancingv2 as elbv2,
     aws_dynamodb as dynamodb,
+    RemovalPolicy,
 )
 from constructs import Construct
+
+# Log retention by the number of days in the deployment context, which the
+# load balancer log bucket's lifecycle also uses
+RETENTION = {
+    30: logs.RetentionDays.ONE_MONTH,
+    90: logs.RetentionDays.THREE_MONTHS,
+    365: logs.RetentionDays.ONE_YEAR,
+}
 
 
 class AuthenticationAPIServiceConstruct(Construct):
@@ -25,11 +34,21 @@ class AuthenticationAPIServiceConstruct(Construct):
         public_alb_sg: ec2.SecurityGroup,
         table: dynamodb.Table,
         messaging_policy: iam.ManagedPolicy,
+        environment_name: str,
+        log_retention_days: int,
     ):
         super().__init__(scope, id)
 
         cluster = ecs.Cluster(self, "AuthenticationAPICluster", vpc=vpc)
-        log_group = logs.LogGroup(self, "AuthenticationAPILogGroup")
+        # Named, so the dashboard and saved queries can find it
+        log_group = logs.LogGroup(
+            self,
+            "AuthenticationAPILogGroup",
+            log_group_name=f"/perseus/{environment_name}/authentication-api",
+            retention=RETENTION[log_retention_days],
+            removal_policy=RemovalPolicy.RETAIN,
+        )
+        self.log_group = log_group
         task_def = ecs.FargateTaskDefinition(self, "TaskDef")
         task_def.task_role.add_managed_policy(ssm_policy)
         task_def.task_role.add_managed_policy(messaging_policy)
