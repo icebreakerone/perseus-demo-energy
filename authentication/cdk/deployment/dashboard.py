@@ -213,31 +213,37 @@ class Dashboard(Construct):
         )
         services = (("authentication", "Authentication"), ("resource", "Resource"))
         region = stack.region
-        athena_links = " · ".join(
-            f"[{workgroup}](https://{region}.console.aws.amazon.com/athena/home"
-            f"?region={region}#/query-editor/saved-queries?workgroup={workgroup})"
-            for workgroup in athena_workgroups
+        workgroup_names = " or ".join(f"`{workgroup}`" for workgroup in athena_workgroups)
+        # Both stages run against the Perseus sandbox trust framework. They share
+        # an account, where dashboard names must be unique, so preprod is named
+        stage = "prod" if env == "prod" else "preprod"
+        dashboard_name = (
+            "perseus-sandbox" if stage == "prod" else "perseus-sandbox-preprod"
         )
 
         dashboard = cloudwatch.Dashboard(
             self,
             "Dashboard",
-            dashboard_name=f"Perseus-{env}",
+            dashboard_name=dashboard_name,
             default_interval=Duration.days(1),
         )
         dashboard.add_widgets(
             cloudwatch.TextWidget(
                 markdown=(
-                    f"# Perseus demo services ({env})\n"
+                    f"# Perseus sandbox demo services ({stage})\n"
                     "Every request that reaches the authentication or resource API "
                     "writes one audit line naming the client certificate. "
                     "A connection whose certificate the load balancer refuses never "
                     "reaches the app, so it is counted under *TLS handshakes refused* "
-                    "and listed, with its certificate, by the Athena saved queries: "
-                    f"{athena_links}"
+                    "and listed, with its certificate, by saved queries in Athena. "
+                    "To find them:\n\n"
+                    f"1. Open Athena in the {region} region\n"
+                    "2. Open the query editor\n"
+                    f"3. Choose the {workgroup_names} workgroup at the top right\n"
+                    "4. Open the **Saved queries** tab"
                 ),
                 width=24,
-                height=3,
+                height=5,
             )
         )
         dashboard.add_widgets(
