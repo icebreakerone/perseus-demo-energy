@@ -77,6 +77,8 @@ def test_token_is_named_by_reference_only(mock_get, audit_lines):
     [line] = audit_lines()
     assert line["failure_stage"] == "permission"
     assert len(line["token_ref"]) == 12
+    # An endpoint's own 404 is a refusal, not an unknown path
+    assert line["outcome"] == "client_error"
     assert "a-refresh-token-that-must-not-be-logged" not in json.dumps(line)
 
 
@@ -103,6 +105,29 @@ def test_success_is_recorded(audit_lines):
     assert line["outcome"] == "success"
     assert line["route"] == "/.well-known/oauth-authorization-server"
     assert line["level"] == "INFO"
+
+
+def test_unknown_path_is_unmatched(audit_lines):
+    response = client.get("/RDWeb/Pages/en-US/login.aspx")
+
+    assert response.status_code == 404
+    [line] = audit_lines()
+    assert line["route"] == "unmatched"
+    assert line["outcome"] == "unmatched"
+    assert line["error"] == "not_found"
+    assert line["error_description"] == "Not Found"
+    # Scanner traffic, so it does not raise a warning
+    assert line["level"] == "INFO"
+
+
+def test_wrong_method_is_unmatched(audit_lines):
+    response = client.options("/")
+
+    assert response.status_code == 405
+    [line] = audit_lines()
+    assert line["route"] == "/"
+    assert line["outcome"] == "unmatched"
+    assert line["error"] == "method_not_allowed"
 
 
 def test_health_checks_are_not_recorded(audit_lines):

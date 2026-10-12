@@ -88,6 +88,24 @@ def certificate_identity(pem: str | None) -> dict:
     return identity
 
 
+# Answered by the router itself, before any endpoint ran. FastAPI's own handler
+# writes these responses, so nothing else records the error
+UNMATCHED_ERRORS = {
+    404: ("not_found", "Not Found"),
+    405: ("method_not_allowed", "Method Not Allowed"),
+}
+
+
+def unmatched(route: str | None, status: int) -> bool:
+    """
+    Whether no endpoint took the request: the path does not exist, or the
+    endpoint does not accept the method. Nearly all of these are scanners
+    probing for other software, so they are kept apart from refused requests.
+    No endpoint here answers 405 itself, so a 405 is always the router's.
+    """
+    return (route is None and status == 404) or status == 405
+
+
 def outcome(status: int) -> str:
     if status >= 500:
         return "server_error"
@@ -146,6 +164,11 @@ class AuditMiddleware:
         if user_agent.startswith(HEALTH_CHECK_AGENT) or path.startswith(QUIET_PREFIXES):
             return
         route = getattr(scope.get("route"), "path", None)
+        is_unmatched = unmatched(route, status)
+        if is_unmatched:
+            error, description = UNMATCHED_ERRORS[status]
+            fields.setdefault("error", error)
+            fields.setdefault("error_description", description)
         forwarded = headers.get("x-forwarded-for")
         client = scope.get("client")
         entry = {
@@ -158,7 +181,7 @@ class AuditMiddleware:
             "path": path,
             "host": headers.get("host"),
             "status": status,
-            "outcome": outcome(status),
+            "outcome": "unmatched" if is_unmatched else outcome(status),
             "latency_ms": round((time.perf_counter() - started) * 1000, 1),
             "source_ip": (
                 forwarded.split(",")[0].strip()
@@ -170,5 +193,5 @@ class AuditMiddleware:
             **fields,
         }
         entry = {key: value for key, value in entry.items() if value is not None}
-        level = "INFO" if status < 400 else "WARNING"
+        level = "INFO" if status < 400 or is_unmatched else "WARNING"
         logger.bind(**entry).log(level, f"{entry['method']} {path} {status}")
