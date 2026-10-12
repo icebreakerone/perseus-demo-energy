@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - **A request no endpoint takes is counted as `unmatched`, not as a refusal.** A request for a path that does not exist (404) or with a method the endpoint does not accept (405) now has `outcome` set to `unmatched`, with `error` set to `not_found` or `method_not_allowed`. Almost all of these are scanners probing the public load balancers for other software: 3,796 of the 3,825 errors in the week to 12 October. They were counted as refused requests, filled the Recent errors table and hid the 29 real errors in it, and logged no error code, because FastAPI answers them before any of our handlers run. They are now logged at info rather than warning, shown as their own Unknown path count in the headline numbers, and left out of the outcome graphs, Recent errors and Latency by route. A 404 from an endpoint, such as an unknown meter, is still a refusal
 
+### Fixed
+
+- The dashboard tables show `last_seen` as a date and time, such as `2026-10-12 11:40:06.698` (UTC). They showed milliseconds since 1970, such as `1791805206698`
+
 ## [v7.1.0] - 2026-10-06
 
 ### Added
