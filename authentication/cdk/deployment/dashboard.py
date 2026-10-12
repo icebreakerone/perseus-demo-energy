@@ -76,7 +76,7 @@ QUERIES: dict[str, dict] = {
             "@timestamp, service, route, status, error, failure_stage, "
             "client_application, error_description, request_id"
         ),
-        "filter": 'event = "request" and status >= 400',
+        "filter": 'event = "request" and status >= 400 and outcome != "unmatched"',
         "sort": "@timestamp desc",
         "limit": 50,
     },
@@ -111,7 +111,7 @@ QUERIES: dict[str, dict] = {
     },
     "latency": {
         "title": "Latency by route (ms)",
-        "filter": 'event = "request"',
+        "filter": 'event = "request" and outcome != "unmatched"',
         "stats": (
             "count(*) as requests, pct(latency_ms, 50) as p50, "
             "pct(latency_ms, 95) as p95, max(latency_ms) as max "
@@ -211,6 +211,9 @@ class Dashboard(Construct):
             ("client_error", "Refused"),
             ("server_error", "Failed"),
         )
+        # Requests no endpoint took, nearly all of them scanners. Counted in the
+        # headline numbers only, as on a graph they would bury the real traffic
+        unmatched = ("unmatched", "Unknown path")
         services = (("authentication", "Authentication"), ("resource", "Resource"))
         region = stack.region
         workgroup_names = " or ".join(f"`{workgroup}`" for workgroup in athena_workgroups)
@@ -251,7 +254,8 @@ class Dashboard(Construct):
                 cloudwatch.SingleValueWidget(
                     title=f"{title} requests",
                     metrics=[
-                        requests(service, outcome, label) for outcome, label in outcomes
+                        requests(service, outcome, label)
+                        for outcome, label in (*outcomes, unmatched)
                     ],
                     set_period_to_time_range=True,
                     width=8,
