@@ -64,7 +64,7 @@ QUERIES: dict[str, dict] = {
         "filter": 'event = "request" and ispresent(client_application)',
         "stats": (
             "count(*) as requests, count(error) as refused, "
-            "latest(@timestamp) as last_seen "
+            "max(@timestamp) as last_seen "
             "by client_application, client_member, service, route"
         ),
         "sort": "last_seen desc",
@@ -84,7 +84,7 @@ QUERIES: dict[str, dict] = {
         "title": "Refused requests by reason and client",
         "filter": 'event = "request" and ispresent(failure_stage)',
         "stats": (
-            "count(*) as refused, latest(@timestamp) as last_seen "
+            "count(*) as refused, max(@timestamp) as last_seen "
             "by failure_stage, client_application, service"
         ),
         "sort": "refused desc",
@@ -94,7 +94,7 @@ QUERIES: dict[str, dict] = {
         "filter": r'event = "request" and service = "authentication" and route like /^\/api\/v1\//',
         "stats": (
             "count(*) as calls, count(error) as refused, "
-            "latest(@timestamp) as last_seen by client_application, route, grant_type"
+            "max(@timestamp) as last_seen by client_application, route, grant_type"
         ),
         "sort": "calls desc",
     },
@@ -104,7 +104,7 @@ QUERIES: dict[str, dict] = {
         "stats": (
             "min(client_days_to_expiry) as days_left, "
             "latest(client_not_after) as not_after, count(*) as requests, "
-            "latest(@timestamp) as last_seen "
+            "max(@timestamp) as last_seen "
             "by client_application, client_member, client_serial, client_issuer"
         ),
         "sort": "days_left asc",
