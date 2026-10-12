@@ -155,6 +155,39 @@ def test_unhandled_error_correlates_with_the_audit_line(
     assert line["correlation_id"] == response.json()["correlation_id"]
 
 
+def test_unknown_path_is_unmatched(audit_lines):
+    response = client.get("/TS/Api/home/util/Db/GetDataTable")
+
+    assert response.status_code == 404
+    [line] = audit_lines()
+    assert line["outcome"] == "unmatched"
+    assert line["error"] == "not_found"
+
+
+def test_unknown_meter_is_a_refusal_not_unmatched(mocker, audit_lines):
+    mocker.patch(
+        "api.main.auth.check_token",
+        return_value=(
+            {"sub": "account123", "scp": [conf.ENERGY_CONSUMPTION_LICENSE_URL]},
+            {},
+        ),
+    )
+
+    response = client.get(
+        "/datasources/no-such-meter/import?from=2026-01-01",
+        headers={
+            "Authorization": "Bearer token",
+            "x-amzn-mtls-clientcert-leaf": certificate(),
+        },
+    )
+
+    assert response.status_code == 404
+    [line] = audit_lines()
+    assert line["route"] == "/datasources/{id}/{measure}"
+    assert line["outcome"] == "client_error"
+    assert line["error"] == "not_found"
+
+
 def test_certificate_is_read_from_the_lambda_event():
     pem, _, _, _ = client_certificate(
         roles=[conf.PROVIDER_ROLE], member=MEMBER, add_application=True
