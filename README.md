@@ -106,11 +106,11 @@ pipenv run uvicorn api.main:app --reload
 
 Each part of the stack is a different Perseus scheme participant, so its certificates are issued to a different application in the directory:
 
-| Component | Scheme role | Certificates |
-| --------- | ----------- | ------------ |
-| resource API | energy data provider | signing, to sign provenance records |
-| cap-demo | carbon accounting provider | client for mTLS, and signing for its provenance record |
-| authentication API | the authorization server | none from the directory |
+| Component          | Scheme role                | Certificates                                           |
+| ------------------ | -------------------------- | ------------------------------------------------------ |
+| resource API       | energy data provider       | signing, to sign provenance records                    |
+| cap-demo           | carbon accounting provider | client for mTLS, and signing for its provenance record |
+| authentication API | the authorization server   | none from the directory                                |
 
 `scripts/refresh-certs.sh` refreshes all of them with one command. Client and signing certificates are issued by the real sandbox directory service, so local testing uses the same identities, roles and CA chains as production. Only the localhost server certificate is generated locally, because the directory does not issue certificates for localhost.
 
@@ -191,7 +191,7 @@ Please contact [tf-ops@icebreakerone.org](mailto:tf-ops@icebreakerone.org) for t
   Scheme Catalog Requirements allow either by carrying `ib1:requireOneOrMoreOf` on
   `dcterms:license`. Per the
   [IB1 OAuth profile](https://specification.trust.ib1.org/oauth-with-member-identity-certificates/1.0/#oauth-profile)
-  the scope *is* a Registry License URL, so it changes whenever the Registry publishes a
+  the scope _is_ a Registry License URL, so it changes whenever the Registry publishes a
   new version of a license, and a client registered only for a superseded version will
   reject the scopes this server advertises
 - Redirect urls to match your production and/or development and local redirect URLs
@@ -273,3 +273,7 @@ To follow one request, search the log group for the `X-Request-Id` a caller rece
 ### Container Diagram
 
 ![Container Diagram](docs/Container%20Diagram.png)
+
+### Dashboard
+
+The deployment includes a CloudWatch dashboard with queries for the authentication and resource APIs, and for the load balancers. A full overview of the dashboard is available in [docs/dashboard.md](docs/dashboard.md).
